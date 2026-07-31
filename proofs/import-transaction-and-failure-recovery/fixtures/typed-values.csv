@@ -1,0 +1,3 @@
+name;amount;enabled;literal_formula
+"Alpha; North";12.50;true;"=1+2"
+Beta;0;false;plain

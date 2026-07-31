@@ -26,15 +26,16 @@
   var activeSelectionTarget = null;
   var activeContextTarget = null;
   var activeFormatPopoverTrigger = null;
+  var currentPostgresTableName = "";
   var spreadsheetView = { freezeRows: "0", freezeColumns: "0", zoom: "100" };
   var namedSheetColumns = [
-    { key: "order-id", label: "Order ID", field: "Number", format: "Plain text", storage: "bigint", required: true },
-    { key: "customer", label: "Customer", field: "Relation", format: "Related record", storage: "foreign key", required: true },
-    { key: "email", label: "Email", field: "Email", format: "Email link", storage: "text", required: true },
-    { key: "status", label: "Status", field: "Select", format: "Badge", storage: "text", required: false },
-    { key: "total", label: "Total", field: "Price", format: "Currency", storage: "numeric", required: false },
-    { key: "paid", label: "Paid", field: "Switch", format: "Yes/no", storage: "boolean", required: false },
-    { key: "ordered-at", label: "Ordered at", field: "Date and time", format: "Date/time", storage: "timestamptz", required: false }
+    { key: "order-id", label: "Order ID", postgresName: "order_id", field: "Number", format: "Plain text", storage: "bigint", required: true },
+    { key: "customer", label: "Customer", postgresName: "customer", field: "Relation", format: "Related record", storage: "foreign key", relationTarget: "finance/invoices", relationFieldTemplate: "{invoice_number} — {customer_name}", relatedRecordTemplate: "{invoice_number}", required: true },
+    { key: "email", label: "Email", postgresName: "email", field: "Email", format: "Email link", storage: "text", required: true },
+    { key: "status", label: "Status", postgresName: "status", field: "Select", format: "Badge", storage: "text", required: false },
+    { key: "total", label: "Total", postgresName: "total", field: "Price", format: "Currency", storage: "numeric", required: false },
+    { key: "paid", label: "Paid", postgresName: "paid", field: "Switch", format: "Yes/no", storage: "boolean", required: false },
+    { key: "ordered-at", label: "Ordered at", postgresName: "ordered_at", field: "Date and time", format: "Date/time", storage: "timestamptz", required: false }
   ];
   var sheetRecords = [
     ["1084", "Northstar Market", "ap@northstar.co", "Processing", "₱1,280.00", "Yes", "Jul 24, 10:32 AM"],
@@ -42,6 +43,19 @@
     ["1082", "Acacia Retail", "team@acaciaretail.com", "Shipped", "₱2,410.00", "Yes", "Jul 23, 3:04 PM"],
     ["1081", "Luna Home", "ops@lunahome.co", "Processing", "₱720.00", "Yes", "Jul 23, 11:48 AM"]
   ];
+  var sheetRecordCount = 248;
+  var relationTargetRecords = {
+    "finance/invoices": [
+      { id: "invoice_9321", invoice_number: "INV-9321", customer_name: "Northstar Market", first_name: "Mia", last_name: "Santos", company_name: "Northstar Market", name: "Northstar Market" },
+      { id: "invoice_9317", invoice_number: "INV-9317", customer_name: "Harbor Goods", first_name: "Noah", last_name: "Reyes", company_name: "Harbor Goods", name: "Harbor Goods" },
+      { id: "invoice_9308", invoice_number: "INV-9308", customer_name: "Acacia Retail", first_name: "Elena", last_name: "Cruz", company_name: "Acacia Retail", name: "Acacia Retail" }
+    ],
+    default: [
+      { id: "record_1", first_name: "Mia", last_name: "Santos", company_name: "Northstar Market", customer_name: "Northstar Market", invoice_number: "INV-9321", name: "Northstar Market" },
+      { id: "record_2", first_name: "Noah", last_name: "Reyes", company_name: "Harbor Goods", customer_name: "Harbor Goods", invoice_number: "INV-9317", name: "Harbor Goods" },
+      { id: "record_3", first_name: "Elena", last_name: "Cruz", company_name: "Acacia Retail", customer_name: "Acacia Retail", invoice_number: "INV-9308", name: "Acacia Retail" }
+    ]
+  };
 
   function sheetColumnLetter(index) {
     return String.fromCharCode(65 + index);
@@ -51,6 +65,7 @@
     return namedSheetColumns[index] || {
       key: "column-" + sheetColumnLetter(index).toLowerCase(),
       label: "",
+      postgresName: "column_" + sheetColumnLetter(index).toLowerCase(),
       field: "Text",
       format: "Plain text",
       storage: "text",
@@ -58,10 +73,146 @@
     };
   }
 
+  function isUntitledFileRoute(params) {
+    return !!params && params.get("new") === "1" && params.get("table") === "untitled-file";
+  }
+
+  function initUntitledFileState() {
+    var params = new URLSearchParams(window.location.search);
+    if (!isUntitledFileRoute(params)) {
+      return;
+    }
+    namedSheetColumns = [];
+    sheetRecords = [];
+    sheetRecordCount = 0;
+    currentPostgresTableName = "";
+  }
+
+  function updateSheetSummary() {
+    var summary = query("[data-sheet-summary]");
+    if (summary) {
+      summary.textContent = sheetRecordCount + " records · " + sheetCapacity.toLocaleString() + " rows · " + namedSheetColumns.filter(Boolean).length + " named columns";
+    }
+  }
+
   function findSheetColumn(key) {
     return namedSheetColumns.find(function (column) {
       return column && column.key === key;
     });
+  }
+
+  function relationRecordsFor(column) {
+    return relationTargetRecords[(column || {}).relationTarget] || relationTargetRecords.default;
+  }
+
+  function formatRelationTemplate(template, record) {
+    var normalizedTemplate = String(template || "{name}").trim() || "{name}";
+    return normalizedTemplate.replace(/\{([a-z_]+)\}/gi, function (token, key) {
+      return record && record[key] !== undefined ? record[key] : token;
+    });
+  }
+
+  function relationRecordFor(column, value) {
+    return relationRecordsFor(column).find(function (record) {
+      return record.id === value;
+    });
+  }
+
+  function relationDisplayValue(column, value, template) {
+    var record = relationRecordFor(column, value);
+    return record ? formatRelationTemplate(template, record) : value;
+  }
+
+  function relationFileOption(panel, value) {
+    return queryAll("[data-relation-file-option]", panel).find(function (option) {
+      return option.getAttribute("data-relation-file-value") === value;
+    });
+  }
+
+  function setRelationFilePickerValue(panel, value) {
+    var target = query("[data-column-relation-target]", panel);
+    var search = query("[data-relation-file-search]", panel);
+    var option = relationFileOption(panel, value);
+    if (target) {
+      target.value = value;
+    }
+    if (search) {
+      search.value = option ? option.getAttribute("data-relation-file-label") : value;
+    }
+  }
+
+  function filterRelationFileOptions(panel, term) {
+    var normalizedTerm = String(term || "").trim().toLowerCase();
+    var options = queryAll("[data-relation-file-option]", panel);
+    var hasMatch = false;
+    options.forEach(function (option) {
+      var haystack = [
+        option.getAttribute("data-relation-file-label"),
+        option.getAttribute("data-relation-file-folder")
+      ].join(" ").toLowerCase();
+      var matches = !normalizedTerm || haystack.indexOf(normalizedTerm) !== -1;
+      option.hidden = !matches;
+      hasMatch = hasMatch || matches;
+    });
+    var empty = query("[data-relation-file-empty]", panel);
+    if (empty) {
+      empty.hidden = hasMatch;
+    }
+  }
+
+  function openRelationFilePicker(panel, term) {
+    var options = query("[data-relation-file-options]", panel);
+    var search = query("[data-relation-file-search]", panel);
+    if (options) {
+      options.hidden = false;
+    }
+    if (search) {
+      search.setAttribute("aria-expanded", "true");
+    }
+    filterRelationFileOptions(panel, term);
+  }
+
+  function closeRelationFilePicker(panel) {
+    var options = query("[data-relation-file-options]", panel);
+    var search = query("[data-relation-file-search]", panel);
+    if (options) {
+      options.hidden = true;
+    }
+    if (search) {
+      search.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function postgresColumnName(value, fallback) {
+    var normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!normalized) {
+      return fallback;
+    }
+    if (!/^[a-z]/.test(normalized)) {
+      normalized = "column_" + normalized;
+    }
+    return normalized;
+  }
+
+  function postgresTableName(value, fallback) {
+    var normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!normalized) {
+      return fallback;
+    }
+    if (!/^[a-z]/.test(normalized)) {
+      normalized = "table_" + normalized;
+    }
+    return normalized;
   }
 
   function resolveCellColumn(cell) {
@@ -310,6 +461,9 @@
     } else if (displayFormat === "plain") {
       displayValue = String(value || "").replace(/^₱/, "");
     }
+    if (column && column.field === "Relation" && column.format === "Related record" && displayValue) {
+      displayValue = relationDisplayValue(column, displayValue, column.relatedRecordTemplate);
+    }
     cell.innerHTML = "";
     if (column && column.field === "Select" && displayValue) {
       var pill = document.createElement("span");
@@ -426,6 +580,7 @@
     if (window.WireframeIcons) {
       window.WireframeIcons.render(grid);
     }
+    updateSheetSummary();
   }
 
   function resetCellHistory() {
@@ -827,6 +982,7 @@
     var folderCrumb = query("[data-explorer-folder-crumb]", explorer);
     var folderCrumbText = query("[data-explorer-folder-crumb-text]", explorer);
     var newFile = query("[data-explorer-new-file]", explorer);
+    var importFile = query("[data-explorer-import]", explorer);
     var search = query("[data-explorer-search]", explorer);
     var empty = query("[data-explorer-empty]", explorer);
     var view = "list";
@@ -870,6 +1026,7 @@
       if (sectionTitle) sectionTitle.textContent = "Folders";
       if (folderCrumb) folderCrumb.hidden = true;
       if (newFile) newFile.hidden = true;
+      if (importFile) importFile.hidden = true;
     } else {
       document.title = department.label + " · Acme Inc.";
       if (sectionTitle) sectionTitle.textContent = "Files";
@@ -877,7 +1034,11 @@
       if (folderCrumbText) folderCrumbText.textContent = department.label;
       if (newFile) {
         newFile.hidden = false;
-        newFile.setAttribute("href", "./create-table.html?folder=" + department.key);
+        newFile.setAttribute("href", "./table.html?new=1&folder=" + department.key + "&table=untitled-file");
+      }
+      if (importFile) {
+        importFile.hidden = false;
+        importFile.setAttribute("href", "./import.html?folder=" + department.key);
       }
     }
 
@@ -905,7 +1066,7 @@
       link.setAttribute("href", "./browse.html?folder=" + department.key);
     });
     queryAll("[data-department-create]").forEach(function (link) {
-      link.setAttribute("href", "./create-table.html?folder=" + department.key);
+      link.setAttribute("href", "./table.html?new=1&folder=" + department.key + "&table=untitled-file");
     });
 
     queryAll("[data-department-import]").forEach(function (link) {
@@ -962,7 +1123,7 @@
     var create = query("[data-department-action='create']");
     var importLink = query("[data-department-action='import']");
     if (create) {
-      create.setAttribute("href", "./create-table.html?department=" + department.key);
+      create.setAttribute("href", "./table.html?new=1&folder=" + department.key + "&table=untitled-file");
     }
     if (importLink) {
       importLink.setAttribute("href", "./import.html?department=" + department.key);
@@ -996,150 +1157,6 @@
     });
   }
 
-  var fieldTypes = {
-    text: { storage: "text", format: "plain text", sql: "text" },
-    email: { storage: "text", format: "email link", sql: "text" },
-    relation: { storage: "foreign key", format: "related record", sql: "bigint REFERENCES public.customers(id)" },
-    price: { storage: "numeric", format: "currency", sql: "numeric" },
-    select: { storage: "text + check", format: "label", sql: "text" },
-    switch: { storage: "boolean", format: "yes / no", sql: "boolean" },
-    datetime: { storage: "timestamptz", format: "date and time", sql: "timestamptz" }
-  };
-
-  function sqlIdentifier(value, fallback) {
-    var normalized = String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-    return normalized || fallback;
-  }
-
-  function builderColumnMarkup(index) {
-    return [
-      '<div class="column-card" data-builder-column>',
-      '  <label class="app-field">',
-      '    <span class="app-label">Column name</span>',
-      '    <input class="app-input" type="text" value="New field ' + index + '" data-column-name>',
-      "  </label>",
-      '  <label class="app-field">',
-      '    <span class="app-label">Field</span>',
-      '    <select class="app-select" data-field-type>',
-      '      <option value="text" selected>Text</option>',
-      '      <option value="email">Email</option>',
-      '      <option value="relation">Relation</option>',
-      '      <option value="price">Price</option>',
-      '      <option value="select">Select</option>',
-      '      <option value="switch">Switch</option>',
-      '      <option value="datetime">Date and time</option>',
-      "    </select>",
-      "  </label>",
-      '  <div class="column-card__inference" data-inference>text · plain text</div>',
-      '  <button class="app-button app-button--ghost app-button--icon column-card__remove" type="button" data-remove-builder-column aria-label="Remove new column">',
-      '    <span data-wf-icon="trash"></span>',
-      "  </button>",
-      "</div>"
-    ].join("");
-  }
-
-  function updateBuilder() {
-    var builder = query("[data-table-builder]");
-    if (!builder) {
-      return;
-    }
-    var tableName = query("[data-table-name]", builder);
-    var identity = query("[data-object-identity]");
-    var name = sqlIdentifier(tableName.value, "new_table");
-    var lines = ["  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY"];
-
-    queryAll("[data-builder-column]", builder).forEach(function (column) {
-      var fieldSelect = query("[data-field-type]", column);
-      var columnName = query("[data-column-name]", column);
-      var config = fieldTypes[fieldSelect.value] || fieldTypes.text;
-      query("[data-inference]", column).textContent = config.storage + " · " + config.format;
-      var identifier = sqlIdentifier(columnName.value, "new_field");
-      if (fieldSelect.value === "relation" && !/_id$/.test(identifier)) {
-        identifier += "_id";
-      }
-      lines.push("  " + identifier + " " + config.sql);
-    });
-
-    if (identity) {
-      identity.textContent = "public." + name;
-    }
-    var help = query("#table-name-help");
-    if (help) {
-      help.innerHTML = 'Created as <span class="app-code">public.' + name + "</span>.";
-    }
-    var preview = query("[data-sql-preview]");
-    if (preview) {
-      preview.textContent = "CREATE TABLE public." + name + " (\n" + lines.join(",\n") + "\n);";
-    }
-  }
-
-  function initTableBuilder() {
-    var builder = query("[data-table-builder]");
-    var list = query("[data-column-list]");
-    if (!builder || !list) {
-      return;
-    }
-
-    function bindColumn(column) {
-      queryAll("input, select", column).forEach(function (control) {
-        control.addEventListener("input", updateBuilder);
-        control.addEventListener("change", updateBuilder);
-      });
-      var remove = query("[data-remove-builder-column]", column);
-      remove.addEventListener("click", function () {
-        if (queryAll("[data-builder-column]", list).length === 1) {
-          showToast("Keep one column", "A new table needs at least one usable column.");
-          return;
-        }
-        column.remove();
-        updateBuilder();
-      });
-    }
-
-    queryAll("[data-builder-column]", list).forEach(bindColumn);
-    queryAll("[data-add-builder-column]").forEach(function (button) {
-      button.addEventListener("click", function () {
-        var wrapper = document.createElement("div");
-        wrapper.innerHTML = builderColumnMarkup(queryAll("[data-builder-column]", list).length + 1);
-        var column = wrapper.firstElementChild;
-        list.appendChild(column);
-        bindColumn(column);
-        if (window.WireframeIcons) {
-          window.WireframeIcons.render(column);
-        }
-        query("[data-column-name]", column).focus();
-        updateBuilder();
-      });
-    });
-
-    builder.addEventListener("submit", function (event) {
-      event.preventDefault();
-      var department = currentDepartment(new URLSearchParams(window.location.search));
-      var tableName = query("[data-table-name]", builder);
-      var error = query("[data-table-name-error]", builder);
-      if (!tableName.value.trim()) {
-        tableName.setAttribute("aria-invalid", "true");
-        error.hidden = false;
-        tableName.focus();
-        return;
-      }
-      tableName.removeAttribute("aria-invalid");
-      error.hidden = true;
-      var button = query("[data-create-table]", builder);
-      button.disabled = true;
-      button.textContent = "Creating table…";
-      window.setTimeout(function () {
-        window.location.href = "./table.html?created=1&folder=" + department.key + "&table=customer-orders";
-      }, 450);
-    });
-
-    updateBuilder();
-  }
-
   function initQueryState() {
     var params = new URLSearchParams(window.location.search);
     var department = currentDepartment(params);
@@ -1154,7 +1171,8 @@
       "purchase-requests": "Purchase requests",
       invoices: "Invoices",
       expenses: "Expenses",
-      budgets: "Budgets"
+      budgets: "Budgets",
+      "untitled-file": "Untitled File"
     };
     var tableKey = params.get("table") || "customer-orders";
     var tableLabel = tableLabels[tableKey];
@@ -1178,7 +1196,7 @@
       element.textContent = department.label;
     });
 
-    if (params.get("created") === "1" && banner) {
+    if (params.get("created") === "1" && !isUntitledFileRoute(params) && banner) {
       copy.textContent = "Customer orders was created as public.customer_orders.";
       banner.hidden = false;
     }
@@ -1626,17 +1644,55 @@
     var editorType = "text";
     var control;
     var outsideEditorHandler = null;
+    var selectOptionButtons = [];
 
     if (field === "Select") {
       editorType = "select";
-      control = document.createElement("select");
+      var selectFrame = document.createElement("span");
+      selectFrame.className = "sheet-cell-select-frame";
+      control = document.createElement("button");
+      control.type = "button";
       control.className = "sheet-cell-editor sheet-cell-editor--select";
+      control.value = original || "Processing";
+      control.textContent = control.value;
+      control.setAttribute("aria-haspopup", "listbox");
+      control.setAttribute("aria-expanded", "true");
+      var selectMenu = document.createElement("span");
+      selectMenu.className = "sheet-cell-select-menu";
+      selectMenu.setAttribute("role", "listbox");
       ["Processing", "Ready", "Shipped", "Cancelled"].forEach(function (optionValue) {
-        var option = document.createElement("option");
+        var option = document.createElement("button");
+        option.type = "button";
+        option.className = "sheet-cell-select-menu__option";
         option.value = optionValue;
         option.textContent = optionValue;
-        option.selected = optionValue === original;
-        control.appendChild(option);
+        option.setAttribute("role", "option");
+        option.setAttribute("aria-selected", String(optionValue === control.value));
+        selectOptionButtons.push(option);
+        selectMenu.appendChild(option);
+      });
+      selectFrame.appendChild(control);
+      selectFrame.appendChild(selectMenu);
+      cell.appendChild(selectFrame);
+    } else if (field === "Relation") {
+      editorType = "relation";
+      control = document.createElement("select");
+      control.className = "sheet-cell-editor sheet-cell-editor--select";
+      var relationRecords = relationRecordsFor(column);
+      var selectedRelation = relationRecordFor(column, original);
+      if (!selectedRelation && original) {
+        var existingOption = document.createElement("option");
+        existingOption.value = original;
+        existingOption.textContent = original;
+        existingOption.selected = true;
+        control.appendChild(existingOption);
+      }
+      relationRecords.forEach(function (record) {
+        var relationOption = document.createElement("option");
+        relationOption.value = record.id;
+        relationOption.textContent = formatRelationTemplate(column.relationFieldTemplate, record);
+        relationOption.selected = !!selectedRelation && record.id === selectedRelation.id;
+        control.appendChild(relationOption);
       });
     } else if (field === "Price") {
       editorType = "price";
@@ -1729,6 +1785,8 @@
         }
       } else if (commit && field === "Date and time") {
         value = formatDatetimeValue(control.value);
+      } else if (commit && field === "Relation") {
+        value = control.value;
       } else if (commit) {
         value = control.value;
       }
@@ -1768,6 +1826,18 @@
         finish(true);
       }
     });
+    selectOptionButtons.forEach(function (option) {
+      option.addEventListener("click", function () {
+        control.value = option.value;
+        control.textContent = option.value;
+        finish(true);
+      });
+    });
+    if (editorType === "select" || editorType === "relation") {
+      control.addEventListener("change", function () {
+        finish(true);
+      });
+    }
     outsideEditorHandler = function (event) {
       if (!cell.contains(event.target)) {
         finish(true);
@@ -1781,6 +1851,13 @@
     control.focus();
     if (typeof control.select === "function" && editorType !== "datetime") {
       control.select();
+    }
+    if ((editorType === "select" || editorType === "relation") && typeof control.showPicker === "function") {
+      try {
+        control.showPicker();
+      } catch (error) {
+        // Browsers that restrict scripted native pickers still retain the focused select editor.
+      }
     }
   }
 
@@ -1914,15 +1991,33 @@
       var params = new URLSearchParams(window.location.search);
       var tableKey = params.get("table") || "customer-orders";
       var tableTitle = query("[data-table-title]");
+      var isUntitledFile = isUntitledFileRoute(params);
+      var displayName = tableTitle ? tableTitle.textContent.trim() : "Customer orders";
+      var automaticPostgresName = postgresTableName(isUntitledFile ? displayName : tableKey, isUntitledFile ? "untitled_file" : "customer_orders");
+      var tableNameInput = query("[data-table-settings-name]", panel);
+      var postgresNameInput = query("[data-table-settings-postgres-name]", panel);
       columnForm.hidden = true;
       tableForm.hidden = false;
       rowDetail.hidden = true;
       actions.hidden = true;
       tableActions.hidden = false;
       title.textContent = "Table settings";
-      query("[data-table-settings-name]", panel).value = tableTitle ? tableTitle.textContent.trim() : "Customer orders";
+      tableNameInput.value = displayName;
       query("[data-table-settings-folder]", panel).value = currentDepartment(params).label;
-      query("[data-table-settings-storage]", panel).textContent = "public." + tableKey.replace(/-/g, "_");
+      postgresNameInput.value = currentPostgresTableName || automaticPostgresName;
+      postgresNameInput.setAttribute("data-postgres-name-derived", String(isUntitledFile && !currentPostgresTableName));
+      if (isUntitledFile && !tableNameInput.hasAttribute("data-postgres-name-sync")) {
+        tableNameInput.setAttribute("data-postgres-name-sync", "true");
+        tableNameInput.addEventListener("input", function () {
+          if (postgresNameInput.getAttribute("data-postgres-name-derived") === "true") {
+            postgresNameInput.value = postgresTableName(tableNameInput.value, "untitled_file");
+          }
+        });
+        postgresNameInput.addEventListener("input", function () {
+          var derivedName = postgresTableName(tableNameInput.value, "untitled_file");
+          postgresNameInput.setAttribute("data-postgres-name-derived", String(postgresTableName(postgresNameInput.value, derivedName) === derivedName));
+        });
+      }
     } else {
       var config = findSheetColumn(value) || namedSheetColumns[2];
       columnForm.hidden = false;
@@ -1934,9 +2029,14 @@
       panel.setAttribute("data-active-column", config.key);
       query("[data-column-panel-name]", panel).value = config.label;
       query("[data-column-panel-field]", panel).value = config.field;
-      query("[data-column-panel-format]", panel).value = config.format;
+      query("[data-column-panel-format]", panel).value = config.field === "Relation" ? "Related record" : config.format;
       query("[data-column-storage]", panel).value = config.storage;
+      query("[data-column-postgres-name]", panel).value = config.postgresName || postgresColumnName(config.key, "column");
+      setRelationFilePickerValue(panel, config.relationTarget || "finance/invoices");
+      query("[data-column-relation-field-template]", panel).value = config.relationFieldTemplate || "{first_name} {last_name}";
+      query("[data-column-related-record-template]", panel).value = config.relatedRecordTemplate || "{first_name} {last_name}";
       query("[data-column-required]", panel).checked = config.required;
+      syncColumnRelationControls(panel);
     }
     panel.setAttribute("data-open", "true");
     panel.setAttribute("aria-hidden", "false");
@@ -1950,6 +2050,22 @@
       panel.setAttribute("data-open", "false");
       panel.setAttribute("aria-hidden", "true");
       panel.setAttribute("inert", "");
+    }
+  }
+
+  function syncColumnRelationControls(panel) {
+    if (!panel) {
+      return;
+    }
+    var field = query("[data-column-panel-field]", panel);
+    var format = query("[data-column-panel-format]", panel);
+    var relationSettings = query("[data-relation-field-settings]", panel);
+    var relatedRecordSettings = query("[data-related-record-format-settings]", panel);
+    if (relationSettings && field) {
+      relationSettings.hidden = field.value !== "Relation";
+    }
+    if (relatedRecordSettings && format) {
+      relatedRecordSettings.hidden = !field || field.value !== "Relation" || format.value !== "Related record";
     }
   }
 
@@ -1984,10 +2100,7 @@
       cell.setAttribute("data-column-key", config.key);
       cell.setAttribute("data-named-column", "true");
     });
-    var summary = query("[data-sheet-summary]");
-    if (summary) {
-      summary.textContent = "248 records · " + sheetCapacity.toLocaleString() + " rows · " + namedSheetColumns.filter(Boolean).length + " named columns";
-    }
+    updateSheetSummary();
     bindColumnHeader(header);
     validateColumnLayout();
     if (window.WireframeIcons) {
@@ -1997,7 +2110,76 @@
 
   function initColumnAndRowPanels() {
     var menu = query("[data-context-menu]");
+    var columnPanel = query("[data-context-panel]");
+    var fieldControl = query("[data-column-panel-field]");
+    var formatControl = query("[data-column-panel-format]");
+    var relationFileSearch = query("[data-relation-file-search]");
+    var relationFileOptions = query("[data-relation-file-options]");
     queryAll("[data-column-header]").forEach(bindColumnHeader);
+
+    if (fieldControl) {
+      fieldControl.addEventListener("change", function () {
+        if (fieldControl.value === "Relation") {
+          query("[data-column-storage]", columnPanel).value = "foreign key";
+          if (formatControl) {
+            formatControl.value = "Related record";
+          }
+        }
+        syncColumnRelationControls(columnPanel);
+      });
+    }
+    if (formatControl) {
+      formatControl.addEventListener("change", function () {
+        if (fieldControl && fieldControl.value === "Relation") {
+          formatControl.value = "Related record";
+        }
+        syncColumnRelationControls(columnPanel);
+      });
+    }
+    if (relationFileSearch) {
+      relationFileSearch.addEventListener("focus", function () {
+        openRelationFilePicker(columnPanel, "");
+        relationFileSearch.select();
+      });
+      relationFileSearch.addEventListener("input", function () {
+        openRelationFilePicker(columnPanel, relationFileSearch.value);
+      });
+      relationFileSearch.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setRelationFilePickerValue(columnPanel, query("[data-column-relation-target]", columnPanel).value);
+          closeRelationFilePicker(columnPanel);
+        } else if (event.key === "ArrowDown") {
+          event.preventDefault();
+          openRelationFilePicker(columnPanel, relationFileSearch.value);
+        } else if (event.key === "Enter") {
+          var firstMatch = queryAll("[data-relation-file-option]", columnPanel).find(function (option) {
+            return !option.hidden;
+          });
+          if (firstMatch) {
+            event.preventDefault();
+            setRelationFilePickerValue(columnPanel, firstMatch.getAttribute("data-relation-file-value"));
+            closeRelationFilePicker(columnPanel);
+          }
+        }
+      });
+      relationFileSearch.addEventListener("blur", function () {
+        window.setTimeout(function () {
+          closeRelationFilePicker(columnPanel);
+          setRelationFilePickerValue(columnPanel, query("[data-column-relation-target]", columnPanel).value);
+        }, 120);
+      });
+    }
+    if (relationFileOptions) {
+      relationFileOptions.addEventListener("click", function (event) {
+        var option = event.target.closest("[data-relation-file-option]");
+        if (!option) {
+          return;
+        }
+        setRelationFilePickerValue(columnPanel, option.getAttribute("data-relation-file-value"));
+        closeRelationFilePicker(columnPanel);
+      });
+    }
 
     queryAll("[data-open-column-panel]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -2030,6 +2212,11 @@
         config.field = query("[data-column-panel-field]").value;
         config.format = query("[data-column-panel-format]").value;
         config.storage = query("[data-column-storage]").value;
+        config.postgresName = postgresColumnName(query("[data-column-postgres-name]").value, config.postgresName || "column");
+        query("[data-column-postgres-name]").value = config.postgresName;
+        config.relationTarget = query("[data-column-relation-target]").value;
+        config.relationFieldTemplate = query("[data-column-relation-field-template]").value.trim() || "{name}";
+        config.relatedRecordTemplate = query("[data-column-related-record-template]").value.trim() || "{name}";
         config.required = query("[data-column-required]").checked;
         var headerLabel = query("[data-column-header='" + activeColumn + "'] [data-column-label]");
         if (headerLabel) {
@@ -2040,14 +2227,19 @@
         });
         updateAllSheetRowValidation();
         closeContextPanel();
-        showToast("Column updated", name + " now uses the selected field, output format, and PostgreSQL storage.");
+        showToast("Column updated", name + " uses the selected field and format. PostgreSQL column: " + config.postgresName + ".");
       });
     }
 
     var saveTable = query("[data-save-table]");
     if (saveTable) {
       saveTable.addEventListener("click", function () {
-        var name = query("[data-table-settings-name]").value.trim() || "Untitled spreadsheet";
+        var params = new URLSearchParams(window.location.search);
+        var tableKey = params.get("table") || "customer-orders";
+        var isUntitledFile = isUntitledFileRoute(params);
+        var name = query("[data-table-settings-name]").value.trim() || (isUntitledFile ? "Untitled File" : "Untitled spreadsheet");
+        var automaticPostgresName = postgresTableName(isUntitledFile ? name : tableKey, isUntitledFile ? "untitled_file" : "customer_orders");
+        var postgresName = postgresTableName(query("[data-table-settings-postgres-name]").value, automaticPostgresName);
         var tableTitle = query("[data-table-title]");
         var titleInput = query("[data-table-title-input]");
         var grid = query("[data-grid]");
@@ -2057,9 +2249,10 @@
         }
         if (titleInput) titleInput.value = name;
         if (grid) grid.setAttribute("aria-label", name + " spreadsheet");
+        currentPostgresTableName = isUntitledFile && postgresName === automaticPostgresName ? "" : postgresName;
         document.title = name + " · Acme Inc.";
         closeContextPanel();
-        showToast("Table settings applied", name + " remains connected to its existing PostgreSQL table.");
+        showToast("Table settings applied", name + " remains connected to PostgreSQL table " + (currentPostgresTableName || automaticPostgresName) + ".");
       });
     }
 
@@ -2185,7 +2378,7 @@
       grid.setAttribute("aria-rowcount", String(sheetCapacity + 2));
       grid.setAttribute("data-sheet-capacity", String(sheetCapacity));
       query("[data-row-capacity]").textContent = sheetCapacity.toLocaleString() + " rows";
-      query("[data-sheet-summary]").textContent = "248 records · " + sheetCapacity.toLocaleString() + " rows · " + namedSheetColumns.filter(Boolean).length + " named columns";
+      updateSheetSummary();
       showToast("Rows added", amount.toLocaleString() + " blank rows were added to the bottom of the sheet.");
     });
   }
@@ -3259,7 +3452,7 @@
     initFileExplorer();
     initDepartmentBrowse();
     initObjectSearch();
-    initTableBuilder();
+    initUntitledFileState();
     buildSpreadsheetGrid();
     initGrid();
     initGridReordering();

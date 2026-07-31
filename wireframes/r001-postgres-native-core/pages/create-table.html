@@ -8,16 +8,16 @@
   <link rel="stylesheet" href="../lib/base/reset.css">
   <link rel="stylesheet" href="../lib/base/base.css">
   <link rel="stylesheet" href="../lib/icons.css">
-  <link rel="stylesheet" href="../lib/app.css?v=r005-round3">
+  <link rel="stylesheet" href="../lib/app.css">
 </head>
 <body>
   <header class="focused-topbar">
-    <a class="app-logo" href="./browse.html" aria-label="Acme Inc. files">
+    <a class="app-logo" href="../workflows.html">
       <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
-      <span>Acme Inc.</span>
+      <span>Tabular</span>
     </a>
-    <span class="app-meta"><span data-department-name>Operations</span> folder</span>
-    <a class="app-button app-button--ghost app-button--icon" href="./browse.html?folder=operations" data-department-return aria-label="Close table builder">
+    <span class="app-meta">Operations · public</span>
+    <a class="app-button app-button--ghost app-button--icon" href="./browse.html" aria-label="Close table builder">
       <span data-wf-icon="close"></span>
     </a>
   </header>
@@ -25,9 +25,7 @@
   <main class="builder-page">
     <div class="builder-wrap">
       <nav class="crumbs" aria-label="Breadcrumb">
-        <a href="./browse.html" aria-label="Files">Files</a>
-        <span data-wf-icon="chevron-right"></span>
-        <a href="./browse.html?folder=operations" data-department-return data-department-name>Operations</a>
+        <a href="./browse.html">public</a>
         <span data-wf-icon="chevron-right"></span>
         <strong>New table</strong>
       </nav>
@@ -35,7 +33,7 @@
       <section class="builder-head">
         <p class="app-eyebrow">Create table</p>
         <h1>Create a table</h1>
-        <p class="wf-copy">Start with familiar fields. This table will be placed in <span data-department-name>Operations</span>, while Tabular creates the real PostgreSQL structure behind it.</p>
+        <p class="wf-copy">Start with familiar fields. Tabular will create a real PostgreSQL table with safe defaults you can refine later.</p>
       </section>
 
       <form data-table-builder novalidate>
@@ -44,7 +42,7 @@
             <section class="builder-card">
               <div class="builder-card__header">
                 <h2>Table identity</h2>
-                <span class="app-badge">Folder: <span data-department-name>Operations</span></span>
+                <span class="app-badge">public schema</span>
               </div>
               <div class="builder-card__body">
                 <div class="builder-form-grid">
@@ -152,7 +150,7 @@
             </section>
 
             <div class="builder-actions">
-              <a class="app-button app-button--secondary" href="./browse.html?folder=operations" data-department-return>Cancel</a>
+              <a class="app-button app-button--secondary" href="./browse.html">Cancel</a>
               <button class="app-button" type="submit" data-create-table>
                 <span data-wf-icon="table"></span> Create table
               </button>
@@ -200,7 +198,7 @@
     </div>
   </main>
 
-  <script src="../lib/icons.js?v=r005-round3"></script>
-  <script src="../lib/app.js?v=r005-round3"></script>
+  <script src="../lib/icons.js"></script>
+  <script src="../lib/app.js"></script>
 </body>
 </html>

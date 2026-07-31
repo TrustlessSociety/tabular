@@ -2,7 +2,16 @@
 
 ## State
 
-Research is planned and has not started. This file defines the bounded queue and evidence method for user review before source acquisition.
+Research started on 2026-07-23 and the original R-001 through R-019 queue
+completed on 2026-07-24. The user then accepted a Mathesar-like,
+PostgreSQL-native direction and requested FRUI-inspired field and format types.
+R-020, the computed-column/FRUI risk follow-up R-021, and the approved-wireframe
+reconciliation R-022 are complete. Their
+result supersedes the generic cell-row recommendation, invalidates P-001 as
+written, and resolves G-026 through G-028. Formula compatibility is deferred;
+current imports preserve exact values only. Source research alone did not prove
+runtime behavior; the retained Proof loop later proved the bounded runtime
+contracts recorded in `proofs.md`.
 
 ## Evidence Protocol
 
@@ -37,26 +46,33 @@ Preserve negative evidence, dead ends, and patterns rejected for licensing, coup
 
 | ID | Source | Focus | Status | Affected Gaps |
 | --- | --- | --- | --- | --- |
-| R-001 | `nocodb/nocodb` | Package architecture; metadata and row storage; table/field/view/relation models; API, access, sync, import, tests, migrations, and extension patterns | Pending | G-002 through G-012, G-014, G-016 |
-| R-002 | `gristlabs/grist-core` | Document/table/column/record models; formula/dependency engine; views; permissions; revisions; collaboration; import/export; UI and test contracts | Pending | G-002 through G-010, G-013 through G-016 |
-| R-003 | `gristlabs/grist-static` | Static/runtime boundary, reuse of Grist concepts, packaging and persistence constraints, and meaningful contrast with Grist Core | Pending | G-002, G-003, G-005, G-010, G-013, G-014, G-016 |
-| R-004 | `baserow/baserow` | Backend/frontend boundaries; field types; tables/rows/views; plugin model; permissions; jobs; APIs; collaboration; migrations; tests | Pending | G-002 through G-012, G-014, G-016 |
-| R-005 | Stackpress `.agents` | Idea/schema semantics; generated runtime; SQL/storage; events; view/admin/API/MCP surfaces; sessions; plugin lifecycle; verification contracts | Pending | G-001 through G-012, G-014 through G-019 |
+| R-001 | `nocodb/nocodb` | Package architecture; metadata and row storage; table/field/view/relation models; API, access, sync, import, tests, migrations, and extension patterns | Complete for the bounded comparison | G-002 through G-012, G-014, G-016 |
+| R-002 | `gristlabs/grist-core` | Document/table/column/record models; formula/dependency engine; views; permissions; revisions; collaboration; import/export; UI and test contracts | Complete for the bounded comparison | G-002 through G-010, G-013 through G-016 |
+| R-003 | `gristlabs/grist-static` | Static/runtime boundary, reuse of Grist concepts, packaging and persistence constraints, and meaningful contrast with Grist Core | Complete; portability case classified | G-002, G-003, G-005, G-010, G-013, G-014, G-016 |
+| R-004 | `baserow/baserow` | Backend/frontend boundaries; field types; tables/rows/views; plugin model; permissions, jobs, APIs, collaboration, migrations, and tests | Complete for the bounded comparison | G-002 through G-012, G-014, G-016 |
+| R-005 | Stackpress `.agents` | Idea/schema semantics; generated runtime; SQL/storage; events, view/admin/API/MCP surfaces, sessions, plugin lifecycle, and verification contracts | Complete; retained runtime uncertainties proved within `proofs.md` limits | G-001 through G-012, G-014 through G-019 |
+| R-016 | Google Sheets, Drive, SpreadsheetML, CSV, PostgreSQL official contracts | Formula/value/format/note/comment extraction, file-format boundaries, large-import reads, and generic JSON storage constraints | Historical rich-fidelity research complete; value-only fixtures verified by P-006; P-003 deferred | G-002 through G-004, G-006, G-010, G-014, G-016, G-021 through G-025 |
 
 ## Cross-Source Synthesis Queue
 
 | ID | Topic | Required output | Status | Affected Gaps |
 | --- | --- | --- | --- | --- |
-| R-006 | Domain and data model | Semantic model map with source-specific differences and target implications | Pending | G-002 through G-005 |
-| R-007 | Persistence and dynamic schema | Strategy comparison covering storage, queries, indexes, migrations, and revisions | Pending | G-003, G-006, G-012, G-015 |
-| R-008 | Product capability and workflow | Evidence-backed audience, project-shape, first-slice, user/admin flow, auth, surface, and deferred-capability options | Pending | G-001, G-007 through G-011, G-016 through G-019 |
-| R-009 | UI and grid interaction | Pattern comparison for scale, editing, keyboard, clipboard, views, accessibility, and browser behavior | Pending | G-005, G-009, G-015 |
-| R-010 | Security and collaboration | Tenancy, permissions, sharing, audit, concurrency, history, and recovery matrix | Pending | G-007, G-008, G-016 |
-| R-011 | Extensibility and interfaces | API, webhook, automation, plugin, import/export, and surface-boundary matrix | Pending | G-010, G-011, G-012 |
-| R-012 | Stackpress capability fit | Native/adapt/application/framework-gap mapping with exact Stackpress evidence | Pending | G-003 through G-012, G-015, G-016 |
-| R-013 | Snippet catalog | Minimal, provenance-rich excerpts or pseudocode grouped by research question | Pending | All material Gaps |
-| R-014 | Proof selection | Keep, revise, invalidate, or defer candidate Proofs based on remaining uncertainty | Pending | G-003, G-006, G-008, G-009, G-012, G-015 |
-| R-015 | Final synthesis | Recommended starting product and architecture, app-discovery handoff, tradeoffs, rejected alternatives, risks, and open decisions | Pending | G-001 through G-020 |
+| R-006 | Domain and data model | Semantic model map with source-specific differences and target implications | Historical generic model retained; canonical recommendation superseded by R-020 and verified by P-007 | G-002 through G-005, G-021 through G-023 |
+| R-007 | PostgreSQL spreadsheet persistence | Compare cell-row, row-document, bounded-block, indexes, revisions, and grid/query costs; reject per-department schema and whole-workbook blobs | Historical comparison complete; cell-row recommendation superseded by D-010 | G-003, G-006, G-012, G-015, G-023 |
+| R-008 | Product capability and workflow | Evidence-backed first-slice, user/admin flow, auth, surface, and deferred-capability options for internal staff | Complete; Q-001 through Q-016 accepted the replacement discovery boundary | G-001, G-007 through G-011, G-016 through G-019 |
+| R-009 | UI and grid interaction | Pattern comparison for scale, editing, keyboard, clipboard, views, accessibility, and browser behavior | Research complete; P-002 proved the bounded contract | G-005, G-009, G-015 |
+| R-010 | Security and collaboration | Tenancy, permissions, sharing, audit, concurrency, history, and recovery matrix | Research and P-004/P-005 evidence complete; exact product policy remains | G-007, G-008, G-016 |
+| R-011 | Extensibility and interfaces | API, webhook, automation, plugin, import/export, and surface-boundary matrix | Research complete; external surfaces deferred | G-010, G-011, G-012 |
+| R-012 | Stackpress capability fit | Native/adapt/application/framework-gap mapping with exact Stackpress evidence | Updated by R-020; applicable P-002 through P-007 evidence complete | G-003 through G-012, G-015, G-016 |
+| R-013 | Snippet catalog | Minimal, provenance-rich excerpts or pseudocode grouped by research question | Complete; 11 representative entries recorded | All material Gaps |
+| R-014 | Proof selection | Keep, revise, invalidate, or defer candidate Proofs based on remaining uncertainty | Complete: P-001 invalidated, P-003 deferred, and five applicable Proofs proved | G-003, G-006, G-008, G-009, G-012, G-015 |
+| R-015 | Final synthesis | Recommended starting product and architecture, app-discovery handoff, tradeoffs, rejected alternatives, risks, and open decisions | Complete; refreshed after R-020/R-021, Proofs, and the accepted grill | G-001 through G-025 |
+| R-017 | Import fidelity | Google Sheets/XLSX/CSV matrix, loss-aware intermediate representation, preview/report contract, and explicit unsupported-feature policy | Rich-fidelity research preserved; current value-only behavior verified by P-006 | G-010, G-014, G-021, G-024, G-025 |
+| R-018 | Formula compatibility | Versioned Google function inventory; parser/AST and engine candidates; mapping rules; dependency, array, error, locale, timezone, volatile, and external-function semantics; license review | Historical inventory complete; deferred with P-003 to a later formula spec | G-004, G-006, G-014, G-022 |
+| R-019 | Downstream-index readiness | Specify only stable IDs, revisions, provenance, permissions, and event/outbox provisions; prevent vector concerns from shaping current canonical storage | Research complete; detailed Qdrant research deliberately deferred | G-006, G-016 |
+| R-020 | PostgreSQL-native product direction | Compare Mathesar, Supabase Studio, NocoDB, Directus, Baserow, Stackpress, and FRUI for direct-table mapping, semantic fields/formats, staged edits, drafts, views, and product scope | Complete; current direction recorded; later reconciled by R-021 | G-001 through G-006, G-008 through G-012, G-014 through G-016, G-018, G-021 through G-028 |
+| R-021 | Computed columns and FRUI support risk | Verify PostgreSQL generated/view boundaries; classify pinned FRUI fields and formats by implementation risk; reconcile G-028 | Complete; G-026 through G-028 accepted | G-004, G-006, G-012, G-014, G-015, G-026 through G-028 |
+| R-022 | Approved wireframe reconciliation | Apply the accepted r001–r005 file explorer, grid, column, command, settings, and import workflow to the research ledger without promoting simulated behavior to production truth | Complete; D-015 records the accepted UX direction and its retained policy boundaries | G-001, G-004, G-005, G-009, G-010, G-018 |
 
 ## Comparison Tracks
 
@@ -64,14 +80,16 @@ Use these tracks across sources so the final packet is comparative rather than a
 
 1. Audience, project shape, product slice, user/admin flows, auth/roles, and custom surface needs.
 2. Product and tenancy hierarchy.
-3. Table, field, record, cell/value, relation, and view semantics.
-4. Dynamic-schema and physical-storage strategy.
-5. Type, formula, computed-value, dependency, and validation systems.
+3. Workbook, sheet, row/column coordinate, cell/value, formula, comment/note, view, import, provenance, and revision semantics.
+4. Cell-row, row-document, bounded-block, and hybrid PostgreSQL storage strategies.
+5. Historical Google Sheets formula compatibility evidence retained for a
+   later spec; no current formula runtime.
 6. Query, filter, sort, group, pagination, index, and aggregation behavior.
 7. Revision, migration, transaction, concurrency, undo, history, and recovery behavior.
 8. Permissions, sharing, authorization enforcement, audit, and secret boundaries.
 9. Grid rendering, editing, selection, keyboard, clipboard, virtualization, and accessibility.
-10. Import, export, attachment, API, webhook, automation, and external integration behavior.
+10. One-time Google Sheets/XLSX/CSV exact-value preview, typed staging, commit,
+    retry, rollback, warnings, and provenance.
 11. Plugin, extension, module, package, event, and lifecycle ownership.
 12. Testing strategies, fixtures, failure modes, observability, jobs, cache, and deployment assumptions.
 13. Stackpress translation and the minimum evidence needed for a later implementation spec.
@@ -90,4 +108,28 @@ Capture adjacent material only when it changes a decision or Proof disposition:
 
 ## Findings Ledger
 
-No findings have been recorded. Add evidence only after the setup review gate in `status.md` is cleared.
+- [Pinned sources, licenses, inspected paths, and bounded inventory conclusions](source-inventory.md)
+- [Current PostgreSQL-native direction, competitor disposition, FRUI-inspired field/format registries, and persistent drafts](postgresql-native-product-direction-findings.md)
+- [Approved r001–r005 wireframe direction and the Gaps it narrows](approved-wireframe-reconciliation.md)
+- [PostgreSQL computed columns, low-friction FRUI-inspired support, and risk boundaries](computed-columns-and-frui-support-findings.md)
+- [Foundational cross-source findings and Stackpress implications](initial-findings.md)
+- [Import, formula, PostgreSQL, and future-indexing-boundary findings](import-formula-findings.md)
+- [Basic-format, note/comment, parser, retry/abandon, warning, and unsupported-feature contract](import-fidelity-contract.md)
+- [Versioned Google Sheets and HyperFormula compatibility matrix](formula-compatibility-matrix.md)
+- [PostgreSQL cell-row, row-document, bounded-block, and whole-document comparison](postgresql-storage-comparison.md)
+- [Security, collaboration, history, recovery, and Stackpress ownership findings](security-collaboration-findings.md)
+- [UI/grid interaction, clipboard, keyboard, accessibility, and P-002 findings](grid-interaction-findings.md)
+- [Semantic domain and Stackpress capability ownership model](domain-capability-model.md)
+- [Interfaces, extensions, background jobs, outbox, and operations findings](interfaces-and-operations-findings.md)
+- [Product discovery handoff and first-slice recommendation](product-discovery-handoff.md)
+- [Representative pseudocode-first snippet catalog](snippet-catalog.md)
+- [Final recommendation, pattern disposition, Proof selection, risks, and handoff](final-synthesis.md)
+
+The Mathesar-like direction, value-only import, low-friction registry,
+FRUI-as-inspiration boundary, metadata/draft direction, per-row unstructured
+JSON, PostgreSQL-native authority, extension surfaces, and complete first slice
+are accepted. Formula compatibility and policy-gated field families are
+assigned to later specs. The research, Proof, and grill loops are complete, and
+accepted reusable truth is promoted into shared context. No research or Proof
+finding authorizes implementation without a separate approved implementation
+spec.

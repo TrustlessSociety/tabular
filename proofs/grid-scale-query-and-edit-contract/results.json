@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-07-31T09:31:03.482Z",
+  "node": "v26.3.0",
+  "proof": "P-002",
+  "disposition": "proved",
+  "database": "PGlite / PostgreSQL 17.5 semantics",
+  "signals": {
+    "realRows": 100000,
+    "realColumns": 200,
+    "boundedWindow": "40 rows by 20 columns",
+    "payloadUnder100Kb": true,
+    "keysetWindowsDoNotOverlap": true,
+    "staleCursorRejectedAfterMutation": true,
+    "indexedFilterAndCursorPlan": true,
+    "atomicBatchRollback": true,
+    "successfulBatchHasOneAction": true,
+    "keyPoliciesExplicit": true,
+    "logicalSelectionSurvivesUnmount": true,
+    "typedMultiMimeClipboard": true
+  },
+  "browser": {
+    "status": "proved",
+    "capturedAt": "2026-07-24T15:48:27.801Z",
+    "playwrightSession": "tabular-p002",
+    "ariaRowCount": 100001,
+    "ariaColumnCount": 200,
+    "mountedGridCells": 96,
+    "tabbableGridCells": 1,
+    "keyboardJump": "R1:C1 to R100000:C200 with Control+End",
+    "editState": "Final draft saved at R100000:C200",
+    "clipboardFormats": [
+      "text/plain",
+      "text/html",
+      "application/x-tabular+json"
+    ],
+    "consoleErrorsAfterReload": 0,
+    "visualInspection": "Passed; final viewport shows the bounded last window, selected draft cell, mounted count, and typed clipboard state without overlap or clipping that blocks review.",
+    "evidence": [
+      "output/playwright/initial-accessibility-snapshot.yml",
+      "output/playwright/edit-mode-accessibility-snapshot.yml",
+      "output/playwright/draft-saved-accessibility-snapshot.yml",
+      "output/playwright/final-accessibility-snapshot.yml",
+      "output/playwright/p002-final-grid.png"
+    ],
+    "limitation": "The browser accessibility tree and full keyboard flow were checked, but an interactive native VoiceOver session was not run."
+  }
+}

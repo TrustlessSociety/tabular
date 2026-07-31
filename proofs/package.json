@@ -1,0 +1,19 @@
+{
+  "name": "tabular-spec-00001-proofs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 */proof.test.mjs",
+    "proof:p002": "node --test grid-scale-query-and-edit-contract/proof.test.mjs",
+    "proof:p004": "node --test concurrent-edit-and-revision-boundary/proof.test.mjs",
+    "proof:p005": "node --test cross-surface-capability-and-authorization-parity/proof.test.mjs",
+    "proof:p006": "node --test import-transaction-and-failure-recovery/proof.test.mjs",
+    "proof:p007": "node --test postgresql-native-table-metadata-draft-boundary/proof.test.mjs",
+    "serve:p002": "node grid-scale-query-and-edit-contract/server.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.15",
+    "exceljs": "4.4.0",
+    "stackpress": "0.10.8"
+  }
+}

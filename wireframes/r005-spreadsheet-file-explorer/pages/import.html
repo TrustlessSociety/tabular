@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../lib/base/reset.css">
   <link rel="stylesheet" href="../lib/base/base.css">
   <link rel="stylesheet" href="../lib/icons.css">
-  <link rel="stylesheet" href="../lib/app.css?v=r005-round3">
+  <link rel="stylesheet" href="../lib/app.css?v=r005-round13">
 </head>
 <body>
   <header class="focused-topbar">
@@ -33,8 +33,6 @@
       </nav>
 
       <section class="builder-head">
-        <p class="app-eyebrow">One-time import</p>
-        <h1>Bring values into <span data-department-name>Operations</span></h1>
         <p class="wf-copy">Review the source, inferred fields, and value fidelity before creating a table in this folder.</p>
       </section>
 
@@ -181,11 +179,15 @@
               <div data-import-ready>
                 <div class="builder-form-grid">
                   <label class="app-field">
+                    <span class="app-label">File name</span>
+                    <input class="app-input" value="Q3 orders" aria-label="Imported file name">
+                  </label>
+                  <label class="app-field">
                     <span class="app-label">Table name</span>
                     <input class="app-input app-code" value="q3_orders" aria-label="Imported table name">
                   </label>
                   <label class="app-field">
-                    <span class="app-label">Department</span>
+                    <span class="app-label">Folder</span>
                     <select class="app-select" aria-label="Folder for imported table"><option data-department-name>Operations</option></select>
                   </label>
                 </div>

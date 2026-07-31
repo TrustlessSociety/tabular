@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../lib/base/reset.css">
   <link rel="stylesheet" href="../lib/base/base.css">
   <link rel="stylesheet" href="../lib/icons.css">
-  <link rel="stylesheet" href="../lib/app.css?v=r005-round3">
+  <link rel="stylesheet" href="../lib/app.css?v=r005-round10">
 </head>
 <body>
   <div class="app-shell" data-app-shell data-nav-open="false">
@@ -41,7 +41,7 @@
           <div class="sheet-menu">
             <button type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" data-sheet-menu-trigger="file">File</button>
             <div class="sheet-menu__panel" role="menu" aria-label="File" data-sheet-menu="file" hidden>
-              <a role="menuitem" href="./create-table.html?folder=operations" data-department-create><span data-wf-icon="add"></span><span>New</span><kbd>⌘N</kbd></a>
+              <a role="menuitem" href="./table.html?new=1&amp;folder=operations&amp;table=untitled-file" data-department-create><span data-wf-icon="add"></span><span>New</span><kbd>⌘N</kbd></a>
               <a role="menuitem" href="./browse.html?folder=operations" data-department-return><span data-wf-icon="table"></span><span>Open</span><kbd>⌘O</kbd></a>
               <a role="menuitem" href="./import.html?folder=operations" data-department-import><span data-wf-icon="import"></span><span>Import</span></a>
               <button type="button" role="menuitem" data-sheet-command="make-copy"><span data-wf-icon="copy"></span><span>Make a copy</span></button>
@@ -386,6 +386,41 @@
                 </select>
                 <span class="app-help">Controls how people enter and validate values.</span>
               </label>
+            </div>
+          </section>
+
+          <section class="panel-section" data-relation-field-settings hidden>
+            <h3>Relation</h3>
+            <div class="panel-grid">
+              <label class="app-field">
+                <span class="app-label">File</span>
+                <span class="relation-file-picker" data-relation-file-picker>
+                  <input class="app-input relation-file-picker__input" type="search" autocomplete="off" placeholder="Search files" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="relation-file-options" data-relation-file-search>
+                  <input type="hidden" value="finance/invoices" data-column-relation-target>
+                  <span class="relation-file-picker__options" id="relation-file-options" role="listbox" hidden data-relation-file-options>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/customer-orders" data-relation-file-label="Customer orders" data-relation-file-folder="Operations"><span>Customer orders</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/inventory" data-relation-file-label="Inventory" data-relation-file-folder="Operations"><span>Inventory</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/vendors" data-relation-file-label="Vendors" data-relation-file-folder="Operations"><span>Vendors</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/stock-movements" data-relation-file-label="Stock movements" data-relation-file-folder="Operations"><span>Stock movements</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/purchase-requests" data-relation-file-label="Purchase requests" data-relation-file-folder="Operations"><span>Purchase requests</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/invoices" data-relation-file-label="Invoices" data-relation-file-folder="Finance"><span>Invoices</span><small>Finance</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/expenses" data-relation-file-label="Expenses" data-relation-file-folder="Finance"><span>Expenses</span><small>Finance</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/budgets" data-relation-file-label="Budgets" data-relation-file-folder="Finance"><span>Budgets</span><small>Finance</small></button>
+                    <span class="relation-file-picker__empty" hidden data-relation-file-empty>No files found.</span>
+                  </span>
+                </span>
+                <span class="app-help">Search any available table file that can be connected to this sheet.</span>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Display format</span>
+                <input class="app-input app-code" type="text" value="{invoice_number} — {customer_name}" spellcheck="false" data-column-relation-field-template>
+                <span class="app-help">Used for options in the relation picker while editing a cell. For example: <span class="app-code">{first_name} {last_name}</span>.</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-grid">
               <label class="app-field">
                 <span class="app-label">Format</span>
                 <select class="app-select" data-column-panel-format>
@@ -400,6 +435,13 @@
                 </select>
                 <span class="app-help">Changes display only, not the stored value.</span>
               </label>
+              <div class="panel-format-detail" data-related-record-format-settings hidden>
+                <label class="app-field">
+                  <span class="app-label">Display format</span>
+                  <input class="app-input app-code" type="text" value="{invoice_number}" spellcheck="false" data-column-related-record-template>
+                  <span class="app-help">Template for the connected record in this sheet outside input mode. It is independent from the relation picker format.</span>
+                </label>
+              </div>
             </div>
           </section>
 
@@ -414,6 +456,11 @@
           <details class="panel-disclosure">
             <summary>Advanced</summary>
             <div class="panel-disclosure__body">
+              <label class="app-field">
+                <span class="app-label">PostgreSQL column name</span>
+                <input class="app-input app-code" type="text" value="email" pattern="[a-z][a-z0-9_]*" autocapitalize="none" autocomplete="off" spellcheck="false" data-column-postgres-name>
+                <span class="app-help">Lowercase letters, numbers, and underscores. This is the stored PostgreSQL name, separate from the spreadsheet label.</span>
+              </label>
               <label class="app-field">
                 <span class="app-label">Storage type</span>
                 <select class="app-select" data-column-storage>
@@ -433,7 +480,7 @@
               </label>
               <div class="app-alert">
                 <span data-wf-icon="database"></span>
-                <span>Changing storage may require a cast and a review of existing values.</span>
+                <span>Changing the PostgreSQL name or storage may require a migration and a review of existing values.</span>
               </div>
             </div>
           </details>
@@ -451,16 +498,12 @@
                 <span class="app-label">Folder</span>
                 <input class="app-input" type="text" value="Operations" data-table-settings-folder readonly>
               </label>
+              <label class="app-field">
+                <span class="app-label">PostgreSQL table name</span>
+                <input class="app-input app-code" type="text" value="customer_orders" autocomplete="off" spellcheck="false" data-table-settings-postgres-name>
+                <span class="app-help">Stored in lower_case with underscores.</span>
+              </label>
             </div>
-          </section>
-
-          <section class="panel-section">
-            <h3>Table details</h3>
-            <dl class="row-detail">
-              <div class="row-detail__field"><dt>PostgreSQL table</dt><dd class="app-code" data-table-settings-storage>public.customer_orders</dd></div>
-              <div class="row-detail__field"><dt>Records</dt><dd>248</dd></div>
-              <div class="row-detail__field"><dt>Columns</dt><dd>7 named columns</dd></div>
-            </dl>
           </section>
         </form>
 
@@ -498,6 +541,6 @@
   </div>
 
   <script src="../lib/icons.js?v=r005-round3"></script>
-  <script src="../lib/app.js?v=r005-round3"></script>
+  <script src="../lib/app.js?v=r005-round10"></script>
 </body>
 </html>

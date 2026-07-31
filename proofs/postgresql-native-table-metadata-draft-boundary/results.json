@@ -1,0 +1,52 @@
+{
+  "capturedAt": "2026-07-31T09:31:05.501Z",
+  "node": "v26.3.0",
+  "proof": "P-007",
+  "disposition": "proved",
+  "database": "PostgreSQL 17.5 on aarch64-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "signals": {
+    "spreadsheetCreatesRealTable": true,
+    "headerDefaultsToText": true,
+    "fieldAndFormatMetadataIndependent": true,
+    "existingTableOpenedWithoutConversion": true,
+    "singleCompositeAndAbsentKeysClassified": true,
+    "foreignKeyIntrospected": true,
+    "incompleteDraftStaysOutsideTarget": true,
+    "validDraftPromotesAtomically": true,
+    "requiredCheckUniqueAndTriggerErrorsMapToCells": true,
+    "oidAndAttnumIdentitySurviveRename": true,
+    "dropTypeAndAddDriftDetected": true,
+    "failedDdlRollsBack": true,
+    "grantsAndForcedRlsPreserved": true,
+    "editorCannotWidenSchemaOrCrossRls": true
+  },
+  "driftEvents": [
+    {
+      "kind": "table-renamed",
+      "from": "workspace.drift_fixture",
+      "to": "workspace.drift_renamed"
+    },
+    {
+      "kind": "column-renamed",
+      "columnId": "64290878-a1f9-4be9-92e5-951d1127b111",
+      "from": "old_name",
+      "to": "title"
+    },
+    {
+      "kind": "column-type-changed",
+      "columnId": "4baf9ff4-acda-4a85-9532-241aedea42f7",
+      "from": "integer",
+      "to": "bigint"
+    },
+    {
+      "kind": "column-dropped",
+      "columnId": "73d97b22-3cc0-4bbf-a335-3ec4c6492c29"
+    },
+    {
+      "kind": "column-added",
+      "columnId": "8c4851d1-7430-427d-99bc-a6b4508f54d6",
+      "column": "fresh"
+    }
+  ],
+  "limitation": "PGlite proves PostgreSQL catalog/DDL/transaction/RLS semantics in one process; it does not prove PostgreSQL 18 server connections, pool behavior, external DDL races, or large-schema performance."
+}
