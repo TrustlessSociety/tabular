@@ -1,0 +1,60 @@
+{
+  "status": "proved",
+  "capturedAt": "2026-08-01T04:32:52.000Z",
+  "browser": "Playwright Chromium via @playwright/cli",
+  "viewports": [
+    { "width": 1280, "height": 720, "journey": "explorer, sheet, draft error, relation settings, context menu, import, R-003 virtualized range selection" },
+    { "width": 390, "height": 844, "journey": "imported sheet, internal grid overflow, and retained R-003 selection" }
+  ],
+  "signals": {
+    "desktopExplorerAndGridRendered": true,
+    "typedCellEditorRendered": true,
+    "invalidValueRetainedAsDraft": true,
+    "errorPopoverAndStatusRendered": true,
+    "independentRelationAndDisplayFormatsRendered": true,
+    "mouseAndKeyboardContextMenusRendered": true,
+    "viewFreezeZoomHierarchyRendered": true,
+    "fontPaletteAndBorderChoicesRendered": true,
+    "threeStepImportReviewed": true,
+    "importFailureRetryProgressAndAbandonRendered": true,
+    "importedSheetMatchesReviewedRowsAndFields": true,
+    "transientCellErrorsScopedByFile": true,
+    "narrowBodyHasNoHorizontalOverflow": true,
+    "narrowGridOwnsHorizontalOverflow": true,
+    "r003TabulatorVerticalVirtualGridRendered": true,
+    "r003LogicalRangeSurvivesUnmountedEndpoint": true,
+    "r003LogicalRangeRestoredAfterRendererReset": true,
+    "r003MixedSelectionToolbarState": true,
+    "r003LogicalAriaCountsAndMountedIndices": true,
+    "r003NarrowGridOwnsHorizontalOverflow": true,
+    "consoleErrors": 0,
+    "consoleWarnings": 0
+  },
+  "screenshots": [
+    "output/playwright/desktop-explorer.png",
+    "output/playwright/desktop-sheet.png",
+    "output/playwright/invalid-draft.png",
+    "output/playwright/relation-settings.png",
+    "output/playwright/context-menu.png",
+    "output/playwright/presentation-choices.png",
+    "output/playwright/import-confirmation.png",
+    "output/playwright/import-recovery.png",
+    "output/playwright/imported-sheet.png",
+    "output/playwright/narrow-sheet.png",
+    "output/playwright/r003-virtual-selection.png",
+    "output/playwright/r003-narrow-selection.png"
+  ],
+  "r003": {
+    "renderer": "tabulator-tables 6.5.0",
+    "selectedRange": { "rows": 899, "columns": 3, "cells": 2697 },
+    "mountedRowsAtFarEndpoint": 60,
+    "anchorMountedAtFarEndpoint": false,
+    "focusMountedAtFarEndpoint": true,
+    "selectionRestoredAfterDataReset": true,
+    "ariaRowCount": 1001,
+    "ariaColumnCount": 11,
+    "horizontalVirtualization": "Not enabled; Tabulator documents that mode as experimental with column manipulation.",
+    "nativeAssistiveTechnology": "Not run; retained as production-target validation."
+  },
+  "nativeAssistiveTechnology": "Not run; retained as production-target validation."
+}

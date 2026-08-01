@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tabular workflows · Saved views and system activity</title>
+  <link rel="stylesheet" href="./lib/base/tokens.css">
+  <link rel="stylesheet" href="./lib/base/reset.css">
+  <link rel="stylesheet" href="./lib/base/base.css">
+  <link rel="stylesheet" href="./lib/icons.css">
+  <link rel="stylesheet" href="./lib/app.css?v=r005-round3">
+</head>
+<body>
+  <header class="workflow-header">
+    <div class="workflow-header__inner">
+      <a class="app-logo" href="./workflows.html" aria-label="Tabular workflow home">
+        <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+        <span>Tabular</span>
+      </a>
+      <span class="app-badge">Files · Views · Activity</span>
+    </div>
+  </header>
+
+  <main class="workflow-main">
+    <section class="workflow-intro">
+      <p class="app-eyebrow">Workflow index</p>
+      <h1 class="wf-title">Find a spreadsheet, work in the sheet, and monitor shared operations.</h1>
+      <p class="wf-copy">Start from folders, open a spreadsheet, save reusable views, or inspect background work and recovery.</p>
+    </section>
+
+    <section class="workflow-grid" aria-label="Available workflows">
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="grid"></span></div>
+        <h2>Browse files</h2>
+        <p>Start with Operations and Finance, then open one of the spreadsheets inside each folder.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/browse.html">Browse files <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="table"></span></div>
+        <h2>New file</h2>
+        <p>Open a blank Untitled File in Operations, then rename it and add columns directly in the spreadsheet.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/table.html?new=1&amp;folder=operations&amp;table=untitled-file">New file <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="rows"></span></div>
+        <h2>Work in the spreadsheet</h2>
+        <p>Use familiar menus and formatting controls, type into blank rows, and right-click cells, rows, or columns for focused actions.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/table.html?folder=operations&amp;table=customer-orders">Open table <span data-wf-icon="arrow-right"></span></a>
+          <a class="app-button app-button--secondary" href="./pages/table.html?folder=operations&amp;table=customer-orders&amp;state=error">Open cell error</a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="import"></span></div>
+        <h2>Import exact values</h2>
+        <p>Review inferred fields and fidelity warnings before committing values from CSV, XLSX, or Google Sheets.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/import.html?folder=operations">Review import <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="table"></span></div>
+        <h2>Open or create a view</h2>
+        <p>Review Personal and Shared views, open one in a new tab, or create a view from the current table state.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/table.html?folder=operations&amp;table=customer-orders&amp;dialog=views">Open views <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="user"></span></div>
+        <h2>Review publication access</h2>
+        <p>See how an editor can keep a personal view without publishing a shared arrangement.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/table.html?folder=operations&amp;table=customer-orders&amp;role=editor&amp;dialog=create">Open as editor <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="history"></span></div>
+        <h2>Monitor system activity</h2>
+        <p>Review active work, queued row-order maintenance, recent completion, and failures.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/system-activity.html">View activity <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="alert"></span></div>
+        <h2>Recover a failed import</h2>
+        <p>Inspect attempt history and choose whether to review and retry or acknowledge the failure.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/system-activity.html?job=import-q3">Open dead letter <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+    </section>
+
+    <footer class="workflow-footer">
+      <span>2 folders · 8 spreadsheets</span>
+      <span>8 workflow starting points</span>
+    </footer>
+  </main>
+
+  <script src="./lib/icons.js?v=r005-round3"></script>
+</body>
+</html>

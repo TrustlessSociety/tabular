@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tabular P-001</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-bar">
+      <button class="brand" id="brand-home" type="button" aria-label="Open Acme Inc. explorer">
+        <span class="brand-mark" aria-hidden="true">T</span>
+        <span>Acme Inc.</span>
+      </button>
+      <label class="search-box">
+        <span aria-hidden="true">⌕</span>
+        <input id="file-search" type="search" placeholder="Search files" autocomplete="off" />
+      </label>
+      <button class="account" type="button" aria-label="Account menu">CB</button>
+    </header>
+
+    <main id="app" tabindex="-1">
+      <section class="loading" aria-live="polite">Opening Tabular…</section>
+    </main>
+
+    <div id="overlay-root" aria-live="polite"></div>
+    <div id="status" class="sr-status" role="status" aria-live="polite"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

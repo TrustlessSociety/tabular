@@ -1,0 +1,487 @@
+{
+  "capturedAt": "2026-08-01T09:34:20.552Z",
+  "node": "v26.3.0",
+  "proof": "Spec 00002 P-002",
+  "disposition": "proved-with-visible-gaps",
+  "runtime": {
+    "stackpress": "0.10.8",
+    "adapter": "@stackpress/inquire-pglite 0.10.8",
+    "pglite": "0.3.15",
+    "event": "tabular.capability"
+  },
+  "dataFeatureCoverage": [
+    {
+      "id": "D-001",
+      "chapter": "catalog-system-schema",
+      "status": "guide",
+      "evidence": "Catalog-driven tables/views and read-only identity policy."
+    },
+    {
+      "id": "D-002",
+      "chapter": "catalog-system-schema",
+      "status": "demonstrated",
+      "evidence": "Version 1 to 2 transactional migration, rollback, and idempotent re-entry."
+    },
+    {
+      "id": "D-003",
+      "chapter": "catalog-reconciliation",
+      "status": "demonstrated-with-prior-evidence",
+      "evidence": "P-002 rename drift plus Frozen Spec 00001 P-007 rename/drop/type reconciliation."
+    },
+    {
+      "id": "D-004",
+      "chapter": "unstructured-promotion",
+      "status": "demonstrated",
+      "evidence": "Collision-safe install, edit/copy/export, failed promotion rollback, and successful promotion."
+    },
+    {
+      "id": "D-005",
+      "chapter": "identity-capabilities",
+      "status": "guide-with-target-validation",
+      "evidence": "Role membership/ownership publication gate, deny-default policy, grants/RLS, redaction; production identity remains a target recheck."
+    },
+    {
+      "id": "D-006",
+      "chapter": "query-concurrency",
+      "status": "demonstrated-with-prior-evidence",
+      "evidence": "Single/no-key and expected-version checks plus Frozen Spec 00001 P-007 composite-key proof."
+    },
+    {
+      "id": "D-007",
+      "chapter": "saved-views",
+      "status": "domain-demonstrated-visible-gap",
+      "evidence": "Allowlisted definition compilation, owning-role publication, and security-invoker view; visible controls remain open."
+    },
+    {
+      "id": "D-008",
+      "chapter": "ddl-relations",
+      "status": "demonstrated-with-prior-evidence",
+      "evidence": "Generated/cross-schema FK fixture plus Frozen Spec 00001 P-007 composite/dependency proof."
+    },
+    {
+      "id": "D-009",
+      "chapter": "export",
+      "status": "demonstrated",
+      "evidence": "CSV is produced from the same caller-authorized filter/sort query as the grid read."
+    },
+    {
+      "id": "D-010",
+      "chapter": "jobs-outbox",
+      "status": "domain-demonstrated-visible-gap",
+      "evidence": "Idempotent enqueue, safe claim, capped retry/dead letter, committed outbox claim/completion; visible admin state remains open."
+    },
+    {
+      "id": "D-011",
+      "chapter": "mcp-frontend-contract",
+      "status": "guide-with-target-validation",
+      "evidence": "Structured page/MCP adapters deny raw SQL/DDL and share a versioned capability contract; production MCP transport remains a target recheck."
+    },
+    {
+      "id": "D-012",
+      "chapter": "production-translation",
+      "status": "target-validation",
+      "evidence": "Server pools, identity, external races/services, workers, AT, deployment, backup, and rollback remain explicit rechecks."
+    }
+  ],
+  "openFeatureIds": [
+    "D-007",
+    "D-010"
+  ],
+  "wireframeBacking": [
+    {
+      "id": "W-001",
+      "backing": "tabular.discover",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-002",
+      "backing": "tabular.discover",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-003",
+      "backing": "tabular.discover",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-004",
+      "backing": "tabular.discover",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-005",
+      "backing": "tabular.capabilities",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-006",
+      "backing": "route/view adapter",
+      "lane": "page-view"
+    },
+    {
+      "id": "W-007",
+      "backing": "browser-only layout",
+      "lane": "browser"
+    },
+    {
+      "id": "W-008",
+      "backing": "tabular.table.create",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-009",
+      "backing": "tabular.metadata.rename",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-010",
+      "backing": "tabular.metadata.identity",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-011",
+      "backing": "tabular.table.settings",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-012",
+      "backing": "tabular.read-window",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-013",
+      "backing": "browser logical selection",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-014",
+      "backing": "tabular.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-015",
+      "backing": "tabular.field-registry",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-016",
+      "backing": "tabular.edit",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-017",
+      "backing": "tabular.column.create",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-018",
+      "backing": "tabular.format-metadata",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-019",
+      "backing": "tabular.presentation.capacity",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-020",
+      "backing": "tabular.batch-edit",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-021",
+      "backing": "tabular.action.undo",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-022",
+      "backing": "tabular.error-translation",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-023",
+      "backing": "tabular.draft.save",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-024",
+      "backing": "tabular.layout.validate",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-025",
+      "backing": "tabular.presentation.reorder",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-026",
+      "backing": "tabular.field-registry",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-027",
+      "backing": "route/view adapter",
+      "lane": "page-view"
+    },
+    {
+      "id": "W-028",
+      "backing": "tabular.column.settings",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-029",
+      "backing": "tabular.field-registry",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-030",
+      "backing": "native constraints",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-031",
+      "backing": "tabular.ddl.plan",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-032",
+      "backing": "tabular.relation.create",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-033",
+      "backing": "browser-only command routing",
+      "lane": "browser"
+    },
+    {
+      "id": "W-034",
+      "backing": "route/capability disposition",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-035",
+      "backing": "tabular.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-036",
+      "backing": "session presentation state",
+      "lane": "configuration"
+    },
+    {
+      "id": "W-037",
+      "backing": "presentation metadata/deferred",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-038",
+      "backing": "browser selection state",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-039",
+      "backing": "tabular.presentation.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-040",
+      "backing": "tabular.presentation.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-041",
+      "backing": "tabular.presentation.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-042",
+      "backing": "tabular.presentation.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-043",
+      "backing": "tabular.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-044",
+      "backing": "tabular.row.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-045",
+      "backing": "tabular.column.action",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-046",
+      "backing": "browser-only overlay geometry",
+      "lane": "browser"
+    },
+    {
+      "id": "W-047",
+      "backing": "tabular.import",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-048",
+      "backing": "tabular.import.source",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-049",
+      "backing": "tabular.import.provenance",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-050",
+      "backing": "tabular.import.stage",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-051",
+      "backing": "tabular.import.commit",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-052",
+      "backing": "tabular.import.recover",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-053",
+      "backing": "tabular.read-window",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-054",
+      "backing": "browser logical selection",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-055",
+      "backing": "surface adapter parity",
+      "lane": "runtime-capability"
+    },
+    {
+      "id": "W-056",
+      "backing": "browser-only overlay geometry",
+      "lane": "browser"
+    },
+    {
+      "id": "W-057",
+      "backing": "browser-only visual language",
+      "lane": "browser"
+    },
+    {
+      "id": "W-058",
+      "backing": "negative capability inventory",
+      "lane": "runtime-capability"
+    }
+  ],
+  "productionTranslation": [
+    {
+      "provedHere": "PGlite SQL/catalog/transactions",
+      "productionRecheck": "Re-run against the target PostgreSQL server version."
+    },
+    {
+      "provedHere": "One cached PGlite resource",
+      "productionRecheck": "Use one checked-out pool client per transaction and prove release/reset."
+    },
+    {
+      "provedHere": "SET LOCAL ROLE in one process",
+      "productionRecheck": "Prove authenticated identity mapping, pool role reset, and failure cleanup."
+    },
+    {
+      "provedHere": "Single-process expected versions",
+      "productionRecheck": "Exercise concurrent workers, external writers, and external DDL races."
+    },
+    {
+      "provedHere": "Fixture Google-shaped import",
+      "productionRecheck": "Add live OAuth, Drive/Sheets download, source version recheck, and revocation."
+    },
+    {
+      "provedHere": "Browser accessibility tree",
+      "productionRecheck": "Run native VoiceOver and the accepted production browser matrix."
+    },
+    {
+      "provedHere": "Local jobs/outbox claiming",
+      "productionRecheck": "Run worker crash, multi-worker contention, metrics, alerts, and retention tests."
+    },
+    {
+      "provedHere": "Versioned transactional system migration",
+      "productionRecheck": "Prove target migration locking, deploy ordering, rollback, and idempotent rerun."
+    },
+    {
+      "provedHere": "Collision-safe hidden JSON installation",
+      "productionRecheck": "Exercise concurrent installers and external name creation with two connections."
+    },
+    {
+      "provedHere": "Owning-role publication gate",
+      "productionRecheck": "Recheck authenticated membership refresh and pool cleanup on allow/deny paths."
+    },
+    {
+      "provedHere": "Allowlisted shared query compiler",
+      "productionRecheck": "Recheck planner behavior, limits, cancellation, and grid/export parity at scale."
+    },
+    {
+      "provedHere": "Static deployment boundary",
+      "productionRecheck": "Choose host, secrets, build, migration, backup, and rollback operations later."
+    }
+  ],
+  "signals": {
+    "actualStackpressPgliteAdapter": true,
+    "configListenLifecycle": true,
+    "noPerTableGeneratedModel": true,
+    "catalogStableIdentityAndDrift": true,
+    "denyDefaultAndForcedRls": true,
+    "pageMcpCapabilityParity": true,
+    "expectedVersionConflict": true,
+    "persistentInvalidDraft": true,
+    "systemSchemaUpgradeAndRollback": true,
+    "collisionSafeOwnerInstalledUnstructuredColumn": true,
+    "failedPromotionPreservesUnstructuredValues": true,
+    "unstructuredCopyAndExport": true,
+    "transactionalUnstructuredPromotion": true,
+    "generatedColumnAndCrossSchemaForeignKey": true,
+    "ownershipCheckedCompiledSecurityInvokerSharedView": true,
+    "authorizedCurrentResultCsvExport": true,
+    "idempotentImportCommit": true,
+    "idempotentJobsAndPostCommitOutboxDispatch": true,
+    "cappedRetryAndDeadLetter": true,
+    "versionedStructuredPageMcpContract": true,
+    "redactedJournal": true,
+    "roleResetObserved": true
+  },
+  "report": {
+    "status": "proved",
+    "capturedAt": "2026-08-01T04:10:05.000Z",
+    "browser": "Playwright Chromium via @playwright/cli",
+    "viewports": [
+      {
+        "width": 1280,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "signals": {
+      "guideReportRendered": true,
+      "executableSignalsShown": 22,
+      "dataContractsShown": 12,
+      "wireframeBackingsDeclared": 58,
+      "productionTranslationsShown": 12,
+      "honestPerContractDispositionsShown": true,
+      "visibleGapsRetained": 2,
+      "narrowBodyHasNoHorizontalOverflow": true,
+      "consoleErrors": 0,
+      "consoleWarnings": 0
+    },
+    "screenshots": [
+      "output/playwright/desktop-guide.png",
+      "output/playwright/narrow-guide.png"
+    ]
+  }
+}

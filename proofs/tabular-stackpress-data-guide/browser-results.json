@@ -1,0 +1,25 @@
+{
+  "status": "proved",
+  "capturedAt": "2026-08-01T04:10:05.000Z",
+  "browser": "Playwright Chromium via @playwright/cli",
+  "viewports": [
+    { "width": 1280, "height": 900 },
+    { "width": 390, "height": 844 }
+  ],
+  "signals": {
+    "guideReportRendered": true,
+    "executableSignalsShown": 22,
+    "dataContractsShown": 12,
+    "wireframeBackingsDeclared": 58,
+    "productionTranslationsShown": 12,
+    "honestPerContractDispositionsShown": true,
+    "visibleGapsRetained": 2,
+    "narrowBodyHasNoHorizontalOverflow": true,
+    "consoleErrors": 0,
+    "consoleWarnings": 0
+  },
+  "screenshots": [
+    "output/playwright/desktop-guide.png",
+    "output/playwright/narrow-guide.png"
+  ]
+}

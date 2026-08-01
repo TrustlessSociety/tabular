@@ -89,6 +89,14 @@ administration remain operator-owned.
   presence cursors, and targeted restore outside the first slice.
 - Tables without a stable primary or composite key are read-only for existing
   row edits unless an owner approves a separate stable-identity migration.
+- Row reordering is shared Tabular presentation state, not physical PostgreSQL
+  row order. Publish committed moves to connected clients in real time when
+  available and use durable queued maintenance when rank compaction or delivery
+  cannot complete inline.
+- An owner-authorized installation may store shared row position in a
+  collision-safe, Tabular-UI-hidden rank column. `__tabular_row` is a logical
+  name hint, not a physical-name guarantee; never adopt or overwrite a user
+  column that already uses that name.
 
 ## Fields, Formats, Views, And Relations
 
@@ -96,6 +104,12 @@ Storage type, semantic field/editor, output format, and constraints are
 independent axes. Use the accepted low-friction field/format registry; raw HTML,
 FRUI `eval` formulas, rich content, attachments, and deeply nested field types
 are not first-slice defaults.
+
+URL and Phone fields accept entered values as strings without strict
+application-level rejection. Best-effort formatters may improve their display
+or link behavior but must not silently rewrite the stored string. Native
+PostgreSQL constraints and triggers remain authoritative and may still reject a
+value.
 
 PostgreSQL generated columns support native deterministic same-row computed
 values. Spreadsheet formula definitions, evaluation, compatibility, and
@@ -106,6 +120,11 @@ private saved view. Only the table owner or an owning-role member may publish a
 shared view. Explicit PostgreSQL view publication requires an SQL-compatible
 definition, destination-schema authority, source privileges, and
 security-invoker behavior.
+
+Column order, visibility, filters, sorting, and cell presentation may be saved
+in a private or shared view. Unsaved changes remain current-tab state. A shared
+view is the explicit collaboration boundary for those presentation settings;
+it does not change physical PostgreSQL column order.
 
 Relations use native foreign keys between eligible ordinary or partitioned
 tables in one database, including across schemas. Primary/unique and composite
@@ -139,6 +158,12 @@ PostgreSQL-backed jobs/outbox with idempotency, safe claiming, capped retries,
 visible dead letters, and administrator-selected retention. Operators configure
 objectives and thresholds and receive logs, metrics, and admin state. There is
 no contractual first-slice SLA.
+
+The first-slice UI exposes permission-filtered System activity from the normal
+explorer and table shells. It includes running/queued/attention/completed
+filters, operation detail, dead-letter review/retry/acknowledgement, and
+administrator-only retention controls. Acknowledgement preserves the auditable
+record; it never deletes the failed operation history.
 
 PostgreSQL operators own backup, restore, PITR, RPO, RTO, and PostgreSQL/pgAudit
 retention. Tabular has no first-slice restore UI or recovery-objective policy.

@@ -2,7 +2,7 @@
 
 ## Status and design intent
 
-**Accepted creative baseline:** r005 Round 13, user approved on 2026-07-30.
+**Accepted creative baseline:** r007 Round 2, user approved on 2026-08-01.
 Use this document for visual and interaction reconstruction only. The
 [PostgreSQL-native product contract](tabular-product-contract.md), accepted on
 2026-07-31, supersedes r005 product-policy assumptions including hierarchy,
@@ -60,6 +60,8 @@ This is a compact grayscale wireframe, not a branded Google clone.
   priority formatting into a More surface, and keep the canvas scrollable.
 - Explorer search may wrap below its identity row on narrow widths; cards become
   one column.
+- Folder Files/Views tabs may scroll or wrap within their own compact region;
+  they may not create document-level overflow.
 - Focused panels and menus must float over content. Opening a menu or panel may
   not reflow, push, or displace grid headers or columns.
 - Import intro copy has matching vertical breathing room above and below; the
@@ -71,11 +73,12 @@ This is a compact grayscale wireframe, not a branded Google clone.
 ### Explorer shell
 
 - Full-width top bar: compact Acme Inc. mark at left, a restrained `Search files`
-  field, and account action at right.
+  field, icon-only System activity link with an accessible name, and account
+  action at right.
 - There is no persistent left navigation panel, Drive-style global navigation,
   owner/storage metadata, or root-level create/import action.
-- Content starts with an Acme Inc. breadcrumb, then the Files label/count,
-  list/grid toggle, and one content region.
+- Content starts with an Acme Inc. breadcrumb, then the root folder count or an
+  open folder's Files/Views tabs, list/grid toggle, and one content region.
 
 ### Spreadsheet shell
 
@@ -86,7 +89,9 @@ This is a compact grayscale wireframe, not a branded Google clone.
   commits; Escape cancels. This changes the display name only unless a future
   confirmed migration flow says otherwise.
 - Under the top bar: File/Edit/View/Format menubar, then WYSIWYG toolbar, then
-  the coordinate band and sheet canvas.
+  the coordinate band and sheet canvas. Do not insert a persistent saved-view
+  bar between the menubar and toolbar.
+- The top bar carries the same icon-only System activity link as the explorer.
 - A right panel is contextual: column configuration or Table settings, never a
   persistent navigator.
 
@@ -95,11 +100,14 @@ This is a compact grayscale wireframe, not a branded Google clone.
 | Route/state | User goal | Required visible state |
 | --- | --- | --- |
 | `pages/browse.html` | Start at the organization root | Operations and Finance folders; list/grid toggle; scoped search; no page heading, explanatory paragraph, New file, or Import. |
-| `pages/browse.html?folder=operations` | Find a file inside a folder | `Acme Inc. › Operations`, `Files`, `5 files`, list/grid toggle, and adjacent `New file` + `Import` actions. |
+| `pages/browse.html?folder=operations` | Find a file or saved view inside a folder | `Acme Inc. › Operations`, Files/Views tabs with scoped counts/search, list/grid toggle, and adjacent `New file` + `Import` actions. |
 | `pages/browse.html?folder=finance` | Find a Finance file | Equivalent Finance folder view, its files, and the same folder-only actions. |
 | `pages/table.html?folder=operations&table=customer-orders` | Work in an existing file | Focused spreadsheet with Customer orders data, command surface, canvas, and contextual panel. |
 | `pages/table.html?new=1&folder=operations&table=untitled-file` | Start a new blank file | `Untitled File`, inline rename enabled, 0 records, 1,000 logical rows, no named columns. |
+| `pages/table.html?folder=operations&table=customer-orders&dialog=views` | Open or create a table view | File-menu Views dialog grouped by Personal/Shared, or a No saved views creation state. |
+| `pages/table.html?folder=operations&table=customer-orders&view=ready` | Work in a saved view | New browser tab, compact active-view breadcrumb/title, saved filtering/presentation, and no persistent view bar. |
 | `pages/import.html?folder=operations` | Create one new file by importing values | Folder-aware values-only import wizard. |
+| `pages/system-activity.html` | Monitor and recover background operations | Summary cards; All/Active/Needs attention/Completed filters; job detail; dead-letter actions; administrator retention. |
 
 `create-table.html` is deliberately not a current route. A new file opens
 directly into the blank spreadsheet so column configuration happens in the
@@ -113,13 +121,15 @@ Root shows exactly two folder items: Operations and Finance. Folder items show
 a folder icon, name, concise file count, and edited-time information. Do not
 repeat a secondary count on the same folder card.
 
-Within a folder, call the content section **Files**, not Spreadsheets or Tables.
+Within a folder, use **Files** and **Views** tabs, not Spreadsheets or Tables.
 Each file item shows a table icon, display name, technical `schema.table` path
 as secondary metadata, a compact `columns x records` value (for example,
-`7 x 248`), edited time, and an open affordance. List view uses dividers;
-grid view uses restrained cards. The same data and actions must work in either
-view. Search only filters the items currently in view and produces a scoped
-no-results message.
+`7 x 248`), edited time, and an open affordance. Each view item shows its name,
+source file, access, updated time, and open-new-tab affordance. List view uses
+dividers; grid view uses restrained cards. The same data and actions must work
+in either mode. Search only filters the selected collection and produces a
+scoped no-results message. The Views tab lists Tabular saved views; native
+PostgreSQL views remain read-only files in Files.
 
 ### Spreadsheet canvas at rest
 
@@ -144,6 +154,24 @@ clear title, close control, scrollable body, and sticky Cancel/Apply changes
 footer where appropriate. Opening a column panel hides Table settings and vice
 versa. Details belong in panels, not in the grid header.
 
+### Saved-view dialogs
+
+File → Views opens a centered Personal/Shared list. File → New view opens
+creation directly; the list's Create new view action swaps dialogs. A table
+without views shows an explicit empty state and creation CTA. Saved-view links
+open new tabs. Owners/owning-role members may create Shared views; other users
+remain limited to Private. The current view is identified in compact breadcrumb
+and document-title context rather than a persistent grid control bar.
+
+### System activity
+
+System activity uses the same full-width shell. Summary cards and filters lead
+to an operation list and overlay detail panel. It represents running imports,
+queued shared-row-order maintenance, dead letters, shared-view publication,
+CSV export, retry/acknowledgement, and administrator retention. Activity cells
+fill their dynamic row height on desktop; narrow layouts stack without
+document-level overflow.
+
 ## Accessibility and interaction baseline
 
 - The canvas is an accessible grid with clear active-cell, row, column, and
@@ -159,10 +187,12 @@ versa. Details belong in panels, not in the grid header.
 
 ## Wireframe-artifact omissions
 
-- The r005 artifact does not demonstrate formula evaluation, charts, pivots,
-  comments, sharing, audit history, export, automation, APIs, or PostgreSQL
-  administration. Do not infer product scope from those omissions; use the
-  product contract.
+- The r007 artifact demonstrates saved-view discovery/creation, a CSV export
+  entry, shared-row-order activity, and operations recovery as simulated UI.
+  It does not prove persistence, PostgreSQL views, rank-column installation,
+  real-time transport, workers, or export generation.
+- Formula evaluation, charts, pivots, comments, automation, public APIs, and
+  broad PostgreSQL administration remain outside the accepted wireframe.
 - No Drive sharing, activity, trash, storage, owners, stars, nested folders,
   batch selection, drag-to-move, or uploads.
 - No production claim for persistence, migrations, transactions, permissions,

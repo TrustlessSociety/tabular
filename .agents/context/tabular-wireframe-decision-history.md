@@ -27,6 +27,8 @@ operations, and exclusions.
 | r003 Spreadsheet table canvas | A–Z sheet, 1,000 logical rows, typed editors, spreadsheet errors, inline headers, reordering, Add Rows | New/Save record controls, record toolbar, nested input cards, header metadata copy. |
 | r004 Spreadsheet command surface | File/Edit/View/Format, WYSIWYG toolbar, choice popovers, contextual menus | Header overflow buttons, toolbar Display format control, cycling-format buttons. |
 | r005 Spreadsheet file explorer | Folder-first Acme Inc. explorer, no persistent sidebar, direct blank file, folder Import, table settings and relation templates | Department/sidebar shell, create-table route, import-to-existing-file idea, Drive-like feature breadth. |
+| r006 Saved views and activity draft | First saved-view, shared-order, and operations-state surfaces | Isolated pages and incomplete copy-forward integration. |
+| r007 Integrated views and activity | Files/Views discovery, File-menu saved views, shared row-order policy, reachable System activity, and permissive URL/Phone policy | Persistent saved-view bar, isolated workflow-only entry points, and visible System activity utility label. |
 
 ## r001 — PostgreSQL-native core
 
@@ -159,6 +161,42 @@ operations, and exclusions.
 - Google Drive is only a restrained structural reference, never a visual or
   feature-copy instruction.
 
+## r006 and r007 — saved views, ordering, and operations
+
+### r006: gap-led surface draft
+
+- Added visible saved-view and System activity concepts to answer Spec 00002's
+  D-007 and D-010 gaps.
+- Its isolated screens and incomplete copy-forward were not the final product
+  graph. r007 supersedes those navigation choices.
+
+### r007 Round 1: integrate with the main app
+
+- Copied the complete r006 baseline before changing navigation.
+- Attached saved views to the real spreadsheet, made System activity reachable
+  from Browse and Table, and linked activity back to the affected file.
+- Accepted URL and Phone as loose string fields with best-effort formatters and
+  no silent stored-value rewrite.
+- Accepted shared row order with real-time delivery when available, durable
+  queued maintenance fallback, and a collision-safe hidden rank field rather
+  than physical PostgreSQL row order.
+
+### r007 Round 2: folder tabs and File-menu ownership
+
+- Replaced the open-folder Files heading with Files and Views tabs. Saved views
+  open their source tables in new browser tabs.
+- Removed the persistent saved-view bar. File now owns Export, Views, and New
+  view; Views provides Personal/Shared lists, a no-views state, and a creation
+  dialog swap.
+- Kept active-view context compact in the breadcrumb/title and kept the
+  spreadsheet toolbar directly below the menubar.
+- Made the Browse/Table System activity utility icon-only with an accessible
+  name. System activity retained filters, job details, retry,
+  acknowledgement, retention, and equal-height desktop cells.
+- Approved defaults: owners/owning-role members may create Shared views
+  directly; System activity stays discoverable with permission-filtered
+  contents; acknowledged dead letters retain their audit record.
+
 ## Review and evidence boundary
 
 The history draws from accepted review notes and browser feedback. Some later
@@ -173,11 +211,15 @@ Before calling a reconstruction complete, verify all of the following:
 - No persistent sidebar, create-table route, duplicate create/import actions, or
   table-screen Import top-bar button.
 - The sample database shows Operations and Finance schema folders; schema views
-  show Files plus authorized New file and Import actions.
+  show Files/Views tabs plus authorized New file and Import actions.
 - New file is blank Untitled File and derives its table name from title.
 - Column settings contains separate Field, Format, constraints, Advanced, and
   the exact two-template Relation sequence.
 - Input/output/edit/error/reorder behavior matches r003 current rules.
 - File/Edit/View/Format and tool popovers match r004 current rules.
+- File includes Export, Views, and New view in the accepted order and does not
+  restore a persistent saved-view bar.
+- Saved views are reachable from folder discovery and the source table; System
+  activity is reachable from Browse and Table.
 - Import creates a new file only and ends with File name, Table name, Folder.
 - No Drive product surface or unsupported spreadsheet capability is added.

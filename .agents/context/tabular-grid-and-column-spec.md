@@ -69,8 +69,8 @@ mini-form appearance.
 | Text | Plain text | Text input | Enter, Tab, or click-away commits; Escape restores. |
 | Number | Numeric output | Numeric input, number-aligned | Same; invalid number becomes an error after commit. |
 | Email | ap@northstar.co or Email link format | Text/email input | Validate after commit, not while typing. |
-| URL | Link-like or clipped output | Text/URL input | Validate after commit. |
-| Phone | Phone text | Text/tel-like input | Validate after commit. |
+| URL | Link-like or clipped output | Text/URL input | Accept the string; apply best-effort link formatting after commit. |
+| Phone | Phone text | Text/tel-like input | Accept the string; apply best-effort phone formatting after commit. |
 | Relation | Saved record template | Searchable related-file picker | Selecting a choice commits immediately. |
 | Select | Compact badge such as Processing | Visible option menu directly below/in the cell | Show choices immediately; clicking a choice commits. |
 | Price | Peso currency output | One full-width value input with non-interactive in-cell currency prefix | Commit restores currency output; prefix may not clip value. |
@@ -91,6 +91,12 @@ mini-form appearance.
 
 An unnamed column's default is always **Text** and preserves strings such as
 002; it must never inherit the nearest named column's Number editor.
+
+URL and Phone are deliberately loose string fields. Their formatters may trim
+presentation noise, recognize a usable link/phone shape, or fall back to plain
+text, but they may not silently replace the stored string. A PostgreSQL
+constraint or trigger can still reject the value; Tabular must then retain it
+as a correctable draft and surface the database error.
 
 ## Blank files and new columns
 
@@ -272,15 +278,27 @@ PostgreSQL column-order operation.
 - Carry a named column's field configuration and values with it; row movement
   renumbers visible sheet positions.
 - Keyboard alternatives use the Alt+arrow commands in the selection table.
-- Reordering is a shared/personal presentation question not resolved in the
-  wireframe. It must not be presented as an immediate PostgreSQL physical-order
-  change.
+- Row ordering is shared table presentation state. Commit a row move against a
+  collision-safe, Tabular-UI-hidden rank column installed with owner authority;
+  never treat PostgreSQL's physical row order as the sheet order.
+- Publish committed row-order changes to connected clients in real time when
+  available. If rank compaction or delivery cannot complete inline, enqueue
+  durable Row order maintenance and expose its queued/failed state in System
+  activity.
+- `__tabular_row` is the logical naming hint for the rank field, not permission
+  to reuse a conflicting user column. Installation chooses a versioned,
+  collision-safe physical name.
+- Column reordering remains presentation metadata. It is current-tab state
+  until saved in a view; a private view persists it for its owner and a shared
+  view publishes it to authorized collaborators. It never changes physical
+  PostgreSQL column order.
 - The row-adder accepts a positive number and increases logical capacity. It
   does not add a database record by itself.
 
 ## Deferred implementation decisions
 
-The wireframe does not settle production grid virtualization, server-side
-validation mapping, data persistence, schema migration/conflict handling,
-relation integrity, multi-user formatting/reordering, locale/timezone behavior,
-or recovery. It demonstrates the target interaction and error language only.
+The wireframe does not settle server-side validation mapping, schema
+migration/conflict handling, relation integrity, broad real-time collaboration,
+locale/timezone behavior, or production recovery mechanics. Renderer,
+selection, validation, and ordering ownership are governed by the accepted
+product and implementation-boundary documents.

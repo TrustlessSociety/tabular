@@ -40,15 +40,42 @@ File contains these actions in this order:
 2. **Open** — returns to/opens the file explorer.
 3. **Import** — opens the folder-aware, values-only import flow that creates a
    new file. It is not import-to-existing-file.
-4. **Make a copy** — representative wireframe command; no persistence claim.
-5. Separator.
-6. **Version history** with secondary **Changes** cue — a deferred/representative
+4. **Export** — exports CSV with headers for the current authorized grid result.
+5. **Make a copy** — representative wireframe command; no persistence claim.
+6. Separator.
+7. **Views** — opens the current table's Personal and Shared saved-view list.
+8. **New view** — opens saved-view creation directly.
+9. Separator.
+10. **Version history** with secondary **Changes** cue — a deferred/representative
    route, not a complete file-version system.
-7. **Table settings** — opens the table-level right panel. It must not open a
+11. **Table settings** — opens the table-level right panel. It must not open a
    selected-column panel.
 
 There is no duplicate Import, New, or Save action in the global sheet header,
 and no New record or Save record button in the sheet toolbar.
+
+## Saved views and active-view context
+
+- Do not place a persistent saved-view bar between the menubar and formatting
+  toolbar. The formatting toolbar follows the menubar directly.
+- File → Views opens a centered dialog grouped into Personal and Shared views.
+  Every view link opens the source table in a new browser tab with the saved
+  filter, sort, column, and presentation state.
+- A table with no views shows **No saved views** and **Create new view**. That
+  action closes the list dialog before opening creation; File → New view opens
+  creation directly.
+- Creation asks for a name, Private or Shared access, and which current-sheet
+  presentation settings to include. Shared is unavailable unless the caller is
+  the table owner or an owning-role member.
+- An opened view uses compact breadcrumb/title context. It must not reintroduce
+  the removed persistent controls bar.
+
+## System activity utility
+
+The explorer and spreadsheet top bars expose System activity as a focusable
+icon-only link with an accessible name and tooltip. It opens the permission-
+filtered operations surface. Visible text is omitted to preserve the compact
+shell; the activity page itself retains its full title and breadcrumb.
 
 ## Edit menu
 
@@ -291,4 +318,5 @@ an immediate schema mutation.
 Menus illustrate a familiar command language, but theme persistence, advanced
 number semantics, cut/paste coverage, structural operations, version history,
 freezing persistence, full-screen behavior, border rendering fidelity, and
-multi-user formatting are not production commitments.
+multi-user formatting outside an explicitly saved shared view are not
+production commitments.

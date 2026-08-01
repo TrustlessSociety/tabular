@@ -19,9 +19,10 @@ only inside an authorized schema folder, not at connection or database level.
 
 Required visible structure:
 
-1. Full-width top bar: Acme Inc. mark, Search files input, account action.
+1. Full-width top bar: Acme Inc. mark, Search files input, icon-only System
+   activity link with an accessible name, and account action.
 2. Compact connection → database breadcrumb.
-3. Files label with an appropriate count.
+3. Folders label with an appropriate count at database scope.
 4. List and grid view toggle.
 5. Current database collection containing example Operations and Finance
    schema folders.
@@ -36,9 +37,10 @@ trash, starred feature, or global navigation.
 Opening Operations or Finance changes the breadcrumb to Acme Inc. followed by
 the folder name. It still has no large page heading or explanatory paragraph.
 
-The content heading is **Files** and the count uses “files,” for example
-“5 files,” never “spreadsheets.” The folder header adds exactly two actions,
-placed together at the upper right:
+The content heading becomes two tabs: **Files** and **Views**. Files uses a file
+count, for example “5 files”; Views uses a view count. Never call either
+collection “spreadsheets.” The folder header adds exactly two actions, placed
+together at the upper right:
 
 1. **New file**
 2. **Import**
@@ -63,15 +65,32 @@ List view uses low-contrast divider-separated rows. Grid view uses compact
 cards. Both surface identical content, navigations, and actions. The chosen
 view is page-session state only until a product preference model is approved.
 
+### Folder saved views
+
+Views lists saved views attached to files in the current folder. Each row/card
+shows the view name, source file, Personal or Shared access, updated time, and
+an open-new-tab affordance. Opening a view creates a new browser tab for the
+source table and applies its saved query/presentation state.
+
+The **Views** tab means Tabular saved views. A native PostgreSQL view remains a
+read-only file in **Files** because it is a canonical database object, not
+Tabular presentation metadata.
+
+The Views tab is discovery, not an alternate table editor. View creation stays
+inside the source table's File menu. A folder with no matching views uses a
+scoped empty state; a high-volume table filter may be added later but is not a
+first-slice requirement.
+
 ### Search and navigation
 
-- Search filters the items in the currently visible root or folder collection;
-  it does not infer a global Drive search.
+- Search filters the items in the currently visible root, folder, or selected
+  Files/Views tab; it does not infer a global Drive search.
 - An empty state explains that no current items match.
 - Clicking the Acme Inc. root breadcrumb returns to the root collection.
 - The folder breadcrumb from a spreadsheet returns to its folder's Files
   listing.
 - A file item opens that file's spreadsheet route with folder/table identity.
+- A view item opens its source spreadsheet and saved-view state in a new tab.
 
 ## New file
 
@@ -249,7 +268,7 @@ to the new file; it does not change an existing spreadsheet.
 ## Production boundary
 
 The [product contract](tabular-product-contract.md) now governs schema-folder
-membership, table creation, import commit, migrations, persistence, authority,
-ownership, sorting, undo, recovery ownership, and cross-schema relations. This
-wireframe remains a detailed interaction target, not evidence that its
-simulated actions already happen against PostgreSQL.
+membership, table creation, import commit, migrations, saved-view persistence,
+authority, ownership, sorting, undo, recovery ownership, and cross-schema
+relations. The accepted wireframe is a detailed interaction target, not
+evidence that its simulated actions already happen against PostgreSQL.

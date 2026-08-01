@@ -9,11 +9,17 @@
     "proof:p005": "node --test cross-surface-capability-and-authorization-parity/proof.test.mjs",
     "proof:p006": "node --test import-transaction-and-failure-recovery/proof.test.mjs",
     "proof:p007": "node --test postgresql-native-table-metadata-draft-boundary/proof.test.mjs",
-    "serve:p002": "node grid-scale-query-and-edit-contract/server.mjs"
+    "proof:p101": "node --test tabular-browser-interaction-guide/proof.test.mjs",
+    "proof:p102": "node --test tabular-stackpress-data-guide/proof.test.mjs",
+    "serve:p002": "node grid-scale-query-and-edit-contract/server.mjs",
+    "serve:p101": "node tabular-browser-interaction-guide/server.mjs",
+    "serve:p102": "node tabular-stackpress-data-guide/server.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.3.15",
+    "@stackpress/inquire-pglite": "0.10.8",
     "exceljs": "4.4.0",
-    "stackpress": "0.10.8"
+    "stackpress": "0.10.8",
+    "tabulator-tables": "6.5.0"
   }
 }

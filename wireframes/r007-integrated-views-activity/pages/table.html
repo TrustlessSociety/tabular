@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer orders · Acme Inc.</title>
+  <link rel="stylesheet" href="../lib/base/tokens.css?v=round5b">
+  <link rel="stylesheet" href="../lib/base/reset.css">
+  <link rel="stylesheet" href="../lib/base/base.css">
+  <link rel="stylesheet" href="../lib/icons.css">
+  <link rel="stylesheet" href="../lib/app.css?v=r005-round10">
+  <link rel="stylesheet" href="../lib/integrations.css?v=r007-round2">
+</head>
+<body>
+  <div class="app-shell" data-app-shell data-nav-open="false">
+    <header class="app-topbar">
+      <div class="app-topbar__start">
+        <a class="app-logo" href="./browse.html" aria-label="Acme Inc. files">
+          <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+          <span>Acme Inc.</span>
+        </a>
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <a href="./browse.html?folder=operations" data-department-return data-department-name>Operations</a>
+          <span data-wf-icon="chevron-right"></span>
+          <button class="crumbs__rename" type="button" data-table-title aria-label="Rename spreadsheet" title="Rename spreadsheet">Customer orders</button>
+          <input class="crumbs__rename-input" type="text" data-table-title-input aria-label="Spreadsheet name" hidden>
+          <span class="active-view-context" data-active-view-context hidden><span data-wf-icon="chevron-right"></span><strong data-active-view-label></strong></span>
+        </nav>
+      </div>
+      <div class="app-topbar__end">
+        <a class="app-button app-button--ghost app-button--icon app-utility-link" href="./system-activity.html" aria-label="System activity" title="System activity"><span data-wf-icon="history"></span></a>
+        <button class="app-button app-button--ghost app-button--icon" type="button" aria-label="Account menu"><span data-wf-icon="user"></span></button>
+      </div>
+    </header>
+
+    <main class="app-main table-main">
+      <div class="app-alert" data-query-banner hidden>
+        <span data-wf-icon="check"></span>
+        <span data-query-banner-copy></span>
+      </div>
+
+      <section class="sheet-command-surface" aria-label="Spreadsheet commands">
+        <nav class="sheet-menubar" role="menubar" aria-label="Table menus" data-sheet-menubar>
+          <div class="sheet-menu">
+            <button type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" data-sheet-menu-trigger="file">File</button>
+            <div class="sheet-menu__panel" role="menu" aria-label="File" data-sheet-menu="file" hidden>
+              <a role="menuitem" href="./table.html?new=1&amp;folder=operations&amp;table=untitled-file" data-department-create><span data-wf-icon="add"></span><span>New</span><kbd>⌘N</kbd></a>
+              <a role="menuitem" href="./browse.html?folder=operations" data-department-return><span data-wf-icon="table"></span><span>Open</span><kbd>⌘O</kbd></a>
+              <a role="menuitem" href="./import.html?folder=operations" data-department-import><span data-wf-icon="import"></span><span>Import</span></a>
+              <button type="button" role="menuitem" data-sheet-command="export"><span data-wf-icon="export"></span><span>Export</span></button>
+              <button type="button" role="menuitem" data-sheet-command="make-copy"><span data-wf-icon="copy"></span><span>Make a copy</span></button>
+              <hr>
+              <button type="button" role="menuitem" data-open-views-dialog><span data-wf-icon="rows"></span><span>Views</span></button>
+              <button type="button" role="menuitem" data-open-view-dialog><span data-wf-icon="add"></span><span>New view</span></button>
+              <hr>
+              <button type="button" role="menuitem" data-sheet-command="version-history"><span data-wf-icon="history"></span><span>Version history</span><kbd>Changes</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="table-settings"><span data-wf-icon="settings"></span><span>Table settings</span></button>
+            </div>
+          </div>
+          <div class="sheet-menu">
+            <button type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" data-sheet-menu-trigger="edit">Edit</button>
+            <div class="sheet-menu__panel" role="menu" aria-label="Edit" data-sheet-menu="edit" hidden>
+              <button type="button" role="menuitem" data-sheet-command="undo"><span data-wf-icon="undo"></span><span>Undo</span><kbd>⌘Z</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="redo"><span data-wf-icon="redo"></span><span>Redo</span><kbd>⇧⌘Z</kbd></button>
+              <hr>
+              <button type="button" role="menuitem" data-sheet-command="cut"><span data-wf-icon="cut"></span><span>Cut</span><kbd>⌘X</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="copy"><span data-wf-icon="copy"></span><span>Copy</span><kbd>⌘C</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="paste"><span data-wf-icon="paste"></span><span>Paste</span><kbd>⌘V</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="paste-values"><span data-wf-icon="paste"></span><span>Paste values only</span><kbd>⇧⌘V</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="clear"><span data-wf-icon="trash"></span><span>Clear contents</span></button>
+              <hr>
+              <button type="button" role="menuitem" data-sheet-command="select-all"><span data-wf-icon="grid"></span><span>Select all</span><kbd>⌘A</kbd></button>
+              <button type="button" role="menuitem" data-sheet-command="find"><span data-wf-icon="search"></span><span>Find and replace</span><kbd>⌘H</kbd></button>
+            </div>
+          </div>
+          <div class="sheet-menu">
+            <button type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" data-sheet-menu-trigger="view">View</button>
+            <div class="sheet-menu__panel" role="menu" aria-label="View" data-sheet-menu="view" hidden>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="show"><span data-wf-icon="grid"></span><span>Show</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Show" data-sheet-submenu="show" hidden>
+                  <button type="button" role="menuitemcheckbox" aria-checked="true" data-sheet-command="toggle-gridlines"><span data-menu-check>✓</span><span>Gridlines</span></button>
+                </div>
+              </div>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="freeze"><span data-wf-icon="rows"></span><span>Freeze</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel sheet-submenu__panel--freeze" role="menu" aria-label="Freeze" data-sheet-submenu="freeze" hidden>
+                  <button type="button" role="menuitemradio" aria-checked="true" data-sheet-command="freeze-rows-0"><span data-menu-check>✓</span><span>No rows</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-rows-1"><span data-menu-check></span><span>1 row</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-rows-2"><span data-menu-check></span><span>2 rows</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-rows-current"><span data-menu-check></span><span>Up to row 4</span></button>
+                  <hr>
+                  <button type="button" role="menuitemradio" aria-checked="true" data-sheet-command="freeze-columns-0"><span data-menu-check>✓</span><span>No columns</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-columns-1"><span data-menu-check></span><span>1 column</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-columns-2"><span data-menu-check></span><span>2 columns</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="freeze-columns-current"><span data-menu-check></span><span>Up to column G</span></button>
+                </div>
+              </div>
+              <hr>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="zoom"><span data-wf-icon="search"></span><span>Zoom</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Zoom" data-sheet-submenu="zoom" hidden>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-50"><span data-menu-check></span><span>50%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-75"><span data-menu-check></span><span>75%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-90"><span data-menu-check></span><span>90%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="true" data-sheet-command="zoom-100"><span data-menu-check>✓</span><span>100%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-125"><span data-menu-check></span><span>125%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-150"><span data-menu-check></span><span>150%</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-sheet-command="zoom-200"><span data-menu-check></span><span>200%</span></button>
+                </div>
+              </div>
+              <button type="button" role="menuitem" data-sheet-command="fullscreen"><span data-wf-icon="fullscreen"></span><span>Full screen</span></button>
+            </div>
+          </div>
+          <div class="sheet-menu">
+            <button type="button" role="menuitem" aria-haspopup="true" aria-expanded="false" data-sheet-menu-trigger="format">Format</button>
+            <div class="sheet-menu__panel sheet-menu__panel--wide" role="menu" aria-label="Format" data-sheet-menu="format" hidden>
+              <button type="button" role="menuitem" data-sheet-command="theme"><span data-wf-icon="fill"></span><span>Theme</span></button>
+              <hr>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="number"><span data-wf-icon="currency"></span><span>Number</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Number" data-sheet-submenu="number" hidden>
+                  <button type="button" role="menuitemradio" aria-checked="true" data-format-command="number-automatic"><span data-menu-check>✓</span><span>Automatic</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-format-command="number-plain"><span data-menu-check></span><span>Plain text</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-format-command="number-currency"><span data-menu-check></span><span>Currency</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-format-command="number-percent"><span data-menu-check></span><span>Percent</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-format-command="number-date"><span data-menu-check></span><span>Date</span></button>
+                  <button type="button" role="menuitemradio" aria-checked="false" data-format-command="number-datetime"><span data-menu-check></span><span>Date and time</span></button>
+                </div>
+              </div>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="text"><span data-wf-icon="bold"></span><span>Text</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Text" data-sheet-submenu="text" hidden>
+                  <button type="button" role="menuitemcheckbox" aria-checked="false" data-format-command="bold"><span data-wf-icon="bold"></span><span>Bold</span><kbd>⌘B</kbd></button>
+                  <button type="button" role="menuitemcheckbox" aria-checked="false" data-format-command="italic"><span data-wf-icon="italic"></span><span>Italic</span><kbd>⌘I</kbd></button>
+                  <button type="button" role="menuitemcheckbox" aria-checked="false" data-format-command="underline"><span data-wf-icon="underline"></span><span>Underline</span><kbd>⌘U</kbd></button>
+                  <button type="button" role="menuitem" data-format-popover-trigger="text-color" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="text-color"></span><span>Text color</span></button>
+                </div>
+              </div>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="alignment"><span data-wf-icon="align-left"></span><span>Alignment</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Alignment" data-sheet-submenu="alignment" hidden>
+                  <button type="button" role="menuitem" data-format-popover-trigger="horizontal" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-left"></span><span>Horizontal</span></button>
+                  <button type="button" role="menuitem" data-format-popover-trigger="vertical" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-vertical"></span><span>Vertical</span></button>
+                </div>
+              </div>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="wrapping"><span data-wf-icon="wrap"></span><span>Wrapping</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Wrapping" data-sheet-submenu="wrapping" hidden>
+                  <button type="button" role="menuitemcheckbox" aria-checked="false" data-format-command="wrap"><span data-wf-icon="wrap"></span><span>Wrap</span></button>
+                </div>
+              </div>
+              <button type="button" role="menuitem" aria-disabled="true"><span data-wf-icon="edit"></span><span>Rotation</span><span data-wf-icon="chevron-right"></span></button>
+              <button type="button" role="menuitem" aria-disabled="true"><span data-wf-icon="grid"></span><span>Smart chips</span><span data-wf-icon="chevron-right"></span></button>
+              <hr>
+              <div class="sheet-menu__submenu">
+                <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-sheet-submenu-trigger="font-size"><span data-wf-icon="text-color"></span><span>Font size</span><span data-wf-icon="chevron-right"></span></button>
+                <div class="sheet-submenu__panel" role="menu" aria-label="Font size" data-sheet-submenu="font-size" hidden>
+                  <button type="button" role="menuitemradio" data-sheet-command="font-size-10"><span data-menu-check></span><span>10</span></button>
+                  <button type="button" role="menuitemradio" data-sheet-command="font-size-12"><span data-menu-check>✓</span><span>12</span></button>
+                  <button type="button" role="menuitemradio" data-sheet-command="font-size-14"><span data-menu-check></span><span>14</span></button>
+                  <button type="button" role="menuitemradio" data-sheet-command="font-size-16"><span data-menu-check></span><span>16</span></button>
+                  <button type="button" role="menuitemradio" data-sheet-command="font-size-18"><span data-menu-check></span><span>18</span></button>
+                </div>
+              </div>
+              <button type="button" role="menuitem" aria-disabled="true"><span data-wf-icon="grid"></span><span>Merge cells</span><span data-wf-icon="chevron-right"></span></button>
+              <hr>
+              <button type="button" role="menuitem" data-format-command="clear-format"><span data-wf-icon="remove-format"></span><span>Clear formatting</span></button>
+            </div>
+          </div>
+        </nav>
+
+        <div class="sheet-format-toolbar" role="toolbar" aria-label="Cell formatting" data-sheet-toolbar>
+          <div class="sheet-format-toolbar__group">
+            <button class="sheet-tool" type="button" data-sheet-command="undo" aria-label="Undo" aria-disabled="true" disabled><span data-wf-icon="undo"></span></button>
+            <button class="sheet-tool" type="button" data-sheet-command="redo" aria-label="Redo" aria-disabled="true" disabled><span data-wf-icon="redo"></span></button>
+          </div>
+          <span class="sheet-format-toolbar__divider" aria-hidden="true"></span>
+          <div class="sheet-format-toolbar__group sheet-format-toolbar__type">
+            <label class="sheet-tool-select sheet-tool-select--font"><span class="wf-sr-only">Font</span><select data-format-select="font" aria-label="Font"><option value="sans">Inter</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
+            <div class="sheet-size-stepper" role="group" aria-label="Font size">
+              <button class="sheet-tool" type="button" data-sheet-command="size-down" aria-label="Decrease font size"><span data-wf-icon="remove"></span></button>
+              <label><span class="wf-sr-only">Font size</span><input type="number" inputmode="numeric" min="8" max="72" step="1" value="12" aria-label="Font size" data-format-size-input></label>
+              <button class="sheet-tool" type="button" data-sheet-command="size-up" aria-label="Increase font size"><span data-wf-icon="add"></span></button>
+            </div>
+          </div>
+          <div class="sheet-format-toolbar__group">
+            <button class="sheet-tool" type="button" data-format-command="bold" aria-label="Bold" aria-pressed="false"><span data-wf-icon="bold"></span></button>
+            <button class="sheet-tool" type="button" data-format-command="italic" aria-label="Italic" aria-pressed="false"><span data-wf-icon="italic"></span></button>
+            <button class="sheet-tool" type="button" data-format-command="underline" aria-label="Underline" aria-pressed="false"><span data-wf-icon="underline"></span></button>
+          </div>
+          <span class="sheet-format-toolbar__divider sheet-format-toolbar__optional" aria-hidden="true"></span>
+          <div class="sheet-format-toolbar__group sheet-format-toolbar__optional">
+            <button class="sheet-tool sheet-tool--indicator" type="button" data-format-popover-trigger="text-color" aria-label="Text color" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="text-color"></span><span class="sheet-tool__color"></span></button>
+            <button class="sheet-tool sheet-tool--indicator" type="button" data-format-popover-trigger="fill-color" aria-label="Fill color" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="fill"></span><span class="sheet-tool__fill"></span></button>
+            <button class="sheet-tool" type="button" data-format-popover-trigger="borders" aria-label="Borders" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="borders"></span></button>
+          </div>
+          <span class="sheet-format-toolbar__divider sheet-format-toolbar__optional" aria-hidden="true"></span>
+          <div class="sheet-format-toolbar__group sheet-format-toolbar__optional">
+            <button class="sheet-tool" type="button" data-format-popover-trigger="horizontal" aria-label="Horizontal alignment" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-left"></span></button>
+            <button class="sheet-tool" type="button" data-format-popover-trigger="vertical" aria-label="Vertical alignment" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-vertical"></span></button>
+            <button class="sheet-tool" type="button" data-format-command="wrap" aria-label="Wrap text" aria-pressed="false"><span data-wf-icon="wrap"></span></button>
+          </div>
+          <div class="sheet-toolbar-overflow">
+            <button class="sheet-tool" type="button" aria-label="More formatting" aria-haspopup="true" aria-expanded="false" data-toolbar-overflow-trigger><span data-wf-icon="more"></span></button>
+            <div class="sheet-toolbar-overflow__panel" role="menu" aria-label="More formatting" data-toolbar-overflow hidden>
+              <button type="button" role="menuitem" data-format-popover-trigger="text-color" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="text-color"></span> Text color</button>
+              <button type="button" role="menuitem" data-format-popover-trigger="fill-color" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="fill"></span> Fill color</button>
+              <button type="button" role="menuitem" data-format-popover-trigger="borders" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="borders"></span> Borders</button>
+              <button type="button" role="menuitem" data-format-popover-trigger="horizontal" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-left"></span> Horizontal align</button>
+              <button type="button" role="menuitem" data-format-popover-trigger="vertical" aria-haspopup="menu" aria-expanded="false"><span data-wf-icon="align-vertical"></span> Vertical align</button>
+              <button type="button" role="menuitem" data-format-command="wrap"><span data-wf-icon="wrap"></span> Wrap</button>
+            </div>
+          </div>
+        </div>
+        <div class="sheet-format-popover" role="menu" aria-label="Formatting choices" data-format-popover hidden></div>
+      </section>
+
+      <div class="table-canvas" data-table-canvas>
+        <div class="sheet-scroll" data-sheet-scroll>
+        <div class="data-grid" role="grid" aria-label="Customer orders spreadsheet" aria-rowcount="1002" aria-colcount="27" tabindex="0" data-grid data-sheet-capacity="1000">
+          <div class="data-grid__row" role="row" aria-rowindex="1">
+            <div class="data-grid__cell data-grid__cell--header data-grid__cell--rownum" role="columnheader" aria-colindex="1">#</div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="2">
+              <span class="header-main"><span class="header-title">Order ID</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="3">
+              <span class="header-main"><span class="header-title">Customer</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="4">
+              <span class="header-main"><span class="header-title" data-email-header-title>Email</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="5">
+              <span class="header-main"><span class="header-title">Status</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="6">
+              <span class="header-main"><span class="header-title">Total</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="7">
+              <span class="header-main"><span class="header-title">Paid</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header" role="columnheader" aria-colindex="8">
+              <span class="header-main"><span class="header-title">Ordered at</span></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--header data-grid__cell--add" role="columnheader" aria-colindex="9" data-empty-header tabindex="0" title="Double-click to add a column">
+              <span data-wf-icon="add"></span>
+              <span class="wf-sr-only">Add column</span>
+            </div>
+          </div>
+
+          <div class="data-grid__row" role="row" aria-rowindex="2" data-draft-row>
+            <div class="data-grid__cell data-grid__cell--draft data-grid__cell--rownum" role="rowheader" aria-colindex="1" aria-label="Blank row"></div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="2">New</div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="3">
+              <input type="text" value="Pine &amp; Co." aria-label="Draft Customer" data-draft-customer>
+            </div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="4" data-draft-email-cell>
+              <input type="email" value="" placeholder="Required" aria-label="Draft Email" data-draft-email>
+              <span class="draft-error" data-draft-error hidden>Email is required</span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="5">
+              <select aria-label="Draft Status"><option>Processing</option><option>Ready</option><option>Shipped</option></select>
+            </div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="6">
+              <input type="text" value="1,640.00" aria-label="Draft Total">
+            </div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="7">
+              <span class="switch-visual" data-on="false" aria-label="Draft Paid: no"></span>
+            </div>
+            <div class="data-grid__cell data-grid__cell--draft" role="gridcell" aria-colindex="8">Jul 25, 10:40 AM</div>
+            <div class="data-grid__cell data-grid__cell--draft data-grid__cell--draft-actions" role="gridcell" aria-colindex="9">
+              <button class="draft-save" type="button" data-save-draft aria-label="Save draft record"><span data-wf-icon="save"></span></button>
+            </div>
+          </div>
+
+          <div class="data-grid__row" role="row" aria-rowindex="3" data-record-row>
+            <div class="data-grid__cell data-grid__cell--rownum" role="rowheader" aria-colindex="1">1</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="2" data-cell data-value="1084">1084</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="3" data-cell data-value="Northstar Market">Northstar Market</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="4" data-cell data-value="ap@northstar.co">ap@northstar.co</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="5" data-cell data-value="Processing"><span class="status-pill">Processing</span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="6" data-cell data-value="1,280.00">₱1,280.00</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="7" data-cell data-value="true"><span class="switch-visual" data-on="true" aria-label="Paid: yes"></span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="8" data-cell data-value="Jul 24, 10:32 AM">Jul 24, 10:32 AM</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="9">
+              <button class="header-button" type="button" data-open-row="1084" aria-label="Open order 1084"><span data-wf-icon="chevron-right"></span></button>
+            </div>
+          </div>
+
+          <div class="data-grid__row" role="row" aria-rowindex="4" data-record-row>
+            <div class="data-grid__cell data-grid__cell--rownum" role="rowheader" aria-colindex="1">2</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="2" data-cell data-value="1083">1083</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="3" data-cell data-value="Harbor Goods">Harbor Goods</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="4" data-cell data-value="orders@harborgoods.ph">orders@harborgoods.ph</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="5" data-cell data-value="Ready"><span class="status-pill">Ready</span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="6" data-cell data-value="845.50">₱845.50</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="7" data-cell data-value="false"><span class="switch-visual" data-on="false" aria-label="Paid: no"></span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="8" data-cell data-value="Jul 24, 9:18 AM">Jul 24, 9:18 AM</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="9">
+              <button class="header-button" type="button" data-open-row="1083" aria-label="Open order 1083"><span data-wf-icon="chevron-right"></span></button>
+            </div>
+          </div>
+
+          <div class="data-grid__row" role="row" aria-rowindex="5" data-record-row>
+            <div class="data-grid__cell data-grid__cell--rownum" role="rowheader" aria-colindex="1">3</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="2" data-cell data-value="1082">1082</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="3" data-cell data-value="Acacia Retail">Acacia Retail</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="4" data-cell data-value="team@acaciaretail.com">team@acaciaretail.com</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="5" data-cell data-value="Shipped"><span class="status-pill">Shipped</span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="6" data-cell data-value="2,410.00">₱2,410.00</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="7" data-cell data-value="true"><span class="switch-visual" data-on="true" aria-label="Paid: yes"></span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="8" data-cell data-value="Jul 23, 3:04 PM">Jul 23, 3:04 PM</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="9">
+              <button class="header-button" type="button" data-open-row="1082" aria-label="Open order 1082"><span data-wf-icon="chevron-right"></span></button>
+            </div>
+          </div>
+
+          <div class="data-grid__row" role="row" aria-rowindex="6" data-record-row>
+            <div class="data-grid__cell data-grid__cell--rownum" role="rowheader" aria-colindex="1">4</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="2" data-cell data-value="1081">1081</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="3" data-cell data-value="Luna Home">Luna Home</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="4" data-cell data-value="ops@lunahome.co">ops@lunahome.co</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="5" data-cell data-value="Processing"><span class="status-pill">Processing</span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="6" data-cell data-value="720.00">₱720.00</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="7" data-cell data-value="true"><span class="switch-visual" data-on="true" aria-label="Paid: yes"></span></div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="8" data-cell data-value="Jul 23, 11:48 AM">Jul 23, 11:48 AM</div>
+            <div class="data-grid__cell" role="gridcell" aria-colindex="9">
+              <button class="header-button" type="button" data-open-row="1081" aria-label="Open order 1081"><span data-wf-icon="chevron-right"></span></button>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="sheet-row-adder">
+          <label class="sheet-row-adder__field">
+            <span>Rows</span>
+            <input type="number" value="100" min="1" step="1" inputmode="numeric" aria-label="Rows to add" data-add-row-count>
+          </label>
+          <button class="app-button app-button--secondary app-button--compact" type="button" data-add-rows>
+            <span data-wf-icon="add"></span> Add Rows
+          </button>
+          <span class="app-meta" data-row-capacity>1,000 rows</span>
+        </div>
+      </div>
+
+      <footer class="table-statusbar">
+        <span data-sheet-summary>248 records · 1,000 rows · 7 named columns</span>
+        <span>Changes save when a row is valid · connected as editor</span>
+      </footer>
+    </main>
+
+    <div class="context-menu sheet-context-menu" role="menu" aria-label="Spreadsheet actions" data-context-menu hidden></div>
+
+    <dialog class="sheet-confirm" data-sheet-confirm>
+      <form method="dialog">
+        <div class="sheet-confirm__header">
+          <span class="sheet-confirm__icon"><span data-wf-icon="alert"></span></span>
+          <div><h2 data-sheet-confirm-title>Delete row?</h2><p data-sheet-confirm-copy>This change affects the connected PostgreSQL table.</p></div>
+        </div>
+        <div class="sheet-confirm__actions">
+          <button class="app-button app-button--secondary" value="cancel">Cancel</button>
+          <button class="app-button" value="confirm" data-sheet-confirm-accept>Delete</button>
+        </div>
+      </form>
+    </dialog>
+
+    <aside class="context-panel" data-context-panel data-open="false" aria-hidden="true" aria-labelledby="context-panel-title" inert>
+      <div class="context-panel__header">
+        <h2 id="context-panel-title" data-context-title>Configure Email</h2>
+        <button class="app-button app-button--ghost app-button--icon" type="button" data-close-context aria-label="Close panel"><span data-wf-icon="close"></span></button>
+      </div>
+
+      <div class="context-panel__body">
+        <form class="panel-grid" data-column-form>
+          <section class="panel-section">
+            <div class="panel-grid">
+              <label class="app-field">
+                <span class="app-label">Column name</span>
+                <input class="app-input" type="text" value="Email" data-column-panel-name>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Field</span>
+                <select class="app-select" data-column-panel-field>
+                  <option>Text</option>
+                  <option>Number</option>
+                  <option selected>Email</option>
+                  <option>URL</option>
+                  <option>Phone</option>
+                  <option>Relation</option>
+                  <option>Select</option>
+                  <option>Price</option>
+                  <option>Switch</option>
+                  <option>Date and time</option>
+                </select>
+                <span class="app-help">Controls how people enter and validate values.</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section" data-relation-field-settings hidden>
+            <h3>Relation</h3>
+            <div class="panel-grid">
+              <label class="app-field">
+                <span class="app-label">File</span>
+                <span class="relation-file-picker" data-relation-file-picker>
+                  <input class="app-input relation-file-picker__input" type="search" autocomplete="off" placeholder="Search files" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="relation-file-options" data-relation-file-search>
+                  <input type="hidden" value="finance/invoices" data-column-relation-target>
+                  <span class="relation-file-picker__options" id="relation-file-options" role="listbox" hidden data-relation-file-options>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/customer-orders" data-relation-file-label="Customer orders" data-relation-file-folder="Operations"><span>Customer orders</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/inventory" data-relation-file-label="Inventory" data-relation-file-folder="Operations"><span>Inventory</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/vendors" data-relation-file-label="Vendors" data-relation-file-folder="Operations"><span>Vendors</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/stock-movements" data-relation-file-label="Stock movements" data-relation-file-folder="Operations"><span>Stock movements</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="operations/purchase-requests" data-relation-file-label="Purchase requests" data-relation-file-folder="Operations"><span>Purchase requests</span><small>Operations</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/invoices" data-relation-file-label="Invoices" data-relation-file-folder="Finance"><span>Invoices</span><small>Finance</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/expenses" data-relation-file-label="Expenses" data-relation-file-folder="Finance"><span>Expenses</span><small>Finance</small></button>
+                    <button type="button" role="option" class="relation-file-picker__option" data-relation-file-option data-relation-file-value="finance/budgets" data-relation-file-label="Budgets" data-relation-file-folder="Finance"><span>Budgets</span><small>Finance</small></button>
+                    <span class="relation-file-picker__empty" hidden data-relation-file-empty>No files found.</span>
+                  </span>
+                </span>
+                <span class="app-help">Search any available table file that can be connected to this sheet.</span>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Display format</span>
+                <input class="app-input app-code" type="text" value="{invoice_number} — {customer_name}" spellcheck="false" data-column-relation-field-template>
+                <span class="app-help">Used for options in the relation picker while editing a cell. For example: <span class="app-code">{first_name} {last_name}</span>.</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-grid">
+              <label class="app-field">
+                <span class="app-label">Format</span>
+                <select class="app-select" data-column-panel-format>
+                  <option>Plain text</option>
+                  <option selected>Email link</option>
+                  <option>Clipped text</option>
+                  <option>Related record</option>
+                  <option>Badge</option>
+                  <option>Currency</option>
+                  <option>Yes/no</option>
+                  <option>Date/time</option>
+                </select>
+                <span class="app-help">Changes display only, not the stored value.</span>
+              </label>
+              <div class="panel-format-detail" data-related-record-format-settings hidden>
+                <label class="app-field">
+                  <span class="app-label">Display format</span>
+                  <input class="app-input app-code" type="text" value="{invoice_number}" spellcheck="false" data-column-related-record-template>
+                  <span class="app-help">Template for the connected record in this sheet outside input mode. It is independent from the relation picker format.</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <h3>Constraints</h3>
+            <div class="panel-grid">
+              <label class="app-check"><input type="checkbox" checked data-column-required> Required</label>
+              <label class="app-check"><input type="checkbox"> Unique values</label>
+            </div>
+          </section>
+
+          <details class="panel-disclosure">
+            <summary>Advanced</summary>
+            <div class="panel-disclosure__body">
+              <label class="app-field">
+                <span class="app-label">PostgreSQL column name</span>
+                <input class="app-input app-code" type="text" value="email" pattern="[a-z][a-z0-9_]*" autocapitalize="none" autocomplete="off" spellcheck="false" data-column-postgres-name>
+                <span class="app-help">Lowercase letters, numbers, and underscores. This is the stored PostgreSQL name, separate from the spreadsheet label.</span>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Storage type</span>
+                <select class="app-select" data-column-storage>
+                  <option>bigint</option>
+                  <option selected>text</option>
+                  <option>varchar</option>
+                  <option>citext</option>
+                  <option>numeric</option>
+                  <option>boolean</option>
+                  <option>timestamptz</option>
+                  <option>foreign key</option>
+                </select>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Default value</span>
+                <input class="app-input app-code" type="text" placeholder="No default">
+              </label>
+              <div class="app-alert">
+                <span data-wf-icon="database"></span>
+                <span>Changing the PostgreSQL name or storage may require a migration and a review of existing values.</span>
+              </div>
+            </div>
+          </details>
+        </form>
+
+        <form class="panel-grid" data-table-settings-form hidden>
+          <section class="panel-section">
+            <div class="panel-grid">
+              <label class="app-field">
+                <span class="app-label">Display name</span>
+                <input class="app-input" type="text" value="Customer orders" data-table-settings-name>
+                <span class="app-help">Shown in files and at the top of this spreadsheet.</span>
+              </label>
+              <label class="app-field">
+                <span class="app-label">Folder</span>
+                <input class="app-input" type="text" value="Operations" data-table-settings-folder readonly>
+              </label>
+              <label class="app-field">
+                <span class="app-label">PostgreSQL table name</span>
+                <input class="app-input app-code" type="text" value="customer_orders" autocomplete="off" spellcheck="false" data-table-settings-postgres-name>
+                <span class="app-help">Stored in lower_case with underscores.</span>
+              </label>
+            </div>
+          </section>
+        </form>
+
+        <div class="row-detail" data-row-detail hidden>
+          <div class="row-detail__title">
+            <p class="app-eyebrow">Record</p>
+            <h3 class="wf-heading" data-row-detail-id>Order 1084</h3>
+          </div>
+          <dl class="row-detail">
+            <div class="row-detail__field"><dt>Customer</dt><dd>Northstar Market</dd></div>
+            <div class="row-detail__field"><dt>Email</dt><dd>ap@northstar.co</dd></div>
+            <div class="row-detail__field"><dt>Status</dt><dd><span class="status-pill">Processing</span></dd></div>
+            <div class="row-detail__field"><dt>Total</dt><dd>₱1,280.00</dd></div>
+            <div class="row-detail__field"><dt>Paid</dt><dd>Yes</dd></div>
+            <div class="row-detail__field"><dt>Ordered at</dt><dd>Jul 24, 2026, 10:32 AM</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <div class="context-panel__footer" data-column-panel-actions>
+        <button class="app-button app-button--secondary" type="button" data-close-context>Cancel</button>
+        <button class="app-button" type="button" data-save-column><span data-wf-icon="check"></span> Apply changes</button>
+      </div>
+      <div class="context-panel__footer" data-table-panel-actions hidden>
+        <button class="app-button app-button--secondary" type="button" data-close-context>Cancel</button>
+        <button class="app-button" type="button" data-save-table><span data-wf-icon="check"></span> Apply changes</button>
+      </div>
+    </aside>
+
+    <dialog class="integration-dialog integration-dialog--views" data-views-dialog aria-labelledby="views-dialog-title">
+      <header class="integration-dialog__header">
+        <div><p class="app-eyebrow" data-views-table-name>Customer orders</p><h2 id="views-dialog-title">Views</h2></div>
+        <button class="app-button app-button--ghost app-button--icon" type="button" data-close-views-dialog aria-label="Close"><span data-wf-icon="close"></span></button>
+      </header>
+      <div class="integration-dialog__body">
+        <div class="views-dialog__groups" data-views-groups>
+          <section class="views-dialog__group" aria-labelledby="personal-views-title">
+            <h3 id="personal-views-title">Personal</h3>
+            <div class="views-dialog__list" data-personal-views>
+              <a class="views-dialog__item" href="./table.html?folder=operations&amp;table=customer-orders&amp;view=follow-ups" target="_blank" rel="noopener" data-saved-view-link="follow-ups">
+                <span class="views-dialog__icon"><span data-wf-icon="user"></span></span><span><strong>My follow-ups</strong><small>Processing · newest first</small></span><span class="views-dialog__meta">Open new tab</span>
+              </a>
+            </div>
+          </section>
+          <section class="views-dialog__group" aria-labelledby="shared-views-title">
+            <h3 id="shared-views-title">Shared</h3>
+            <div class="views-dialog__list" data-shared-views>
+              <a class="views-dialog__item" href="./table.html?folder=operations&amp;table=customer-orders&amp;view=ready" target="_blank" rel="noopener" data-saved-view-link="ready">
+                <span class="views-dialog__icon"><span data-wf-icon="rows"></span></span><span><strong>Ready to ship</strong><small>Status is Ready · newest first</small></span><span class="views-dialog__meta">Open new tab</span>
+              </a>
+              <a class="views-dialog__item" href="./table.html?folder=operations&amp;table=customer-orders&amp;view=unpaid" target="_blank" rel="noopener" data-saved-view-link="unpaid">
+                <span class="views-dialog__icon"><span data-wf-icon="rows"></span></span><span><strong>Unpaid orders</strong><small>Paid is No · total highest</small></span><span class="views-dialog__meta">Open new tab</span>
+              </a>
+            </div>
+          </section>
+        </div>
+        <div class="views-dialog__empty" data-views-empty hidden>
+          <span class="views-dialog__icon"><span data-wf-icon="rows"></span></span>
+          <strong>No saved views</strong>
+          <p>Create a view from this table’s current filters, sorting, columns, and presentation.</p>
+          <button class="app-button" type="button" data-swap-to-create><span data-wf-icon="add"></span> Create new view</button>
+        </div>
+      </div>
+      <footer class="integration-dialog__footer">
+        <button class="app-button app-button--secondary" type="button" data-close-views-dialog>Close</button>
+        <button class="app-button" type="button" data-swap-to-create data-views-footer-create><span data-wf-icon="add"></span> Create new view</button>
+      </footer>
+    </dialog>
+
+    <dialog class="integration-dialog" data-view-dialog aria-labelledby="view-dialog-title">
+      <form method="dialog" data-view-form>
+        <header class="integration-dialog__header">
+          <div><p class="app-eyebrow">Saved view</p><h2 id="view-dialog-title">Create a view</h2></div>
+          <button class="app-button app-button--ghost app-button--icon" type="button" data-close-view-dialog aria-label="Close"><span data-wf-icon="close"></span></button>
+        </header>
+        <div class="integration-dialog__body">
+          <label class="app-field"><span class="app-label">Name</span><input class="app-input" type="text" name="viewName" value="Ready for review" required></label>
+          <fieldset class="integration-choice-group">
+            <legend>Access</legend>
+            <label class="integration-choice"><input type="radio" name="access" value="private" checked><span><strong>Private</strong><small>Only you can open and update this view.</small></span></label>
+            <label class="integration-choice" data-shared-choice><input type="radio" name="access" value="shared"><span><strong>Shared</strong><small>Everyone with table access can open it.</small></span></label>
+            <p class="integration-field-message" data-shared-message hidden>Only the table owner or an owning-role member can publish a shared view.</p>
+          </fieldset>
+          <fieldset class="integration-check-group">
+            <legend>Save from the current sheet</legend>
+            <label><input type="checkbox" checked> Filters and sorting</label>
+            <label><input type="checkbox" checked> Column order and visibility</label>
+            <label><input type="checkbox" checked> Cell presentation</label>
+          </fieldset>
+        </div>
+        <footer class="integration-dialog__footer">
+          <button class="app-button app-button--secondary" type="button" data-close-view-dialog>Cancel</button>
+          <button class="app-button" type="submit">Create view</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div class="app-toast" role="status" data-toast hidden>
+      <span data-wf-icon="check"></span>
+      <span><strong data-toast-title>Changes saved</strong><p data-toast-copy>The table has been updated.</p></span>
+    </div>
+
+    <div class="integration-toast" role="status" aria-live="polite" data-integration-toast hidden></div>
+
+  </div>
+
+  <script src="../lib/icons.js?v=r005-round3"></script>
+  <script src="../lib/app.js?v=r007-round2"></script>
+  <script src="../lib/integrations.js?v=r007-round2"></script>
+</body>
+</html>

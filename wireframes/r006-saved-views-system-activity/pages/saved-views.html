@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer orders · Saved views</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="saved-views">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar__start">
+        <a class="brand" href="./browse.html">
+          <span class="brand__mark"><span data-icon="grid"></span></span>
+          <span>Acme Inc.</span>
+        </a>
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="./browse.html?folder=operations">Operations</a>
+          <span data-icon="chevron-right"></span>
+          <span>Customer orders</span>
+        </nav>
+      </div>
+      <div class="topbar__actions">
+        <a class="utility-link" href="./system-activity.html"><span data-icon="activity"></span> System activity</a>
+        <button class="icon-button" type="button" aria-label="Account menu"><span data-icon="user"></span></button>
+      </div>
+    </header>
+
+    <main class="sheet-page">
+      <nav class="menubar" aria-label="Spreadsheet menus">
+        <button type="button">File</button>
+        <button type="button">Edit</button>
+        <button type="button">View</button>
+        <button type="button">Format</button>
+      </nav>
+
+      <section class="viewbar" aria-label="Saved view controls">
+        <div class="view-selector">
+          <button class="view-selector__trigger" type="button" data-view-trigger aria-haspopup="menu" aria-expanded="false">
+            <span data-icon="bookmark"></span>
+            <span data-current-view>Current sheet</span>
+            <span data-icon="chevron-down"></span>
+          </button>
+          <div class="view-menu" role="menu" aria-label="Saved views" data-view-menu hidden>
+            <div class="view-menu__heading">Personal</div>
+            <button type="button" role="menuitemradio" aria-checked="true" data-view-option="current" data-view-label="Current sheet">
+              <span data-icon="table"></span><span><strong>Current sheet</strong><small>Default arrangement</small></span><span data-icon="check"></span>
+            </button>
+            <button type="button" role="menuitemradio" aria-checked="false" data-view-option="my-follow-ups" data-view-label="My follow-ups">
+              <span data-icon="user"></span><span><strong>My follow-ups</strong><small>2 filters · 1 sort</small></span><span data-icon="check"></span>
+            </button>
+            <div class="view-menu__heading">Shared</div>
+            <button type="button" role="menuitemradio" aria-checked="false" data-view-option="ready" data-view-label="Ready to ship">
+              <span data-icon="users"></span><span><strong>Ready to ship</strong><small>Owner published</small></span><span data-icon="check"></span>
+            </button>
+            <button type="button" role="menuitemradio" aria-checked="false" data-view-option="unpaid" data-view-label="Unpaid orders">
+              <span data-icon="users"></span><span><strong>Unpaid orders</strong><small>Finance team</small></span><span data-icon="check"></span>
+            </button>
+            <div class="view-menu__footer">
+              <button type="button" data-open-view-dialog><span data-icon="add"></span> New view</button>
+              <button type="button"><span data-icon="settings"></span> Manage views</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-summary" aria-live="polite">
+          <span class="summary-chip" data-view-filter><span data-icon="filter"></span> Status is not Cancelled</span>
+          <span class="summary-chip" data-view-sort><span data-icon="sort"></span> Ordered at · newest</span>
+          <button class="summary-chip summary-chip--button" type="button" data-make-dirty><span data-icon="columns"></span> 7 columns</button>
+        </div>
+
+        <div class="viewbar__actions">
+          <span class="dirty-state" data-dirty-state>Unsaved changes</span>
+          <button class="button button--primary button--small" type="button" data-save-current>Save</button>
+          <button class="icon-button" type="button" aria-label="View options"><span data-icon="more"></span></button>
+        </div>
+      </section>
+
+      <section class="formatbar" aria-label="Cell formatting">
+        <button class="icon-button" type="button" aria-label="Undo" disabled><span data-icon="undo"></span></button>
+        <button class="icon-button" type="button" aria-label="Redo" disabled><span data-icon="redo"></span></button>
+        <span class="divider"></span>
+        <button class="format-select" type="button">Arial <span data-icon="chevron-down"></span></button>
+        <button class="format-select" type="button">12 <span data-icon="chevron-down"></span></button>
+        <button class="icon-button" type="button" aria-label="Bold"><strong>B</strong></button>
+        <button class="icon-button" type="button" aria-label="Italic"><em>I</em></button>
+        <button class="icon-button" type="button" aria-label="More formatting"><span data-icon="more"></span></button>
+      </section>
+
+      <div class="grid-wrap">
+        <table class="data-table" aria-label="Customer orders">
+          <thead>
+            <tr><th>#</th><th>Order ID</th><th>Customer</th><th>Email</th><th>Status</th><th>Total</th><th>Paid</th><th>Ordered at</th></tr>
+          </thead>
+          <tbody data-grid-body>
+            <tr data-status="Processing" data-paid="Yes"><th>1</th><td>ORD-1048</td><td>Northstar Market</td><td>ap@northstar.co</td><td><span class="cell-badge">Processing</span></td><td>₱12,500.00</td><td>Yes</td><td>Jul 24, 10:32 AM</td></tr>
+            <tr data-status="Ready" data-paid="No"><th>2</th><td>ORD-1049</td><td>Lumen Workshop</td><td>ops@lumen.ph</td><td><span class="cell-badge">Ready</span></td><td>₱8,840.50</td><td>No</td><td>Jul 24, 12:15 PM</td></tr>
+            <tr data-status="Shipped" data-paid="Yes"><th>3</th><td>ORD-1050</td><td>Mosaic Foods</td><td>orders@mosaic.ph</td><td><span class="cell-badge">Shipped</span></td><td>₱21,990.00</td><td>Yes</td><td>Jul 24, 1:05 PM</td></tr>
+            <tr data-status="Cancelled" data-paid="No"><th>4</th><td>ORD-1051</td><td>Arc &amp; Field</td><td>team@arcfield.ph</td><td><span class="cell-badge">Cancelled</span></td><td>₱3,990.00</td><td>No</td><td>Jul 24, 2:40 PM</td></tr>
+            <tr data-status="Ready" data-paid="Yes"><th>5</th><td>ORD-1052</td><td>Common Ground</td><td>buy@commonground.ph</td><td><span class="cell-badge">Ready</span></td><td>₱17,250.00</td><td>Yes</td><td>Jul 24, 3:18 PM</td></tr>
+            <tr data-status="Processing" data-paid="No"><th>6</th><td>ORD-1053</td><td>Field Notes Co.</td><td>orders@fieldnotes.ph</td><td><span class="cell-badge">Processing</span></td><td>₱6,400.00</td><td>No</td><td>Jul 24, 4:02 PM</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <footer class="sheet-footer"><span data-visible-count>5 of 6 records</span><span>1,000 logical rows</span></footer>
+    </main>
+  </div>
+
+  <dialog class="dialog" data-view-dialog aria-labelledby="view-dialog-title">
+    <form method="dialog" data-view-form>
+      <header class="dialog__header">
+        <div><p class="eyebrow">Saved view</p><h2 id="view-dialog-title">Create a view</h2></div>
+        <button class="icon-button" type="button" data-close-dialog aria-label="Close"><span data-icon="close"></span></button>
+      </header>
+      <div class="dialog__body">
+        <label class="field"><span>Name</span><input type="text" name="viewName" value="Ready for review" required></label>
+        <fieldset class="choice-group">
+          <legend>Access</legend>
+          <label class="choice-card"><input type="radio" name="access" value="private" checked><span><strong>Private</strong><small>Only you can open and update this view.</small></span></label>
+          <label class="choice-card" data-shared-choice><input type="radio" name="access" value="shared"><span><strong>Shared</strong><small>Everyone with table access can open it.</small></span></label>
+          <p class="field-message" data-shared-message hidden>Only the table owner or an owning-role member can publish a shared view.</p>
+        </fieldset>
+        <fieldset class="check-group">
+          <legend>Save from the current sheet</legend>
+          <label><input type="checkbox" checked> Filters and sorting</label>
+          <label><input type="checkbox" checked> Column order and visibility</label>
+          <label><input type="checkbox" checked> Cell presentation</label>
+        </fieldset>
+      </div>
+      <footer class="dialog__footer">
+        <button class="button" type="button" data-close-dialog>Cancel</button>
+        <button class="button button--primary" type="submit">Create view</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+  <script src="../app.js"></script>
+</body>
+</html>
