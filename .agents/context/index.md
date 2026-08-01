@@ -4,12 +4,12 @@
 
 This is the durable product and creative knowledge base for Tabular. The
 PostgreSQL-native product contract was accepted and promoted when research Spec
-00001 Froze on 2026-07-31. The creative reconstruction preserves the approved
-wireframe direction through r007 Round 2 (2026-08-01), including saved views,
-shared row order, and System activity.
+00001 Froze on 2026-07-31. The creative reconstruction preserves r007 Round 2,
+and Frozen Spec 00003 supplies the accepted direct-library application,
+security, migration, PostgreSQL, and process boundaries.
 
 It does **not** authorize production implementation or PostgreSQL migrations.
-Implementation requires a separate approved implementation spec.
+Implementation requires an accepted task plan from a Frozen spec.
 
 ## Read in this order
 
@@ -28,8 +28,9 @@ Implementation requires a separate approved implementation spec.
 6. [Wireframe decision history](tabular-wireframe-decision-history.md) — why
    current behavior supersedes earlier revisions and the browser-review record.
 7. [Implementation boundaries](tabular-implementation-boundaries.md) — accepted
-   runtime-object, authority, migration, browser-state, ordering, action, and
-   production-recheck rules discovered by Spec 00002 and r007.
+   direct-library composition, runtime-object, identity, authority, migration,
+   browser-state, ordering, action, worker, and production-recheck rules from
+   Specs 00002/00003 and r007.
 
 ## Source boundary
 

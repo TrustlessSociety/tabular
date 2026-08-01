@@ -9,7 +9,9 @@
 - Feature coverage: 58 `W-*` and 12 `D-*` IDs classified atomically
 - Gap-check state: Refreshed after approved r007 Round 2; no unresolved blocker
   findings remain
-- Implementation state: Not started; no production scaffold or task plan
+- Implementation plan: **Historical proposal**; superseded by the accepted
+  replacement plan in [Frozen Spec 00003](../00003-tabular-direct-stackpress-libraries-architecture/index.md)
+- Implementation state: Not started; no production scaffold or task files
 - Context promotion: Proof/R-003 discoveries and approved r007 decisions promoted
 
 ## Work Items
@@ -30,7 +32,7 @@
 | Promote R-003 discoveries to Context | Complete 2026-08-01 | Keep Context boundary current |
 | Promote r007 discoveries to Context | Complete 2026-08-01 | Keep accepted UX and ownership rules current |
 | Freeze Spec 00002 | Complete 2026-08-01 | Reopen only with explicit user permission |
-| Propose production tasks | Ready on request | Use the post-Freeze task workflow when requested |
+| Propose production tasks | Superseded 2026-08-01 | Preserve as historical; follow the accepted Spec 00003 task plan |
 
 ## Proof Results
 
@@ -68,6 +70,7 @@ deployment, backup, and rollback.
 
 ## Next Authority Gate
 
-Wait for a user request to create the production implementation task plan. Do
-not scaffold or implement production code before that plan is reviewed and
-accepted.
+Do not accept this spec's `tasks/sprint.md`. [Frozen Spec 00003](../00003-tabular-direct-stackpress-libraries-architecture/index.md)
+owns the direct-library architecture, accepted sprint, and open task files.
+Preserve this proposal for review history; implementation begins with Spec 00003
+Task 00001.

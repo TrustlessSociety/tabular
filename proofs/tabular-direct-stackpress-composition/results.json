@@ -1,0 +1,26 @@
+{
+  "proof": "P-001-direct-library-composition",
+  "result": "proved-with-explicit-boundaries",
+  "runtime": {
+    "node": "v26.3.0"
+  },
+  "signals": {
+    "directPackageGraph": true,
+    "explicitBootstrap": true,
+    "sessionRotation": true,
+    "csrfDenial": true,
+    "reactusBuildAndHydration": true,
+    "transactionalCapability": true,
+    "independentMcpAdapter": true,
+    "rollback": true,
+    "renderContainment": true,
+    "resourceCleanup": true
+  },
+  "boundaries": {
+    "identity": "provider-neutral proof double, not live authentication",
+    "session": "PGlite-backed durable contract for proof lifetime",
+    "secureCookie": "required in production; omitted on local HTTP proof",
+    "hydrationProps": "allowlisted shell bootstrap only; user data travels through JSON actions",
+    "database": "PGlite programming evidence, not PostgreSQL server evidence"
+  }
+}
