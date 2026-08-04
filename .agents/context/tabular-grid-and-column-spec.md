@@ -92,6 +92,11 @@ mini-form appearance.
 An unnamed column's default is always **Text** and preserves strings such as
 002; it must never inherit the nearest named column's Number editor.
 
+Typing below a blank header retains an unnamed logical column in Tabular
+metadata and stores its permanent values in the owner-enabled hidden JSON
+field. It does not infer `Column B`, `column_b`, or any other named/physical
+PostgreSQL column. Naming that header is the separate promotion action.
+
 URL and Phone are deliberately loose string fields. Their formatters may trim
 presentation noise, recognize a usable link/phone shape, or fall back to plain
 text, but they may not silently replace the stored string. A PostgreSQL
@@ -294,6 +299,10 @@ PostgreSQL column-order operation.
   PostgreSQL column order.
 - The row-adder accepts a positive number and increases logical capacity. It
   does not add a database record by itself.
+- Editing any blank logical row creates an actor-owned persistent row draft
+  carrying the hidden shared-rank token for that visible position. Reload must
+  restore a sparse draft or committed record at the same row number; skipped
+  visual rows remain blank capacity rather than empty PostgreSQL records.
 
 ## Deferred implementation decisions
 

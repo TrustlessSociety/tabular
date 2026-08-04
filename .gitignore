@@ -142,5 +142,11 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Tabular production build outputs
+.build/
+dist/
+public/assets/
+public/client/
+
 # Playwright CLI session state (retain curated proof output separately)
 **/.playwright-cli/

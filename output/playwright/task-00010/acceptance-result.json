@@ -1,0 +1,38 @@
+{
+  "task": "00010",
+  "result": "passed",
+  "runtime": {
+    "database": "PostgreSQL 18 task-scoped container",
+    "serverInstances": 2,
+    "browserSessions": 2,
+    "browser": "Codex in-app browser",
+    "narrowViewport": "390x844"
+  },
+  "verification": {
+    "focused": "21/21 passed",
+    "full": "105/105 passed",
+    "postgresRegressions": "Tasks 00002, 00003, 00004, 00005, 00008, and 00010 each passed 1/1",
+    "typecheck": "passed",
+    "productionArtifacts": "3 Reactus artifacts and 7 SQL assets verified",
+    "architecture": "passed",
+    "runtime": "passed",
+    "entrypoints": "passed",
+    "specialistAudits": "backend PASS, contract/security PASS, UI PASS"
+  },
+  "acceptance": {
+    "crossInstanceRealtime": "Edits, row-order changes, and shared-view changes propagated between independent signed-in sessions on two server instances without manual refresh.",
+    "savedViews": "Private/shared discovery and permission-aware create, update, duplicate, apply, and delete behavior passed without private-event leakage.",
+    "replay": "Disconnect/reconnect and explicit Last-Event-ID replay applied missed events once, in order, from the last committed cursor.",
+    "revocation": "Session and access revocation stopped later delivery, disclosed no later row data, and surfaced the recovery state.",
+    "rowOrder": "Shared row order moved and converged live; a sorted view disabled move authority and the pointer-handle mount while preserving sorted rows and logical selection across remount.",
+    "focus": "Delete confirmation focused Cancel, trapped Tab between two actions, inactivated and visually suppressed the background, and restored the originating Delete action on Escape.",
+    "console": "No warning or error entries in the final browser runs.",
+    "cleanup": "Browser finalized, viewport reset, fixtures and temporary files removed, ports released, and PostgreSQL container removed."
+  },
+  "screenshots": [
+    "live-table-390x844.png",
+    "saved-views-390x844.png",
+    "create-view-390x844.png",
+    "delete-confirmation-390x844.png"
+  ]
+}

@@ -54,6 +54,12 @@ structured sort, filter, relation, or constraint semantics until the user names
 and transactionally promotes them into a real PostgreSQL column. A failed
 promotion leaves the JSON values intact.
 
+Typing beneath an unnamed spreadsheet coordinate creates a stable unnamed
+Tabular column-metadata record; it never infers a display name or creates a
+physical PostgreSQL column. The entered value is retained in the actor-owned
+row draft and, when that row is promotable, is stored under the stable column
+ID in the target's Tabular-hidden `jsonb` field.
+
 ## Authority
 
 Internal authenticated users map to existing PostgreSQL roles. Actual
@@ -81,6 +87,11 @@ administration remain operator-owned.
 - Treat paste, fill, clear, and multi-cell edit as one atomic domain action.
 - Keep incomplete new rows and pending invalid values as persistent drafts;
   PostgreSQL constraints, triggers, grants, and RLS make the final decision.
+- The first changed cell in a logical blank row creates a persistent draft with
+  that row's Tabular-hidden rank. A draft at logical row 20 must reload at row
+  20; rows 1 through 19 remain visual blank positions and must not become empty
+  PostgreSQL records. Promotion inserts exactly one target record and carries
+  the retained rank into the hidden shared-rank field.
 - Use expected-version writes and explicit stale-conflict resolution; never
   silently overwrite.
 - Provide 100-step current-session undo/redo for the actor's own actions with

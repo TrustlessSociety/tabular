@@ -5,7 +5,7 @@
 Expose permitted Tabular capabilities to the MCP/harness boundary while proving
 they share application actions, authorization, transactions, and audit behavior.
 
-Status: `open`; depends on Task 00012.
+Status: `verified`; depends on verified Task 00012.
 
 ## Implementation Steps
 
@@ -40,12 +40,43 @@ application-wide user experience.
 
 ## Implementation Notes
 
-Not started. MCP is another transport over shared capabilities, not a parallel
-business-logic or authorization system.
+Started 2026-08-02 after Task 00012 passed its complete verifier, clean
+PostgreSQL 18 operations gate, npm audit, browser acceptance, and final backend,
+contract/security, and UI specialist audits. MCP remains another transport over
+shared capabilities, not a parallel business-logic or authorization system.
+
+Completed a backend-only `plugins/mcp` service registered after realtime and
+before the application catch-all. It exposes only the accepted bounded tools and
+frontend-contract resource through a concrete provider-neutral credential
+adapter, branded caller identity, the existing web pool, the caller's effective
+PostgreSQL role, shared capability actions, repeatable-read repositories, and
+safe transport-specific envelopes. It exposes no raw SQL, DDL, role selection,
+migrator authority, cookie/CSRF controls, or diagnostics.
+
+The implementation also hardened the shared PostgreSQL transaction and catalog
+read boundaries. Abort-aware checkout and real `pg_cancel_backend` cancellation
+now drain or destroy unsafe clients before release. MCP reads apply database-side
+result preflights on the same repeatable snapshot as payload retrieval. Ranked
+tables derive authoritative versions from all caller-visible values inside
+PostgreSQL without materializing omitted values, and choose a quoted internal
+version alias that cannot collide with any live physical column.
 
 ## Verification Notes
 
-Not run.
+- `npm run verify` passed: TypeScript, 193 tests, Reactus production build (three
+  artifacts), server build (nine SQL assets), artifact integrity, dependency and
+  plugin architecture, built runtime, and web/migrate/worker entrypoint checks.
+- The disposable PostgreSQL 18.4 harness passed 1/1 from clean migrations. It
+  proved web/MCP result, journal, outbox, rollback, validation, conflict, RLS,
+  cross-identity, replay, history, cancellation, deadline, shutdown, and clean
+  pool parity. It additionally proved database-side rejection of oversized
+  query/record/draft reads, ranked narrow-query-to-patch versions, both former
+  internal-alias collision names, no migrator escalation, and zero effects for
+  rolled-back work.
+- Focused capability/catalog/MCP tests passed 15/15. `npm audit --omit=dev`
+  reported zero vulnerabilities and `git diff --check` passed.
+- Final backend/transaction, contract/security, and parity/frontend specialist
+  audits each reported no actionable P1/P2 finding on the current worktree.
 
 ## Human Acceptance
 
@@ -53,4 +84,5 @@ None. Per-task human acceptance is waived; the user performs one final review.
 
 ## Agent Acceptance
 
-Not required because this task has no meaningful user-facing UI output.
+Not required because this task has no meaningful user-facing UI output. The
+three required specialist audits passed with no actionable P1/P2 findings.

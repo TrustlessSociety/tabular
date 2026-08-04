@@ -1,0 +1,89 @@
+{
+  "task": "00012",
+  "status": "passed",
+  "date": "2026-08-02",
+  "target": {
+    "database": "PostgreSQL 18 disposable local target",
+    "browser": "Codex in-app browser",
+    "desktop": { "width": 1280, "height": 800 },
+    "phone": { "width": 390, "height": 844 },
+    "desktopReconnectCapture": { "width": 1280, "height": 720 }
+  },
+  "flows": {
+    "shell": {
+      "passed": true,
+      "details": "System activity rendered the four metrics, filters, authorized count, live state, and operator retention control at desktop and phone widths.",
+      "viewports": ["1280x800", "390x844"]
+    },
+    "lifecycle": {
+      "passed": true,
+      "details": "One durable import job moved queued -> running -> 42% -> succeeded at the same operation ID at both widths.",
+      "viewports": ["1280x800", "390x844"]
+    },
+    "resultAuthorization": {
+      "passed": true,
+      "details": "Succeeded import exposed Open authorized result at /pages/table.html?folder=workspace&table=result_file; direct navigation under the operator session loaded the table route. The phone detail was repeated after fixing the detail-query metadata projection.",
+      "viewports": ["1280x800", "390x844"]
+    },
+    "retry": {
+      "passed": true,
+      "details": "Retryable failure committed one idempotency-keyed fixture effect and then exhausted into dead-letter. Review and retry reused the same operation ID, attempted the same committed effect, and succeeded with exactly one committed effect row.",
+      "viewports": ["1280x800", "390x844"],
+      "committedEffectRows": 1
+    },
+    "acknowledgement": {
+      "passed": true,
+      "details": "A separate dead-letter became Acknowledged dead letter, remained present, cleared unread state, and persisted across reload."
+    },
+    "cancellation": {
+      "passed": true,
+      "details": "A running 25% job accepted cancellation and recorded Cancellation requested followed by Operation cancelled; the action disappeared at both widths.",
+      "viewports": ["1280x800", "390x844"]
+    },
+    "reconnectReplay": {
+      "passed": true,
+      "details": "A fixture-only 10-second SSE interruption showed Reconnecting. Work completed while disconnected, then replay resumed from cursor 5 and caught up to high-water cursor 8 without manual refresh or recovery UI.",
+      "viewports": ["1280x720 diagnostic capture", "390x844"],
+      "desktopRequestedCursors": [0, 5, 5, 5, 5, 5, 5],
+      "desktopHighWater": 8,
+      "phoneRequestedCursors": [0, 16, 16, 16, 16, 16, 16],
+      "phoneHighWater": 19
+    },
+    "crossUserIsolation": {
+      "passed": true,
+      "details": "The operator saw no member job or running count; direct operator GET and cancel POST against the member job both returned 404. The member saw only its own job."
+    },
+    "retention": {
+      "passed": true,
+      "details": "Operator changed retention from 90 to 180 days; the worker completed the retention job and 180 persisted after reload. Member UI omitted the control and a forged member retention POST returned 403."
+    },
+    "responsive": {
+      "passed": true,
+      "details": "At 390x844 the table header was hidden, body rows computed to grid, detail width equaled 390px, and document horizontal overflow was zero. Desktop horizontal overflow was also zero."
+    }
+  },
+  "errors": {
+    "consoleErrors": 0,
+    "consoleWarnings": 0,
+    "unexpected5xx": 0,
+    "expectedInstrumentation": [
+      "Controlled 503 responses for the deliberately interrupted operations SSE stream"
+    ]
+  },
+  "screenshots": [
+    "activity-queued-desktop.png",
+    "activity-progress-desktop.png",
+    "activity-complete-desktop.png",
+    "activity-dead-letter-desktop.png",
+    "activity-cancelled-desktop.png",
+    "activity-reconnecting-desktop.png",
+    "activity-detail-390.png",
+    "activity-queued-390.png",
+    "activity-progress-390.png",
+    "activity-complete-390.png",
+    "activity-dead-letter-390.png",
+    "activity-cancelled-390.png",
+    "activity-reconnecting-390.png",
+    "activity-result-390.png"
+  ]
+}

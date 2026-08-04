@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".build/local-review-scripts",
+    "rootDir": ".",
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["scripts/local-review/**/*.ts"],
+  "exclude": ["node_modules", "dist", "proofs", "wireframes"]
+}

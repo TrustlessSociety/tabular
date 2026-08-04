@@ -12,10 +12,11 @@
 - Decision state: Nine direction decisions retained; all ten Gaps answered
 - Implementation plan: **Accepted 2026-08-01** in `tasks/sprint.md`; replaces
   the superseded Spec 00002 architecture proposal
-- Implementation state: Not started; fourteen accepted tasks are `open`
+- Implementation state: Task 00014 verified after its latest corrective pass;
+  current launch and Browser checks passed
 - Per-task human acceptance: Waived; every task records `none`
 - Agent acceptance: Required only for tasks with applicable UI acceptance steps
-- Final human review: Pending after all tasks are verified
+- Final human review: Available; explicit user acceptance remains pending
 - Context promotion: Complete in `tabular-implementation-boundaries.md`
 - User journeys: Not applicable; this spec changes technical composition, not
   accepted actors or product flows
@@ -37,7 +38,9 @@
 | Run context-promotion review | Complete 2026-08-01 | Keep disposable Proof details local |
 | Freeze Spec 00003 | Complete 2026-08-01 | Reopen only with explicit permission |
 | Replace production sprint | Accepted 2026-08-01 | Preserve stable task numbers |
-| Create production task files | Complete 2026-08-01 | Start Task 00001 only after coordinator handoff |
+| Create production task files | Complete 2026-08-01 | Preserve stable task numbers |
+| Execute production Tasks 00001-00013 | Verified 2026-08-02 | Preserve task evidence |
+| Prove Task 00014 release readiness | Verified 2026-08-04 | Preserve evidence; await final human review |
 
 ## Freeze Blockers
 
@@ -49,13 +52,13 @@ Context.
 
 - Product and wireframe behavior do not need another discovery pass.
 - Dynamic user tables remain catalog-driven; no Idea replacement is needed.
-- The exact external identity provider can be deferred if the adapter contract,
-  security invariants, and test double are accepted without implying live auth.
+- A third-party identity provider is not required for the first slice. Task
+  00014 must provide PostgreSQL-native sign-in against the PostgreSQL user
+  registry and the existing durable application session boundary.
 - Hosting, secrets, alert destinations, backup ownership, and live Google
   credentials remain later inputs; R-004 did not show an architecture conflict.
-- The one low transitive `esbuild` advisory is contained to a Windows Vite
-  development-server path not used by the proof. It is a mandatory implementation
-  re-audit/update constraint, not a production safety claim or Freeze blocker.
+- The prior transitive `esbuild` advisory was removed by the verified dependency
+  override; both full and production audits now report zero vulnerabilities.
 
 ## Context-Promotion Review
 
@@ -74,7 +77,6 @@ implementation details remain spec/proof-local.
 
 ## Next Authority Gate
 
-Prepare the requested coordinator-agent prompt from the accepted sprint,
-`tasks/status.md`, and Tasks 00001-00014. The coordinator begins Task 00001,
-does not pause for per-task human acceptance, and stops for the single final
-human review only after every task is verified.
+Present the running normal PostgreSQL-native sign-in environment for final human
+review. Do not mark implementation `completed` until the user explicitly
+accepts the final review.

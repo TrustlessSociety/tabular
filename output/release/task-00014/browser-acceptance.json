@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 3,
+  "task": "00014",
+  "generatedAt": "2026-08-04T07:27:05Z",
+  "result": "passed",
+  "state": "agent-verified-human-acceptance-pending",
+  "runtime": {
+    "ordinaryOrigin": "http://127.0.0.1:3000",
+    "database": "PostgreSQL 18 disposable local-review target",
+    "manualBrowser": "Codex in-app Browser plugin",
+    "releaseBrowser": "Chrome/150.0.7871.187",
+    "desktopViewport": "default desktop",
+    "narrowViewport": "390x844",
+    "freshReleaseContexts": 3,
+    "sessionInjection": false,
+    "directServiceCalls": false,
+    "testIdentityProvider": false,
+    "acceptanceRoute": false
+  },
+  "normalEntry": {
+    "startedSignedOut": true,
+    "visiblePostgreSqlLogin": true,
+    "wrongPasswordGenericFailure": true,
+    "correctPasswordReachedExplorer": true,
+    "sessionSurvivedApplicationRestart": true,
+    "visibleSignedInIdentity": "tabular_reviewer",
+    "visibleLogout": true
+  },
+  "manualBrowserJourney": {
+    "authenticatedBrowse": "passed",
+    "createAndRenameFile": {
+      "result": "passed",
+      "file": "operations.untitled_file",
+      "displayName": "Acceptance ledger",
+      "visibleDdlConfirmation": true
+    },
+    "columnsAndRelations": {
+      "result": "passed",
+      "representativeRelationConfiguration": "seeded and reviewed through the table settings surface",
+      "authority": "server-authorized PostgreSQL metadata"
+    },
+    "editingAndValidation": {
+      "result": "passed",
+      "validEdit": true,
+      "invalidInteger": "not-a-number",
+      "existingRowErrorToken": "#VALUE!",
+      "insertRowCellErrorTokens": "non-empty invalid values only",
+      "explicitCommitControl": false,
+      "validEditsAutosaveOnBlur": true,
+      "cancelRestoredStoredValue": true
+    },
+    "formatting": {
+      "result": "passed",
+      "cell": "Customer orders H2 Notes",
+      "boldPersistedAcrossRestart": true
+    },
+    "savedView": {
+      "result": "passed",
+      "name": "Task 00014 review",
+      "scope": "shared"
+    },
+    "sharedRowOrder": {
+      "result": "passed",
+      "currentOrder": [
+        "ord-4002",
+        "ord-4001",
+        "ord-4003"
+      ],
+      "serverRankColumnHidden": true
+    },
+    "authorizedExport": {
+      "result": "passed",
+      "status": "Exported 3 server-authorized rows as CSV"
+    },
+    "csvImport": {
+      "result": "passed",
+      "source": "browser-import-current.csv",
+      "target": "operations.browser_import",
+      "leadingZeroTokensRetained": [
+        "001",
+        "002"
+      ],
+      "atomicWorkerCommit": true,
+      "rows": 2
+    },
+    "externalGoogleProvider": {
+      "result": "blocked-external-credentials",
+      "mockSubstituted": false,
+      "missing": [
+        "TABULAR_GOOGLE_CLIENT_ID",
+        "TABULAR_GOOGLE_CLIENT_SECRET",
+        "TABULAR_GOOGLE_REDIRECT_URI",
+        "TABULAR_GOOGLE_TOKEN_ENCRYPTION_KEY"
+      ]
+    },
+    "permissionTransition": {
+      "result": "passed",
+      "revokedEditState": "Edit cell disabled with Update permission is required for selected cells",
+      "authorityRestored": true,
+      "editingRecovered": true
+    },
+    "twoSessions": {
+      "result": "passed",
+      "independentCookieJars": true,
+      "simultaneousSessionsForOneIdentity": true,
+      "visibleEditPropagatedBySse": true,
+      "publicRotationPreservedPeerSession": true,
+      "logoutRevokedOnlyCurrentSession": true
+    },
+    "activityAndRecovery": {
+      "result": "passed",
+      "authorizedSystemActivity": true,
+      "successfulJobsVisible": 3,
+      "controlledValidationRecovery": true,
+      "controlledPermissionRecovery": true,
+      "restartRecovery": true
+    },
+    "responsive": {
+      "result": "passed",
+      "viewport": "390x844",
+      "surfaces": [
+        "folder",
+        "table",
+        "import",
+        "activity"
+      ],
+      "documentWidth": 390,
+      "bodyWidth": 390,
+      "horizontalOverflow": false
+    },
+    "finalLiveState": {
+      "url": "http://127.0.0.1:3000/pages/table.html?folder=operations&table=product-data",
+      "sessionResumedAfterFinalRestart": true,
+      "status": "Saved and Live",
+      "liveUpdates": "connected",
+      "consoleFailures": []
+    }
+  },
+  "executableReleaseAcceptance": {
+    "result": "passed",
+    "command": "npm run verify:release:browser",
+    "steps": [
+      "desktop-session:visible-postgresql-login",
+      "desktop:explorer-to-live-postgresql-grid",
+      "desktop:unknown-route-and-file-404",
+      "second-session:visible-postgresql-login",
+      "second-session:independent-cookie-jar",
+      "two-session:visible-edit-and-live-sse-sync",
+      "sessions:public-rotation-preserves-peer-session",
+      "desktop:authorized-system-activity",
+      "narrow-session:visible-postgresql-login",
+      "narrow:390x844-folder",
+      "narrow:visible-server-revoked-logout",
+      "sessions:logout-revokes-only-current-cookie-jar"
+    ],
+    "finalReleaseGate": "passed on the current build at 2026-08-04T04:31:19Z",
+    "additionalConsecutiveRepetitions": 2,
+    "unexpectedSignals": []
+  },
+  "correctiveObservation": {
+    "preliminaryGateSignal": "the first current-build audit found a stale Commit-control expectation; the first corrected rerun then exposed a reproducible concurrent grid-load 500",
+    "investigation": "PostgreSQL recorded SQLSTATE 40001 while Files-service catalog reconciliation raced the shared catalog-discovery queue; all web-exposed Files reconciliations now use the shared serialized retry path, with a three-way PostgreSQL integration regression",
+    "finalDisposition": "after rebuild and restart, the first release run plus two explicit repetitions passed with no browser failures or server error/warn records"
+  },
+  "latestCorrectiveRerun": {
+    "result": "passed",
+    "completedAt": "2026-08-04T04:31:19Z",
+    "currentBuild": true,
+    "consecutiveFreshPublicOriginRuns": 3,
+    "freshContextsPerRun": 3,
+    "autosaveOnBlur": "passed with two-session SSE propagation",
+    "adjacentSparseDrafts": "G19 and D20 retained independent IDs and 24-digit ranks through reload; updating G19 did not change D20",
+    "partialRowErrors": "D20 projected only the missing Image error",
+    "skippedRow": "H23 survived reload with rows 21 and 22 blank; clearing it removed only that draft",
+    "selectionFormattingAndReorder": "cell, named-header, and whole-column states; header WYSIWYG; and both column drag directions passed",
+    "unexpectedBrowserSignals": [],
+    "serverDiagnostics": "healthz 200, readyz 200, and no web, worker, or migrator error/warn records after the rebuilt restart"
+  },
+  "latestEmptyRowCorrection": {
+    "result": "passed",
+    "completedAt": "2026-08-04T07:27:05Z",
+    "verificationChecks": 230,
+    "rawInvalidValuesRecoverable": "formula bar and reopened editor",
+    "validationLocation": "row-number summary plus exact invalid-value cells",
+    "inlineInsertErrorTokens": "#VALUE! or #ERROR! for non-empty rejected values; untouched required cells remain blank",
+    "cellEditorBackspace": "cleared the final raw value, persistent draft, row error, and hidden rank",
+    "selectedRowBackspace": "cleared only actual retained fields while ignoring blank future-column placeholders",
+    "rowsAfterReload": "rows 19 and 20 are ordinary blank spreadsheet rows",
+    "recentBrowserDiagnostics": [],
+    "serverDiagnostics": "healthz 200, readyz 200, and no local-review error/warn records"
+  },
+  "artifactBoundary": {
+    "currentMachineLedger": true,
+    "currentScreenshotsRetained": false,
+    "historicalScreenshots": "PNG files in this directory were generated on 2026-08-02 behind the withdrawn fixture-backed entry and are not current corrective acceptance proof."
+  },
+  "humanAcceptance": "pending"
+}

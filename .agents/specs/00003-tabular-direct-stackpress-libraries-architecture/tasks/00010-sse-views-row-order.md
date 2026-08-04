@@ -5,7 +5,7 @@
 Keep signed-in users synchronized with authenticated Server-Sent Events while
 adding durable saved views and shared row ordering over PostgreSQL state.
 
-Status: `open`; depends on Task 00009 passing the Browser gate.
+Status: `verified`; depends on verified Task 00009.
 
 ## Implementation Steps
 
@@ -52,12 +52,42 @@ Status: `open`; depends on Task 00009 passing the Browser gate.
 
 ## Implementation Notes
 
-Not started. SSE is the accepted one-way synchronization transport; PostgreSQL
-outbox state, not an in-memory broadcaster, is authoritative.
+Started 2026-08-02 after Task 00009 passed its full verifier, isolated
+PostgreSQL owner/reader browser acceptance, cleanup, and final specialist
+`PASS` review. SSE is the accepted one-way synchronization transport;
+PostgreSQL outbox state, not an in-memory broadcaster, is authoritative.
+
+Implemented authenticated global-cursor SSE with durable PostgreSQL outbox
+delivery, per-principal filtering, heartbeat, shutdown, bounded backpressure,
+gap/snapshot recovery, `Last-Event-ID` replay, authorization revalidation, and
+bounded reconnect backoff. Outbox idempotency includes the database connection
+identity so equal command IDs on independent connections emit independently.
+
+Implemented strict personal/shared saved-view contracts and permission-aware
+create, update, duplicate, delete, and replay. Definitions are bound to the
+target file's current non-hidden catalog columns and the mapped role's current
+live `SELECT` privileges. Every idempotent replay rechecks current authority.
+
+Implemented fixed-width lexicographic row ranks for insert, move, and rebalance.
+Insert and move share catalog-before-advisory-before-row lock ordering, removing
+the reproduced insert-versus-move deadlock. Rank action replay rechecks current
+row-order authority.
+
+The browser audit also repaired two lifecycle edges: Tabulator remount work is
+now gated on the new instance's `tableBuilt` readiness, and the nested saved-view
+delete confirmation uses visible-element focus cycling plus inert-state visual
+suppression. Sorted authority changes preserve logical selection, sort/filter
+state, issues, and presentation while remounting the row pointer handle safely.
 
 ## Verification Notes
 
-Not run.
+Passed. Focused realtime/grid/saved-view/UI tests passed 21/21. Full
+`npm run verify` passed 105/105 tests plus typecheck, production build,
+3 Reactus artifacts, 7 SQL assets, architecture, built runtime, and entrypoint
+verification. PostgreSQL 18 regressions for Tasks 00002, 00003, 00004, 00005,
+00008, and 00010 each passed 1/1. Independent backend, contract/security, and
+UI specialist audits returned `PASS`. Expected npm `python` and Node
+`module.register()` warnings only.
 
 ## Human Acceptance
 
@@ -65,5 +95,10 @@ None. Per-task human acceptance is waived; the user performs one final review.
 
 ## Agent Acceptance
 
-Pending. The implementing agent must execute the Acceptance Steps and record
-`passed` or `failed` with browser, network, and screenshot evidence.
+Passed. Two independent signed-in sessions across two server instances proved
+live edit, row-order, shared-view, replay, reconnect, and revocation behavior.
+Explicit `Last-Event-ID` replay resumed at the expected row-order event and
+continued with heartbeats. The final 390x844 recheck passed dynamic row-move
+authority, nested confirmation focus/isolation/restoration, visual bounds, and
+a clean console. Evidence: `output/playwright/task-00010/acceptance.md` and the
+four screenshots under `output/playwright/task-00010/`.

@@ -1,0 +1,44 @@
+{
+  "task": "00009",
+  "result": "passed",
+  "runtime": {
+    "database": "PostgreSQL 18 task-scoped container",
+    "ownerRows": 3,
+    "readerRows": 0,
+    "browser": "Codex in-app browser",
+    "desktopViewport": "1440x900",
+    "narrowViewport": "390x844"
+  },
+  "verification": {
+    "focused": "24/24 passed",
+    "full": "86/86 passed",
+    "typecheck": "passed",
+    "productionArtifacts": "3 Reactus artifacts and 6 SQL assets verified",
+    "architecture": "passed",
+    "runtime": "passed",
+    "entrypoints": "passed"
+  },
+  "acceptance": {
+    "menus": "File, Edit, View, and Format opened with accurate one-shot, checked, mixed, disabled, deferred, permission, and destructive states.",
+    "keyboard": "Arrow traversal, top-level switching, submenu entry, Enter activation, Escape one-level dismissal, Shift+F10, focus return, and shared range-copy routing passed.",
+    "formatting": "Cell and range typography, palettes, basic number presentation, border placement/color/style, alignment, wrapping, persistence, clear, undo, and redo passed.",
+    "contexts": "Cell, range, relation, row, column, and explorer context menus routed through shared commands without grid reflow.",
+    "permissions": "Schema configuration, table-level DML, and selected-cell DML were independent: protected owner columns and reader mutations were disabled with exact reasons while copy, export, client-side sort, and permitted row actions remained available.",
+    "narrow": "Four menus and core font/size/emphasis controls remained visible; More retained the full hidden surface and measured x=118..382 at 390x844, preserving the 8px viewport gutter with no document overflow.",
+    "accessibility": "No duplicate IDs or unnamed visible buttons; menu roles and selected/mixed states were exposed; focus restoration passed.",
+    "console": "No warning or error entries in the final browser log sweep.",
+    "cleanup": "Browser tab finalized, fixture listeners stopped, temporary session files deleted, and the PostgreSQL container removed."
+  },
+  "acceptedDeferrals": [
+    "Saved views and multi-user presentation persistence remain Task 00010 scope.",
+    "Make a copy, version history, full screen, structural placement/move/resize/delete commands, advanced number semantics, and production-complete border rendering remain visibly disabled or explicitly non-production-complete as frozen."
+  ],
+  "screenshots": [
+    "formatting-desktop-1440x900-final.png",
+    "menus-desktop-1440x900-final.png",
+    "row-delete-confirmation-1440x900.png",
+    "explorer-context-desktop.png",
+    "narrow-more-390x844.png",
+    "narrow-column-context-390x844.png"
+  ]
+}

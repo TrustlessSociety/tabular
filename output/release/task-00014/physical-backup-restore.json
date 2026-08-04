@@ -1,0 +1,115 @@
+{
+  "task": "00014",
+  "result": "passed",
+  "generatedAt": "2026-08-03T05:08:43.343Z",
+  "postgresql": "PostgreSQL 18.4 (Debian 18.4-1.pgdg13+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+  "backup": {
+    "mechanism": "pg_basebackup",
+    "format": "plain",
+    "walMethod": "stream",
+    "checkpoint": "fast",
+    "bytes": 51589310,
+    "sourceVolume": "tabular-task00014-backup"
+  },
+  "restore": {
+    "target": "isolated-postgresql-18-container",
+    "recoveryComplete": true,
+    "exactDatabaseRoleSchemaRelationOids": true,
+    "migrationHistory": "exact",
+    "rlsDirectLoginDenied": true,
+    "authorizedRoleReadEdit": true,
+    "operationQueue": "exact",
+    "outboxCursor": "exact",
+    "readiness": "packaged-web-ready-and-graceful-shutdown"
+  },
+  "source": {
+    "postgresql": "PostgreSQL 18.4 (Debian 18.4-1.pgdg13+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "inRecovery": false,
+    "oids": {
+      "database": 63043,
+      "roles": {
+        "tabular_task14_recovery_member": 63041,
+        "tabular_task14_recovery_migrator": 63038,
+        "tabular_task14_recovery_web": 63039,
+        "tabular_task14_recovery_worker": 63040
+      },
+      "schemas": {
+        "finance": 64344,
+        "operations": 64343,
+        "release_probe": 64423,
+        "tabular": 63044
+      },
+      "relations": {
+        "finance.customers": 64345,
+        "finance.invoices": 64358,
+        "operations.customer_orders": 64377,
+        "operations.fulfillment_queue": 64401,
+        "release_probe.records": 64424,
+        "tabular.operation_jobs": 64164,
+        "tabular.outbox_events": 63794
+      }
+    },
+    "migrations": {
+      "count": 10,
+      "checksum": "3d12bb48a0ccbcc7ea36cee92788f1c5db0535b82f647f6d6796953f7bba85bf"
+    },
+    "rows": {
+      "count": 2,
+      "uncommitted": 0,
+      "firstLabel": "Committed before crash"
+    },
+    "operations": {
+      "queued": 1,
+      "total": 1
+    },
+    "outbox": {
+      "events": 1,
+      "highWater": 1
+    }
+  },
+  "restored": {
+    "postgresql": "PostgreSQL 18.4 (Debian 18.4-1.pgdg13+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "inRecovery": false,
+    "oids": {
+      "database": 63043,
+      "roles": {
+        "tabular_task14_recovery_member": 63041,
+        "tabular_task14_recovery_migrator": 63038,
+        "tabular_task14_recovery_web": 63039,
+        "tabular_task14_recovery_worker": 63040
+      },
+      "schemas": {
+        "finance": 64344,
+        "operations": 64343,
+        "release_probe": 64423,
+        "tabular": 63044
+      },
+      "relations": {
+        "finance.customers": 64345,
+        "finance.invoices": 64358,
+        "operations.customer_orders": 64377,
+        "operations.fulfillment_queue": 64401,
+        "release_probe.records": 64424,
+        "tabular.operation_jobs": 64164,
+        "tabular.outbox_events": 63794
+      }
+    },
+    "migrations": {
+      "count": 10,
+      "checksum": "3d12bb48a0ccbcc7ea36cee92788f1c5db0535b82f647f6d6796953f7bba85bf"
+    },
+    "rows": {
+      "count": 2,
+      "uncommitted": 0,
+      "firstLabel": "Edited after restore"
+    },
+    "operations": {
+      "queued": 1,
+      "total": 1
+    },
+    "outbox": {
+      "events": 1,
+      "highWater": 1
+    }
+  }
+}

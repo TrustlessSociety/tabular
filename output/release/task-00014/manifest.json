@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "task": "00014",
+  "result": "passed",
+  "startedAt": "2026-08-03T05:06:52.596Z",
+  "completedAt": "2026-08-03T05:09:03.837Z",
+  "environment": {
+    "node": "v26.2.0",
+    "platform": "darwin-arm64",
+    "postgresqlTarget": "disposable-local-postgresql-18",
+    "secretsRetained": false
+  },
+  "source": {
+    "revision": "977cc5079f3ef0d2c798ae729e0255d460535224",
+    "worktreeClean": false,
+    "cleanCheckoutProof": false,
+    "isolatedProductionPackage": true,
+    "note": "Commit/stage/branch actions were outside the authorized task boundary."
+  },
+  "commands": [
+    {
+      "name": "verify",
+      "command": "npm run verify",
+      "result": "passed",
+      "durationMs": 30919,
+      "log": "output/release/task-00014/logs/verify.log"
+    },
+    {
+      "name": "package-release",
+      "command": "npm run package:release",
+      "result": "passed",
+      "durationMs": 9099,
+      "log": "output/release/task-00014/logs/package-release.log"
+    },
+    {
+      "name": "production-install",
+      "command": "npm ci --omit=dev --ignore-scripts",
+      "result": "passed",
+      "durationMs": 1460,
+      "log": "output/release/task-00014/logs/production-install.log"
+    },
+    {
+      "name": "finalize-package-manifest",
+      "command": "npm run package:release:finalize",
+      "result": "passed",
+      "durationMs": 1006,
+      "log": "output/release/task-00014/logs/finalize-package-manifest.log"
+    },
+    {
+      "name": "postgresql18-matrix",
+      "command": "npm run test:postgres:all",
+      "result": "passed",
+      "durationMs": 54392,
+      "log": "output/release/task-00014/logs/postgresql18-matrix.log"
+    },
+    {
+      "name": "process-lifecycle",
+      "command": "npm run test:release:lifecycle",
+      "result": "passed",
+      "durationMs": 6552,
+      "log": "output/release/task-00014/logs/process-lifecycle.log"
+    },
+    {
+      "name": "postgresql-resilience",
+      "command": "npm run test:release:resilience",
+      "result": "passed",
+      "durationMs": 8559,
+      "log": "output/release/task-00014/logs/postgresql-resilience.log"
+    },
+    {
+      "name": "browser-acceptance",
+      "command": "npm run verify:release:browser",
+      "result": "passed",
+      "durationMs": 16091,
+      "log": "output/release/task-00014/logs/browser-acceptance.log"
+    },
+    {
+      "name": "production-audit",
+      "command": "npm audit --omit=dev",
+      "result": "passed",
+      "durationMs": 889,
+      "log": "output/release/task-00014/logs/production-audit.log"
+    },
+    {
+      "name": "full-audit",
+      "command": "npm run audit:full",
+      "result": "passed",
+      "durationMs": 1002,
+      "log": "output/release/task-00014/logs/full-audit.log"
+    }
+  ],
+  "evidence": [
+    {
+      "file": "output/release/task-00014/postgresql-crash-recovery.json",
+      "sha256": "dd03311de3ed10c221d09c9b80b41887a1d37f39eb9f93bc51f74047c5710a17"
+    },
+    {
+      "file": "output/release/task-00014/physical-backup-restore.json",
+      "sha256": "5391f4df054a227068715948e3471226706f59f9356e2a85e45409f3a023d35e"
+    },
+    {
+      "file": "output/release/task-00014/multi-instance-runtime.json",
+      "sha256": "e00560fc5547c0867bf57ad6083c8322874b58c03b0808a5495abe7dd11969b8"
+    }
+  ],
+  "releasePackage": {
+    "root": ".build/release-package",
+    "manifest": ".build/release-package/release-manifest.json",
+    "manifestSha256": "a8df530a43b5965553461acb329fa8d53aac34ca580552bf9376183dd20ca45a",
+    "filesVerified": 3961,
+    "productionDependencyFiles": 3333,
+    "selfReferentialManifestExcluded": true
+  },
+  "knownDeploymentInputs": [
+    "live Google OAuth sandbox credentials",
+    "hosting and TLS termination",
+    "secret manager and alert destinations",
+    "backup owner and accepted RPO/RTO"
+  ]
+}

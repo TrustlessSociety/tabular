@@ -5,7 +5,7 @@
 Implement the PostgreSQL-backed file/table, column, relationship, hidden-field,
 and owner-confirmed DDL workflows consumed by later UI plugins.
 
-Status: `open`; depends on Task 00004.
+Status: `verified`; depends on verified Task 00004.
 
 ## Implementation Steps
 
@@ -40,12 +40,57 @@ None. Visible file and column behavior is exercised in Tasks 00007 and 00008.
 
 ## Implementation Notes
 
-Not started. PostgreSQL is canonical; Tabular metadata never substitutes for
-live catalog identity or database constraints.
+Started 2026-08-01 after Task 00004 passed the full repository verifier, its
+PostgreSQL 18 capability/draft/range/reversal suite, and three independent
+specialist reviews. PostgreSQL is canonical; Tabular metadata never substitutes
+for live catalog identity or database constraints. Request-authorized
+transactions must remain distinct from migrator-only owner DDL authority, and
+Task 00005 must preserve the stable catalog and action-kernel boundaries already
+proved by Tasks 00003 and 00004.
+
+Completed the `tabular.files` plugin with structured plan/confirm/apply DDL,
+short-lived confirmations and immutable replay, locked identity/mapping/role
+generations, final live native-role rechecks, deterministic owner switching in
+the migrator process, full transactional reconciliation, metadata versions, and
+managed-constraint cleanup. Blank files, independent display/physical names,
+the accepted field/format/config registries, defaults, generated text columns,
+required/unique constraints, file/column drops, composite cross-schema foreign
+keys, caller-filtered descriptions, native read-only classification, and stable
+promoted logical column identities are implemented.
+
+Tabular-owned JSON and shared-rank fields use collision-safe versioned physical
+names and current catalog bindings. JSON promotion, metadata transition, native
+DDL, catalog acceptance, dynamic version records, and request application are
+one transaction; PostgreSQL drift, metadata races, forced RLS, conversion
+failures, finalizer failures, and injected promotion failpoints roll back without
+losing JSON. File and column lifecycle cleanup includes source and target managed
+constraint references, including self-referential relations and stale ledgers
+after canonical external constraint removal.
 
 ## Verification Notes
 
-Not run.
+Passed on 2026-08-01:
+
+- `npm run verify`: typecheck, 35/35 focused tests, production Reactus/server
+  build, artifact integrity, architecture, runtime, and entrypoint verification.
+- PostgreSQL 18 Task 00005 integration: guarded disposable database; blank DDL,
+  explicit/derived/concurrent collisions, display independence, metadata races,
+  default/required/unique/generated success and failure, drop cleanup and
+  `RESTRICT` rollback/retry, exact composite cross-schema foreign-key ordering,
+  permission and target-kind denial, caller/schema/column redaction, native
+  identity negatives, hidden-field drift/replacement refusal, stable promoted
+  relation identities, every promotion failpoint, forced-RLS rollback, JSON
+  retention, DDL/version atomicity, confirmation expiry/replay, and revoked
+  applied-result replay.
+- PostgreSQL 18 regression suites for Tasks 00002, 00003, and 00004 passed on
+  separate guarded disposable databases after the final Task 00005 changes.
+- Three independent final specialist reviews passed: architecture/visibility,
+  proof coverage, and authority/transaction/lifecycle integrity.
+
+The sandboxed verifier's first `tsx` attempt could not create its local IPC
+socket (`EPERM`); the approved outside-sandbox rerun passed. npm also reported
+the existing non-fatal unknown `python` user-config warning and Node reported
+the existing `module.register()` deprecation warning.
 
 ## Human Acceptance
 

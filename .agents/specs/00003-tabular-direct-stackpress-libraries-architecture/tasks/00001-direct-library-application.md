@@ -7,7 +7,7 @@ Ingest's package plugin loader. Establish the configuration, bootstrap, plugin
 ownership, Reactus build, entrypoints, readiness, and shutdown contracts that
 all later tasks inherit.
 
-Status: `open`
+Status: `verified`
 
 ## Implementation Steps
 
@@ -44,12 +44,66 @@ None. The starter/health surface is infrastructure, not meaningful product UI.
 
 ## Implementation Notes
 
-Not started. Use the direct Ingest plugin contract; do not copy the scaffold
-skill's umbrella `stackpress/server` import.
+Started 2026-08-01 after a read-only reconciliation of the Frozen spec,
+accepted task tracker, current Context, P-001/P-002 production translations,
+git state, and installed focused-package APIs. The root worktree had no
+production application or unrelated changes. Use the direct Ingest plugin
+contract; do not copy the scaffold skill's umbrella `stackpress/server` import.
+
+Implemented the root direct-library application shell with exact dependency
+pins, typed config, explicit bootstrap and resource ownership, extensionless
+Ingest plugin discovery, and a stable duplicate-guarded `tabular.app` service.
+Only the web entrypoint owns an HTTP listener; migrate is one-shot and worker is
+a long-lived signal-bounded shell. Reactus emits a hashed allowlisted artifact
+manifest, and runtime serving rechecks file size, digest, lexical confinement,
+and real-path confinement. Health, readiness, structured error finalization,
+in-flight draining, reverse-order resource cleanup, signal handling, and
+working-directory-independent source/built paths are in place.
+
+The focused Stackpress scaffold guidance influenced the minimal plugin shape
+and browser/server separation. Frozen Spec 00003 overrode its generic umbrella
+lifecycle examples: production code imports only the focused libraries and
+uses top-level `package.json.plugins` plus `server.bootstrap()`.
 
 ## Verification Notes
 
-Not run.
+Passed 2026-08-01.
+
+- A clean `npm ci` installed the exact root lockfile successfully.
+- `npm run verify` passed type checking; 13/13 source tests; the Reactus and
+  server production build; artifact verification; the direct-library and
+  forbidden-package/import audit; a built server health/readiness, error
+  sanitization, manifest-asset, idempotent-shutdown, and port-release smoke;
+  and built web/migrate/worker entrypoint checks from a non-project working
+  directory.
+- Error tests include a later ordinary-priority listener that attempts to
+  restore retained error text. The final low-priority sanitizer preserves typed
+  exposed 4xx errors and hides unexpected messages and stacks.
+- `git diff --check` passed. The installed `.agents` validator passed with only
+  pre-existing preferred-line-count warnings in Context and historical spec
+  files.
+- `npm audit --offline --json` and `npm audit --offline --omit=dev --json`
+  reported zero cached advisories. These are explicitly not live-registry
+  evidence: a networked audit was unavailable because policy prevented sending
+  this private package's dependency metadata to the public npm endpoint.
+- The lock still contains dev-only `esbuild@0.27.7` through `tsx@4.21.0` and
+  `vite@7.3.6`. Prior proof evidence identifies low-severity
+  `GHSA-g7r4-m6w7-qqqr`, fixed upstream in esbuild 0.28.1. Disposition: accepted
+  as contained for this task because no Vite/esbuild development server is
+  exposed and production runs the built Reactus/Ingest output; re-run a live
+  full and production audit and upgrade when the pinned toolchain supports the
+  fixed release, no later than Task 00014.
+- Node 26.2.0 emitted `tsx`'s `module.register()` deprecation warning, and npm
+  emitted a host user-config `python` warning. Neither originated from the
+  application runtime and neither failed the gate.
+- The shared shutdown deadline bounds orchestration but cannot cancel a close
+  promise already executing. Later PostgreSQL pool and worker owners must add
+  real force/destroy behavior and target-specific tests.
+- No PostgreSQL 18 connectivity, pool, role, migration, or cleanup claim is
+  made by Task 00001; those gates begin in Task 00002.
+
+Independent final review found no remaining blocking code issue and recommended
+PASS after this evidence was recorded.
 
 ## Human Acceptance
 

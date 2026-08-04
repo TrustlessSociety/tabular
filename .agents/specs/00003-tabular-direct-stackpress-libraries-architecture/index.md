@@ -1,9 +1,11 @@
 # Spec 00003: Tabular Direct Stackpress Libraries Architecture
 
-Status: **Frozen 2026-08-01.** Research is complete, both architecture Proofs
-passed, P-001 received human acceptance, and reusable architecture truth is in
-Context. The replacement implementation sprint is accepted and its fourteen
-tasks are open; implementation has not started.
+Status: **Frozen 2026-08-01; Task 00014 latest corrective pass verified 2026-08-04.** Research is
+complete, both architecture Proofs passed, P-001 received human acceptance, and
+reusable architecture truth is in Context. The replacement sprint is accepted;
+Task 00014 is agent-verified after correcting sparse drafts, exact partial-row
+validation, retained invalid-value tokens, and stale launch/browser gates. Final
+human review is available; acceptance remains pending.
 
 This spec is the architecture reset for Tabular's production implementation.
 It composes the focused Stackpress repositories directly and removes the
@@ -24,8 +26,10 @@ the accepted product or visible-behavior contracts.
   completed result ledger plus remaining evidence limits.
 - [Accepted Sprint](tasks/sprint.md): load for the gated direct-library
   implementation sequence and task-level verification/acceptance rules.
-- [Task Status](tasks/status.md): load for Tasks 00001-00014, current states,
-  wave gates, and the final human-review contract.
+- [Task Status](tasks/status.md): load for verified Tasks 00001-00014, wave
+  gates, and the pending final human-review contract.
+- [Implementation Traceability](tasks/traceability.md): load for requirement,
+  decision, proof, wireframe, task, test, runtime, and evidence mapping.
 
 ## Authority And Relationship
 

@@ -5,7 +5,7 @@
 Implement the accepted application menus, formatting toolbar, palettes, context
 menus, and command routing as coherent user-facing controls over shared actions.
 
-Status: `open`; depends on Task 00008.
+Status: `verified`; depends on verified Task 00008.
 
 ## Implementation Steps
 
@@ -47,12 +47,22 @@ Status: `open`; depends on Task 00008.
 
 ## Implementation Notes
 
-Not started. Commands provide a shared presentation-to-action boundary so menu,
-toolbar, context-menu, and shortcut behavior cannot drift independently.
+Completed 2026-08-02 after Task 00008 passed full verification. The registered
+commands plugin provides the exact File/Edit/View/Format hierarchy, shared
+toolbar and context-menu routing, presentation history/persistence, typed
+formatting patches, keyboard navigation, and permission-aware command states.
+Schema configuration, table-level DML, and selected-cell DML use separate
+authority signals. Grid copy and paste keyboard requests route through the same
+range serializer and clipboard fallback as menu/context commands. Popovers are
+anchored to their active trigger using measured, viewport-clamped geometry.
 
 ## Verification Notes
 
-Not run.
+Passed. The final `npm run verify` completed with 86/86 tests, typecheck,
+production build, 3 Reactus artifacts, 6 SQL assets, architecture, built
+runtime, and entrypoint verification all passing. Focused command/grid/UI
+review passed 24/24. Expected warnings only: the existing npm user `python`
+configuration warning and Node `module.register()` deprecation warning.
 
 ## Human Acceptance
 
@@ -60,5 +70,13 @@ None. Per-task human acceptance is waived; the user performs one final review.
 
 ## Agent Acceptance
 
-Pending. The implementing agent must execute the Acceptance Steps and record
-`passed` or `failed` with screenshot and browser evidence.
+Passed in the Codex in-app browser against isolated PostgreSQL 18 owner and
+reader sessions at 1440x900 and 390x844. Menus, keyboard traversal, shared
+range copy, typography/palettes/borders/alignment/wrapping, mixed states,
+undo/redo/clear/persistence, all accepted context targets, exact permission
+reasons, destructive confirmation, focus return, and narrow overlays passed.
+The final More popover measured x=118..382 at 390px width; browser logs had no
+warnings or errors. Evidence is recorded in
+`output/playwright/task-00009/acceptance.md` and `acceptance-result.json`.
+Browser, fixture, proxy, temp sessions, ports, and PostgreSQL container were
+cleaned up. Three bounded source audits ended in `PASS`.

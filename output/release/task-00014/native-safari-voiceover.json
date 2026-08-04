@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "task": "00014",
+  "generatedAt": "2026-08-03T05:11:11Z",
+  "result": "passed",
+  "state": "agent-verified-human-acceptance-pending",
+  "environment": {
+    "platform": "macOS 26.5.2 (25F84)",
+    "browser": "Safari 26.5.2 (21624.2.5.11.8)",
+    "assistiveTechnology": "built-in macOS VoiceOver",
+    "ordinaryOrigin": "http://127.0.0.1:3000",
+    "authentication": "visible PostgreSQL-native sign-in as tabular_reviewer",
+    "sessionInjection": false,
+    "testIdentityProvider": false
+  },
+  "checks": {
+    "freshSignedOutSafariEntry": "passed",
+    "visiblePostgreSqlLogin": "passed",
+    "nativeSafariExplorerAndTableRender": "passed",
+    "skipLinksNamedNavigationAndToolbar": "passed",
+    "spreadsheetInstructionsExposed": "passed",
+    "tableHeadersRowsCellsAndTypedValuesExposed": "passed",
+    "voiceOverEnabledThroughSystemSettings": "passed",
+    "voiceOverCellNavigation": "passed; Control-Option-Right moved the selected spreadsheet cell to C1 Status and exposed Shipped",
+    "systemActivityAccessibilityTree": "passed; heading, filters, authorized operation rows, progress, results, and live updates were exposed",
+    "settingsRestored": "passed; VoiceOver was returned to off after review"
+  },
+  "defectFoundAndResolved": {
+    "symptom": "System activity initially returned the bounded internal_error response for the PostgreSQL-authenticated member",
+    "cause": "the member-authorized activity read attempted control-schema joins after SET ROLE even though member roles intentionally receive only governed data-object privileges",
+    "resolution": "internal activity targets and retention grants now load under verified base authority; mapped member authority checks only PostgreSQL data schema, table, and column privileges by OID",
+    "productionSourceDefect": true,
+    "regression": "the PostgreSQL operations integration test explicitly proves member and operator roles have no USAGE on the tabular control schema",
+    "finalSafariResult": "System activity rendered three authorized succeeded operations with live updates connected"
+  },
+  "evidenceMethod": {
+    "interaction": "native Safari, VoiceOver, and System Settings controlled through the macOS accessibility API",
+    "accessibilityInspection": "native accessibility tree",
+    "speechRecording": "not retained",
+    "currentScreenshotsRetained": false,
+    "historicalScreenshotBoundary": "native-safari-*.png files in this directory are historical 2026-08-02 fixture-backed evidence and are not current corrective proof"
+  },
+  "humanAcceptance": "pending"
+}

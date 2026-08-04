@@ -5,7 +5,7 @@
 Implement the recoverable import workflow for CSV, XLSX, and Google Sheets exact
 values, plus permission-aware CSV export from the current table or saved view.
 
-Status: `open`; depends on Task 00010.
+Status: `verified`; depends on verified Task 00010.
 
 ## Implementation Steps
 
@@ -54,12 +54,37 @@ Status: `open`; depends on Task 00010.
 
 ## Implementation Notes
 
-Not started. Provider-specific parsing stays behind this plugin; committed data
-still flows through the shared capability and worker boundaries.
+Started 2026-08-02 after Task 00010 passed its full verifier, PostgreSQL 18
+regression gates, two-session/two-instance browser acceptance, cleanup, and
+final backend, contract/security, and UI specialist `PASS` audits.
+Provider-specific parsing stays behind this plugin; committed data still flows
+through the shared capability and worker boundaries.
+
+Implemented bounded CSV/XLSX parsing, explicit type mapping, staged and
+fingerprinted imports, atomic capability-backed worker commits, cancellation,
+retry, rollback, expired-staging cleanup, and permission-aware formatted CSV
+export. Google authorization uses one-time state, encrypted server-side token
+persistence, revision pinning, worker authority rechecks, refresh, and local
+revocation. Default grid reads, transient sorts, saved views, and exports share
+the authorized read compiler; saved views are resolved server-side from only an
+opaque identifier and exact version before filtering, sorting, and the row
+window are applied.
 
 ## Verification Notes
 
-Not run. Live Google verification requires configured sandbox credentials.
+- `npm run verify`: passed, 152/152 tests plus typecheck, production client/
+  server/worker builds, artifact, architecture, runtime, and entrypoint gates.
+- PostgreSQL 18 Task 00011 integration gate: passed, including atomic import
+  recovery, OAuth lifecycle, expired-staging cleanup, and saved-view/grid/CSV
+  parity for a matching row beyond the default 1,000-row window.
+- `npm audit --omit=dev`: passed with 0 vulnerabilities; `git diff --check` is
+  clean.
+- Final backend, contract/security, and UI specialist audits: `PASS`.
+- Browser acceptance: passed with retained evidence in
+  `output/playwright/task-00011/`; a focused post-repair rerun loaded a named
+  server-resolved view with live rows and 0 console warnings/errors.
+- Live Google verification remains blocked by missing external sandbox
+  credentials; no mock or live-provider claim was substituted.
 
 ## Human Acceptance
 
@@ -67,5 +92,9 @@ None. Per-task human acceptance is waived; the user performs one final review.
 
 ## Agent Acceptance
 
-Pending. The implementing agent must execute the Acceptance Steps and record
-`passed`, `failed`, or a specific external-credential blocker with evidence.
+Passed for CSV, XLSX, malformed input, mapping recovery, permission denial,
+cancellation, rollback/retry, saved-view CSV export, and the 390x844 primary
+flow. Live Google acceptance is blocked only by the four sandbox variables
+recorded in `output/playwright/task-00011/acceptance.md`; the source is visibly
+disabled, no mock was substituted, and automated lifecycle coverage is kept
+separate from live-provider acceptance.

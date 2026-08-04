@@ -5,7 +5,7 @@
 Deliver the principal table-editing experience, including draft state, keyboard
 workflows, clipboard operations, schema settings, constraints, and relations.
 
-Status: `open`; depends on Task 00007.
+Status: `verified`; depends on verified Task 00007.
 
 ## Implementation Steps
 
@@ -47,12 +47,48 @@ Status: `open`; depends on Task 00007.
 
 ## Implementation Notes
 
-Not started. UI events invoke typed capability actions; they do not recreate DDL
-or authorization policy in browser code.
+Started 2026-08-02 after Task 00007 passed full verification, authenticated
+browser acceptance, disposable-proof cleanup, and three independent specialist
+reviews. UI events invoke typed capability actions; they do not recreate DDL or
+authorization policy in browser code.
+
+Implemented live PostgreSQL-backed editing for all ten accepted field types,
+persistent correctable drafts, exact cell/range/row mutations, copy/paste/fill,
+bounded journal undo/redo, insert/delete, column create/configure, composite
+cross-schema relations, generated/read-only behavior, selection/focus recovery,
+and narrow layouts. DDL remains owner-confirmed and separately applied by the
+migrator; browser routes remain session/origin/CSRF protected.
+
+Reviewer follow-up hardened the slice further: persistent draft writes serialize
+behind one current handle; invalid insertion projects only explicitly failing
+cells; history updates preserve unrelated later work through incarnation and
+touched-cell preconditions; permission failures retain their owning-role reason;
+and relation options hydrate existing out-of-page references while typed search
+remains remote, bounded, and RLS-scoped.
 
 ## Verification Notes
 
-Not run.
+- `npm run verify`: passed with 70 tests, type checking, production Reactus and
+  server builds, artifact and architecture guards, built-runtime checks, and all
+  web/migrator/worker entrypoint checks.
+- Focused PostgreSQL 18 suites passed for Task 00004 history/concurrency
+  regression coverage and Task 00008 native grid editing.
+- Fresh-browser acceptance passed against a freshly reset PostgreSQL 18.4
+  fixture at 1440x900 and 390x844. It covered all ten field editors/formatters,
+  persistent invalid and network drafts, range and row workflows, schema DDL,
+  composite relations, remote relation search beyond the first 50 options,
+  RLS exclusion, generated values, permission denial, focus, blank headers,
+  narrow overflow, DOM sanity, authenticated transport, and zero unexpected
+  browser/runtime signals.
+- Error explanations passed viewport bounds, mutual-exclusion, and topmost-layer
+  checks. The final database audit retained three rows, exact decimal values,
+  zero active drafts, two promoted drafts, one abandoned draft, all six applied
+  DDL requests, and the expected live composite foreign key.
+- Evidence: `output/playwright/task-00008/acceptance.md`, credential-free
+  `acceptance-proof.mjs`, redacted `acceptance-result.json`, and retained desktop/
+  narrow screenshots.
+- `git diff --check`, retained-proof syntax validation, and acceptance-result
+  JSON parsing passed. Three independent same-task re-reviews returned `PASS`.
 
 ## Human Acceptance
 
@@ -60,5 +96,8 @@ None. Per-task human acceptance is waived; the user performs one final review.
 
 ## Agent Acceptance
 
-Pending. The implementing agent must execute the Acceptance Steps and record
-`passed` or `failed` with screenshot and browser evidence.
+Passed 2026-08-02. All Acceptance Steps were executed with recorded browser,
+screenshot, authenticated-request, PostgreSQL, focus, responsive-layout, DOM,
+and runtime-signal evidence. Three independent specialist re-reviews passed the
+final slice: proof/history semantics, adapter/UI/authority safety, and holistic
+Task 00008 architecture.

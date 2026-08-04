@@ -5,7 +5,8 @@
 - Spec: `00003-tabular-direct-stackpress-libraries-architecture`
 - Spec authority: Frozen 2026-08-01
 - Implementation plan: `accepted` 2026-08-01
-- Implementation: not started; fourteen task files are open
+- Implementation: Tasks 00001-00014 agent-verified; final human review ready
+  and pending user acceptance
 
 Deliver Tabular's first production slice as a maintainable PostgreSQL-native spreadsheet
 application using focused Stackpress libraries. This is an ordered backlog, not a calendar estimate.
@@ -17,12 +18,15 @@ application using focused Stackpress libraries. This is an ordered backlog, not 
 | App/package/brand | `Tabular` / `@trustless/tabular` / `Tabular` |
 | Local web port | `3000` |
 | Server/database | Node HTTP with Ingest plugins/bootstrap; PostgreSQL 18 |
+| Human authentication | Existing safe PostgreSQL `LOGIN` roles; durable application sessions |
 | Focused local tests | PGlite through `@stackpress/inquire-pglite` |
 | Committed synchronization | Authenticated SSE; HTTP actions for mutations |
 | Browser targets | Current Chromium and Safari; 390 x 844; native VoiceOver/Safari |
 
-Live identity, Google sandbox credentials, hosting/secrets, backup owner, and alerts are later inputs.
-Missing inputs may block their task; they never authorize a simulated production claim.
+Third-party identity, Google sandbox credentials, hosting/secrets, backup owner,
+and alerts are later inputs. Missing inputs may block their task; they never
+authorize a simulated production claim. PostgreSQL-native local human sign-in is
+required for Task 00014 and is not a later deployment input.
 
 ## Sequencing Rules
 
@@ -176,14 +180,19 @@ domain outcomes without sharing transport policy or unaccepted provider doubles.
 ### 00014 - Refactor, Recheck, And Accept The Production Slice
 
 - Output: maintainability pass; feature/context trace; dependency disposition;
-  deployment/operations runbook; production-target identity, browser, native AT,
-  load, migration, backup, rollback, and recovery evidence; acceptance build.
+  PostgreSQL-native sign-in/sign-out; reproducible local review setup and data;
+  removal of review-only runtime fixtures; deployment/operations runbook;
+  production-target identity, browser, native AT, load, migration, backup,
+  rollback, and recovery evidence; acceptance build.
 - Verification: clean checkout/build; full unit/contract/integration/E2E suites;
-  migration/rollback; races/load; SSE concurrency/reconnect storm/proxy checks;
-  browser/native VoiceOver; zero unexpected console errors/warnings or overflow.
-- Acceptance steps: agent runs complete desktop/narrow first-slice journeys including
-  denial, validation, conflict, recovery, views, import, activity, and MCP-backed
-  outcomes.
+  PostgreSQL login/session denial and lifecycle matrices; migration/rollback;
+  races/load; SSE concurrency/reconnect storm/proxy checks; fresh executable
+  browser/native VoiceOver acceptance; zero unexpected console errors/warnings
+  or overflow.
+- Acceptance steps: agent uses the same documented signed-out PostgreSQL login
+  path as the human reviewer, then runs complete desktop/narrow first-slice
+  journeys including denial, validation, conflict, recovery, views, import,
+  activity, and MCP-backed outcomes without injected sessions or fixture routes.
 
 ## Rubric Decisions And Next Gate
 
