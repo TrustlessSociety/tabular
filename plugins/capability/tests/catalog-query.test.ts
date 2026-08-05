@@ -63,6 +63,23 @@ test('export-shaped queries use the shared compiler for projection, filters, and
   }]);
 });
 
+test('authorized sorting does not apply text collation to UUID-compatible key codecs', async () => {
+  const harness = queryHarness();
+  const adapter = new AuthorizedQueryTestAdapter();
+
+  await adapter.query(harness.database, queryTarget(false), {
+    columnIds: ['col_label'],
+    sorts: [{ columnId: 'col_label', direction: 'asc' }],
+    filters: [],
+    limit: 2
+  });
+
+  assert.match(
+    dataRequest(harness.requests).query,
+    /ORDER BY "label" COLLATE "C" ASC NULLS LAST, "id" ASC NULLS LAST/
+  );
+});
+
 test('shared query validation rejects forged projections, sorts, and filters before reading rows', async () => {
   const harness = queryHarness();
   const adapter = new AuthorizedQueryTestAdapter();
@@ -152,12 +169,13 @@ class AuthorizedQueryTestAdapter extends CatalogPostgreSqlTargetAdapter {
 }
 
 /** Builds the smallest catalog target that exercises authorized query output. */
-function queryTarget(): PreparedTarget {
+function queryTarget(keyCollatable = true): PreparedTarget {
   const key = {
     columnId: 'col_key',
     columnName: 'id',
     attributeNumber: 1,
     codec: 'text' as const,
+    collatable: keyCollatable,
     key: true,
     editable: false,
     generated: false
@@ -167,6 +185,7 @@ function queryTarget(): PreparedTarget {
     columnName: 'label',
     attributeNumber: 2,
     codec: 'text' as const,
+    collatable: true,
     key: false,
     editable: true,
     generated: false

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Icon } from '../../ui/components/icon.js';
 import type {
   SavedView,
   SavedViewAccess,
@@ -122,7 +123,7 @@ export function SavedViewsDialog(props: SavedViewsDialogProps) {
             <span className="panel-kicker">SAVED PRESENTATION</span>
             <h2 id={titleId}>{props.mode === 'create' ? 'Create new view' : 'Views'}</h2>
           </div>
-          <button type="button" className="saved-view-close" aria-label="Close saved views" onClick={props.onClose}>×</button>
+          <button type="button" className="saved-view-close" aria-label="Close saved views" onClick={props.onClose}><Icon name="close" /></button>
         </header>
 
         {props.mode === 'list' ? (
@@ -260,7 +261,7 @@ function ViewGroup(props: {
             <small>Updated {new Date(view.updatedAt).toLocaleString()}</small>
           </a>
           <details>
-            <summary aria-label={`Actions for ${view.name}`}>•••</summary>
+            <summary aria-label={`Actions for ${view.name}`}><Icon name="ellipsis" /></summary>
             <div role="menu">
               <button type="button" role="menuitem" disabled={!view.permissions.update} onClick={() => props.onUpdate(view)}>Update from current sheet</button>
               <button type="button" role="menuitem" disabled={!view.permissions.duplicate} onClick={() => props.onDuplicate(view)}>Duplicate as private</button>

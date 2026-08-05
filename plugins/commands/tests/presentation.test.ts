@@ -80,6 +80,10 @@ test('presentation points project stable selections across both axes', () => {
     presentationPoints({ kind: 'header', columnId: 'beta' }, ROWS, COLUMNS),
     [{ rowId: GRID_HEADER_ROW_ID, columnId: 'beta' }]
   );
+  assert.deepEqual(
+    presentationPoints({ kind: 'header-row' }, ROWS, COLUMNS),
+    COLUMNS.map((column) => ({ rowId: GRID_HEADER_ROW_ID, columnId: column.id }))
+  );
   assert.deepEqual(presentationPoints(null, ROWS, COLUMNS), []);
   assert.deepEqual(
     presentationPoints(selection('cell', 'missing', 'alpha'), ROWS, COLUMNS),

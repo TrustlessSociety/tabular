@@ -12,10 +12,10 @@ persistence, authority, and first-slice assumptions.
 
 | Layer, top to bottom | Content | Behavior |
 | --- | --- | --- |
-| Coordinate band | A–Z spreadsheet letters | Each coordinate is a column-reorder handle. It is neutral even when the paired field header has a naming error. |
+| Coordinate band | A–Z spreadsheet letters | A persisted named column is a drag source; every visible coordinate, including a tab-local blank, is an exact left/right drop boundary. The band stays neutral when the paired field header has a naming error. |
 | Field-header band | User-facing column labels | Labels only; no repeated type/storage metadata. Named headers configure on double-click. |
 | Body grid | Values and blank rows | A cell at rest is an output value; edit controls appear only in edit mode. |
-| Row-header rail | Number sign then row numbers | Sticky above horizontal data scrolling; row headers select/reorder rows and carry row-level validation. |
+| Row-header rail | Visibly blank header corner, then row numbers beginning at 1 | Sticky above horizontal data scrolling; the blank corner selects the whole header row, while numbered headers select/reorder value rows and carry row-level validation. |
 | Row adder | Rows numeric input, Add Rows, capacity label | Adds logical capacity; the base sheet begins at 1,000 rows. |
 | Status bar | Record, logical row, and named-column counts | Quiet system feedback, not a draft or save command. |
 
@@ -28,9 +28,11 @@ sheet** and update ARIA row count/status when rows are added.
 
 ### Selection states
 
-- One click selects a cell. Shift+click or Shift+arrow extends a range.
-- Clicking a row number selects the row; clicking a coordinate/field header
-  selects the column.
+- One click selects a body cell. Shift+click or Shift+arrow extends a range.
+- Clicking a field-header label selects that named header for header-only
+  presentation. Clicking its coordinate selects the whole column. Clicking a
+  row number selects the value row; clicking the blank corner selects the whole
+  header row without treating it as PostgreSQL record data.
 - Blue is the active selection/focus affordance. It is not an error color.
 - The selected target remains visually apparent while a toolbar, popup, or
   context menu acts on it.
@@ -57,6 +59,11 @@ multi-cell clipboard/paste behavior is not specified. Reordering resets
 coordinate-sensitive single-cell history rather than applying an old command to
 a different visible location.
 
+After the grid reaches stable readiness, the visibly active cell owns keyboard
+focus without a preliminary click. Enter/Escape editor close and live mounted
+row/column replacement restore that focus unless the user intentionally moved
+to another control.
+
 ## Cell modes
 
 A read cell always renders its **Format**, not its field editor. Double-click,
@@ -73,7 +80,7 @@ mini-form appearance.
 | Phone | Phone text | Text/tel-like input | Accept the string; apply best-effort phone formatting after commit. |
 | Relation | Saved record template | Searchable related-file picker | Selecting a choice commits immediately. |
 | Select | Compact badge such as Processing | Visible option menu directly below/in the cell | Show choices immediately; clicking a choice commits. |
-| Price | Peso currency output | One full-width value input with non-interactive in-cell currency prefix | Commit restores currency output; prefix may not clip value. |
+| Price | Currency-neutral grouped number with exactly two decimals | One full-width numeric input | Commit restores neutral output; a symbol appears only when an explicit output Format configures one. |
 | Switch | Yes/No | Accessible switch | Change may commit as the field control is activated. |
 | Date and time | Jul 24, 10:32 AM | Native date-time control | Commit restores compact date-time output. |
 
@@ -84,7 +91,9 @@ mini-form appearance.
    into formatted output merely because an input event occurs.
 3. Enter, Tab, or click-away commits; Enter specifically returns to the
    formatted cell state. Escape cancels.
-4. On valid commit, render the output Format.
+4. On valid commit, save automatically through the durable action boundary and
+   render the output Format. Consecutive blur saves are serialized; there is no
+   manual Commit guardrail for ordinary valid edits.
 5. On invalid commit after click-away/Enter/Tab, retain the raw attempted value
    in state for a future double-click correction and render a spreadsheet error
    token at rest.
@@ -105,9 +114,9 @@ as a correctable draft and surface the database error.
 
 ## Blank files and new columns
 
-A New file opens directly at Untitled File with zero records, 1,000 logical
-rows, and no named columns. The user creates its first columns inside the
-spreadsheet:
+A newly named file opens after governed table creation with zero records, 1,000
+logical rows, no named columns, and collision-safe hidden stable row identity.
+The user creates its first visible columns inside the spreadsheet:
 
 - Double-click an empty field-header cell to reveal one edge-to-edge **column
   name** text input only.
@@ -115,6 +124,14 @@ spreadsheet:
 - A committed header becomes a named **Text** column. It can immediately accept
   values, and later double-click opens the normal Column settings panel.
 - Do not open an Add column dialog, create-time builder, or partial field setup.
+- Insert column left/right creates and focuses an adjacent tab-local blank
+  immediately, without opening Column settings. Naming or typing into that
+  explicit structural insertion promotes it through the governed PostgreSQL
+  column-create boundary while preserving its requested side. An untouched
+  insertion disappears on reload.
+- Delete column removes a tracked tab-local blank immediately without DDL. A
+  real PostgreSQL column remains protected until the confirmed destructive DDL
+  workflow exists.
 
 ## Output and configuration axes
 
@@ -142,8 +159,10 @@ future editor choice, so stale Select/Price/Switch styling never remains.
 - Title: Configure followed by the column name.
 - Right-side panel with close control, body scrolling, and Cancel / Apply
   changes footer.
-- Applying updates temporary wireframe configuration only; it does not issue a
-  live PostgreSQL migration, rename, cast, or constraint change.
+- Apply routes presentation-only changes to Tabular metadata and schema-affecting
+  changes through the authorized DDL plan/migrator boundary. The panel must not
+  expose migrator credentials, bypass authority, or report a pending/failed
+  PostgreSQL rename, cast, or constraint change as applied.
 - In the panel label, Field, Format, constraints, and Advanced choices are
   visible in a clear, top-to-bottom form rather than abbreviated grid metadata.
 
@@ -255,9 +274,11 @@ cards do not stack.
 
 ### Unnamed interior column errors
 
-Columns can be dragged from the trailing blank A–Z area. Let the drop complete,
-then validate every unnamed position before the last named column, including
-multiple interior gaps. Each affected field-header cell only:
+An interior blank can come from explicit tab-local column insertion or from a
+persisted named column moving around existing blanks. Blank headers are exact
+drop targets, not drag sources. After the layout change, validate every unnamed
+position before the last named column, including multiple interior gaps. Each
+affected field-header cell only:
 
 - retains the standard neutral gray header background;
 - shows black regular #ERROR!;
@@ -277,8 +298,10 @@ PostgreSQL column-order operation.
 
 ## Reordering and capacity
 
-- Drag a named or trailing empty coordinate/header to reorder columns. Drag a
-  row number to reorder rows.
+- Drag a persisted named coordinate/header to reorder columns. Every visible
+  header, including a tab-local blank, is an exact drop target; the blank does
+  not become a drag source until promoted to a real PostgreSQL column. Drag a
+  committed row number to reorder rows.
 - Rows/columns move first, then interior-gap validation runs.
 - Carry a named column's field configuration and values with it; row movement
   renumbers visible sheet positions.
@@ -299,6 +322,9 @@ PostgreSQL column-order operation.
   PostgreSQL column order.
 - The row-adder accepts a positive number and increases logical capacity. It
   does not add a database record by itself.
+- Insert row above/below creates a focused inert tab-local blank at the requested
+  ranked boundary. It neither persists nor shows required-field errors until
+  the first non-blank edit; clearing its last entered value removes it.
 - Editing any blank logical row creates an actor-owned persistent row draft
   carrying the hidden shared-rank token for that visible position. Reload must
   restore a sparse draft or committed record at the same row number; skipped

@@ -13,14 +13,14 @@ folder treatment is the visual pattern for a schema.
 
 ### Root
 
-The sample Acme Inc. route is the connection explorer. Database and schema
+The configured PostgreSQL connection is the explorer root. Database and schema
 levels use the same restrained list/grid language. New file and Import appear
 only inside an authorized schema folder, not at connection or database level.
 
 Required visible structure:
 
-1. Full-width top bar: Acme Inc. mark, Search files input, icon-only System
-   activity link with an accessible name, and account action.
+1. Full-width top bar: configured connection name, Search files input, icon-only
+   System activity link with an accessible name, and account action.
 2. Compact connection → database breadcrumb.
 3. Folders label with an appropriate count at database scope.
 4. List and grid view toggle.
@@ -34,8 +34,8 @@ trash, starred feature, or global navigation.
 
 ### Folder contents
 
-Opening Operations or Finance changes the breadcrumb to Acme Inc. followed by
-the folder name. It still has no large page heading or explanatory paragraph.
+Opening Operations or Finance shows the configured connection, database, and
+folder path. It still has no large page heading or explanatory paragraph.
 
 The content heading becomes two tabs: **Files** and **Views**. Files uses a file
 count, for example “5 files”; Views uses a view count. Never call either
@@ -48,7 +48,8 @@ together at the upper right:
 These actions are visible only inside an open folder. They are not a replacement
 for each other:
 
-- New file opens an empty spreadsheet immediately.
+- New file asks for the file name, shows the inferred PostgreSQL table name,
+  creates the governed table, and then opens its empty spreadsheet.
 - Import opens the values-only import wizard and creates a new file from a
   source. It never imports values into an existing file.
 
@@ -86,7 +87,8 @@ first-slice requirement.
 - Search filters the items in the currently visible root, folder, or selected
   Files/Views tab; it does not infer a global Drive search.
 - An empty state explains that no current items match.
-- Clicking the Acme Inc. root breadcrumb returns to the root collection.
+- Clicking the configured connection root breadcrumb returns to the root
+  collection.
 - The folder breadcrumb from a spreadsheet returns to its folder's Files
   listing.
 - A file item opens that file's spreadsheet route with folder/table identity.
@@ -94,47 +96,50 @@ first-slice requirement.
 
 ## New file
 
-New file is a direct spreadsheet route, not a creation wizard.
+New file uses one bounded file-identity dialog followed by the direct
+spreadsheet route. It is not a schema/field creation wizard.
 
 ### Entry and initial state
 
-From an open folder, New file opens a route shaped like:
+From an authorized open folder, **New file** opens **Create a blank
+spreadsheet**. The dialog contains one required **File name** input, a live
+read-only **PostgreSQL table** preview, Cancel, and **Create file**. Lowercase
+letters and underscores are inferred automatically; a collision receives a
+bounded numeric suffix.
 
-    pages/table.html?new=1&folder=<folder>&table=untitled-file
+After the governed create action succeeds, Tabular opens the reconciled normal
+table route. The initial sheet has:
 
-Initial sheet state:
+- The entered display name and inferred PostgreSQL table identity.
+- The folder from which New file was chosen.
+- Zero existing records and one thousand logical rows.
+- No named columns, plus collision-safe hidden stable row identity and rank
+  support installed through the authorized migrator boundary.
+- An immediately editable first logical row. Naming a blank header creates a
+  PostgreSQL column; typing beneath an ordinary unnamed trailing coordinate
+  retains unstructured data under stable Tabular metadata.
 
-- Display name: **Untitled File**.
-- Folder: the folder from which New file was chosen.
-- Zero existing records.
-- One thousand logical rows.
-- No named columns.
-- Inline renaming enabled.
-- Column creation happens by naming an empty header, then configuring the
-  column from the spreadsheet panel.
-
-Do not route New file through create-table.html, an identity card, a SQL preview,
-pre-made field presets, Add column setup, or a compact builder. The old builder
-is intentionally removed because it would either omit important field/format/
-Advanced possibilities or duplicate the real spreadsheet configuration flow.
+Do not route New file through `create-table.html`, an identity card, raw SQL
+preview, pre-made field presets, Add column setup, or a compact schema builder.
+Do not expose the internal migrator or require a second owner-confirmation
+dialog after the user chooses Create file.
 
 ### File name and PostgreSQL table name
 
-The visible file name is independently editable in the spreadsheet breadcrumb
-and Table settings. For a new file, PostgreSQL table name initially derives
-from the current file title:
+The visible file name is editable in the spreadsheet breadcrumb and Table
+settings. For a new file, PostgreSQL table name derives from the submitted file
+name before creation:
 
 | Display name | Derived PostgreSQL name |
 | --- | --- |
-| Untitled File | untitled_file |
 | Customer Orders | customer_orders |
 | Q3 orders | q3_orders |
 
 Normalize by lowercasing, using underscores for word boundaries, and removing
-unsupported punctuation. If the user manually changes the PostgreSQL table name
-in Table settings, that explicit value becomes the override; later display-name
-changes do not overwrite it. A future live rename/migration must be a separate
-confirmed flow. The wireframe only represents in-memory configuration.
+unsupported punctuation. A later accepted file rename applies the display-name
+and physical-relation plan through the governed DDL boundary without exposing a
+second migrator confirmation. It must fail visibly and atomically rather than
+leaving metadata and PostgreSQL identity divergent.
 
 ## Table settings
 
@@ -154,8 +159,10 @@ It must show only table-level controls:
 Do **not** include the removed Table details block, record count block,
 column count block, or a selected-column configuration within Table settings.
 
-Apply updates the temporary display/configuration state and closes the panel.
-It does not create, rename, move, or migrate a physical PostgreSQL table.
+Apply plans and executes authorized table-level changes through the governed
+DDL boundary, then closes only after the reconciled identity is available. The
+panel does not expose migrator credentials or pretend a failed/pending physical
+change succeeded.
 
 ## Import: one workflow, one destination
 
@@ -172,8 +179,8 @@ folder context where available.
 
 ### Shell
 
-Import uses the focused, full-width Acme Inc. top bar and a folder context
-label. The page carries a compact breadcrumb such as:
+Import uses the focused full-width configured-connection top bar and a folder
+context label. The page carries a compact breadcrumb such as:
 
     Files › Operations › Import values
 

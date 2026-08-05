@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode
+} from 'react';
+import { Icon, type IconName } from '../../ui/components/icon.js';
 import type {
   CommandContext,
   CommandId,
@@ -155,7 +163,7 @@ export function SpreadsheetMenuBar({ context, stateFor, onCommand }: Omit<Comman
             event.preventDefault();
             setSubmenu(expanded ? undefined : key);
           }}
-        ><span>{entry.label}</span><span aria-hidden="true">›</span></button>
+        ><span>{entry.label}</span><Icon name="chevron-right" /></button>
         {expanded && <div className="command-submenu" data-submenu={key} role="menu" aria-label={`${entry.label} submenu`}>
           {renderEntries(entry.entries, menuIndex)}
         </div>}
@@ -187,7 +195,9 @@ export function SpreadsheetMenuBar({ context, stateFor, onCommand }: Omit<Comman
         close();
       }}
     >
-      <span className="command-check" aria-hidden="true">{state.mixed ? '—' : state.checked ? '✓' : ''}</span>
+      <span className="command-check" aria-hidden="true">
+        {state.mixed ? <Icon name="mixed" /> : state.checked ? <Icon name="check" /> : null}
+      </span>
       <span className="command-label">{label}{entry.secondary && <small>{entry.secondary}</small>}</span>
       {entry.shortcut && <kbd>{entry.shortcut}</kbd>}
     </button>;
@@ -208,7 +218,7 @@ export function SpreadsheetMenuBar({ context, stateFor, onCommand }: Omit<Comman
           aria-controls={`${baseId}-${index}`}
           onFocus={() => setActiveTrigger(index)}
           onClick={() => expanded ? close(false) : openMenu(index)}
-        >{menu.label}<span aria-hidden="true">⌄</span></button>
+        >{menu.label}</button>
         {expanded && <div id={`${baseId}-${index}`} className="command-menu" data-menu-index={index} role="menu" aria-label={`${menu.label} menu`}>
           {renderEntries(menu.entries, index)}
         </div>}
@@ -218,6 +228,211 @@ export function SpreadsheetMenuBar({ context, stateFor, onCommand }: Omit<Comman
 }
 
 type ToolPopover = 'text' | 'fill' | 'border' | 'horizontal' | 'vertical' | 'wrap' | 'more';
+
+export type BorderPlacement =
+  | 'all'
+  | 'inner'
+  | 'horizontal'
+  | 'vertical'
+  | 'outer'
+  | 'left'
+  | 'top'
+  | 'right'
+  | 'bottom'
+  | 'none';
+
+export type ColorPaletteKind = 'text' | 'fill' | 'border';
+
+export const COLOR_PALETTE_ROWS = [
+  ['#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff'],
+  ['#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff'],
+  ['#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc'],
+  ['#dd7e6b', '#ea9999', '#f9cb9c', '#ffe599', '#b6d7a8', '#a2c4c9', '#a4c2f4', '#9fc5e8', '#b4a7d6', '#d5a6bd'],
+  ['#cc4125', '#e06666', '#f6b26b', '#ffd966', '#93c47d', '#76a5af', '#6d9eeb', '#6fa8dc', '#8e7cc3', '#c27ba0'],
+  ['#a61c00', '#cc0000', '#e69138', '#f1c232', '#6aa84f', '#45818e', '#3c78d8', '#3d85c6', '#674ea7', '#a64d79'],
+  ['#85200c', '#990000', '#b45f06', '#bf9000', '#38761d', '#134f5c', '#1155cc', '#0b5394', '#351c75', '#741b47'],
+  ['#5b0f00', '#660000', '#783f04', '#7f6000', '#274e13', '#0c343d', '#1c4587', '#073763', '#20124d', '#4c1130']
+] as const;
+
+export const STANDARD_COLOR_PALETTE = [
+  '#000000', '#ffffff', '#4285f4', '#ea4335',
+  '#fbbc04', '#34a853', '#fa6d03', '#46bdc6'
+] as const;
+
+const BORDER_CHOICES = [
+  ['format.border.all', 'All borders', 'all'], ['format.border.inner', 'Inner borders', 'inner'],
+  ['format.border.horizontal', 'Horizontal borders', 'horizontal'], ['format.border.vertical', 'Vertical borders', 'vertical'],
+  ['format.border.outer', 'Outer borders', 'outer'], ['format.border.left', 'Left border', 'left'],
+  ['format.border.top', 'Top border', 'top'], ['format.border.right', 'Right border', 'right'],
+  ['format.border.bottom', 'Bottom border', 'bottom'], ['format.border.none', 'No borders', 'none']
+] as Array<[CommandId, string, BorderPlacement]>;
+
+function colorCommand(kind: ColorPaletteKind, color: string): CommandId {
+  return `format.${kind === 'fill' ? 'fill' : kind}.color.${color.slice(1).toLowerCase()}` as CommandId;
+}
+
+function colorResetCommand(kind: ColorPaletteKind): CommandId {
+  if (kind === 'text') return 'format.text.reset';
+  if (kind === 'fill') return 'format.fill.reset';
+  return 'format.border.color.4b5563';
+}
+
+function colorKindLabel(kind: ColorPaletteKind) {
+  return kind === 'text' ? 'text' : kind === 'fill' ? 'background' : 'border';
+}
+
+type ColorPaletteProps = {
+  kind: ColorPaletteKind;
+  current: string | 'mixed';
+  customColors: readonly string[];
+  selectedFor: (id: CommandId) => boolean | 'mixed';
+  onCommand: (id: CommandId, trigger: HTMLElement) => void;
+  onCustomColor: (kind: ColorPaletteKind, color: string, trigger: HTMLElement) => void;
+};
+
+/** Adds one normalized custom color to the current page session without duplicates. */
+export function addSessionCustomColor(colors: readonly string[], color: string) {
+  const normalized = color.trim().toLowerCase();
+  return colors.includes(normalized) ? [...colors] : [...colors, normalized];
+}
+
+/** Keeps the supplied main and Standard color order identical across all three surfaces. */
+export function ColorPalette({
+  kind,
+  current,
+  customColors,
+  selectedFor,
+  onCommand,
+  onCustomColor
+}: ColorPaletteProps) {
+  const label = colorKindLabel(kind);
+  const reset = colorResetCommand(kind);
+  const customValue = current === 'mixed' || current === 'transparent'
+    ? kind === 'border' ? '#4b5563' : '#ffffff'
+    : current;
+  const swatch = (color: string, group: 'main' | 'standard' | 'custom', index: number) => {
+    const id = colorCommand(kind, color);
+    const selected = selectedFor(id);
+    return <button
+      className="color-swatch"
+      key={`${group}-${color}`}
+      type="button"
+      aria-label={`Set ${label} color to ${color.toUpperCase()}`}
+      title={color.toUpperCase()}
+      aria-pressed={selected}
+      data-palette-group={group}
+      data-palette-index={index}
+      style={{ '--swatch': color } as CSSProperties}
+      onClick={(event) => onCommand(id, event.currentTarget)}
+    ><span aria-hidden="true" />{selected === true && <Icon className="color-swatch-check" name="check" />}</button>;
+  };
+
+  return <div className="color-palette" aria-label={`${label} color palette`}>
+    <button
+      className="color-reset-button"
+      type="button"
+      aria-pressed={selectedFor(reset)}
+      onClick={(event) => onCommand(reset, event.currentTarget)}
+    >Reset</button>
+    <div className="color-swatch-grid color-swatch-grid-main">
+      {COLOR_PALETTE_ROWS.flat().map((color, index) => swatch(color, 'main', index))}
+    </div>
+    <span className="palette-label">Standard</span>
+    <div className="color-swatch-grid color-swatch-grid-standard">
+      {STANDARD_COLOR_PALETTE.map((color, index) => swatch(color, 'standard', index))}
+    </div>
+    <div className="color-palette-custom">
+      <span className="palette-label">Custom</span>
+      <div className="custom-color-row">
+        <label className="custom-color-control" title={`Choose custom ${label} color`}>
+          <Icon name="plus" />
+          <span className="sr-only">Custom {label} color</span>
+          <input
+            type="color"
+            aria-label={`Custom ${label} color`}
+            value={customValue}
+            onInput={(event) => onCustomColor(kind, event.currentTarget.value, event.currentTarget)}
+          />
+        </label>
+        {customColors.map((color, index) => swatch(color, 'custom', index))}
+      </div>
+    </div>
+  </div>;
+}
+
+type BorderFormattingAccordionProps = {
+  presentation: PresentationToolbarState;
+  customColors: readonly string[];
+  selectedFor: (id: CommandId) => boolean | 'mixed';
+  onCommand: (id: CommandId, trigger: HTMLElement) => void;
+  onCustomColor: ColorPaletteProps['onCustomColor'];
+};
+
+/** Keeps exactly one Border section open, with placement visible on first open. */
+export function BorderFormattingAccordion({
+  presentation,
+  customColors,
+  selectedFor,
+  onCommand,
+  onCustomColor
+}: BorderFormattingAccordionProps) {
+  const baseId = useId();
+  const [active, setActive] = useState<'visible' | 'color' | 'style'>('visible');
+  const section = (
+    id: 'visible' | 'color' | 'style',
+    label: string,
+    content: ReactNode
+  ) => {
+    const expanded = active === id;
+    const triggerId = `${baseId}-${id}-trigger`;
+    const panelId = `${baseId}-${id}-panel`;
+    return <div className="border-accordion-section" key={id}>
+      <button
+        id={triggerId}
+        className="border-accordion-trigger"
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={() => setActive(id)}
+      ><span>{label}</span><Icon name={expanded ? 'chevron-down' : 'chevron-right'} /></button>
+      {expanded && <div
+        id={panelId}
+        className="border-accordion-panel"
+        role="region"
+        aria-labelledby={triggerId}
+      >{content}</div>}
+    </div>;
+  };
+
+  const visible = <div className="command-choice-grid command-border-grid">{BORDER_CHOICES.map(([id, label, placement]) => <button
+    key={id} type="button" aria-label={label} title={label} aria-pressed={selectedFor(id)}
+    onClick={(event) => onCommand(id, event.currentTarget)}
+  ><BorderGlyph placement={placement} /></button>)}</div>;
+  const color = <>
+    {presentation.borderColor === 'mixed' && <span className="mixed-value-note">Mixed border colors</span>}
+    <ColorPalette
+      kind="border"
+      current={presentation.borderColor}
+      customColors={customColors}
+      selectedFor={selectedFor}
+      onCommand={onCommand}
+      onCustomColor={onCustomColor}
+    />
+  </>;
+  const style = <div className="border-style-grid">{(['solid', 'medium', 'thick', 'dashed', 'dotted', 'double'] as const).map((lineStyle) => {
+    const id = `format.border.style.${lineStyle}` as CommandId;
+    return <button key={lineStyle} type="button" aria-label={`${lineStyle} border`} title={`${lineStyle} border`}
+      aria-pressed={selectedFor(id)} onClick={(event) => onCommand(id, event.currentTarget)}>
+      <span className={`border-style-sample border-style-${lineStyle}`} aria-hidden="true" />
+    </button>;
+  })}</div>;
+
+  return <div className="border-accordion" aria-label="Border formatting">
+    {section('visible', 'Border visible', visible)}
+    {section('color', 'Border color', color)}
+    {section('style', 'Border style', style)}
+  </div>;
+}
 
 export function anchoredPopoverLeft(
   triggerLeft: number,
@@ -234,11 +449,11 @@ export function anchoredPopoverLeft(
   return Math.max(minimum, Math.min(triggerLeft - positionOriginLeft, maximum));
 }
 
-const BORDER_PATHS: Record<string, string[]> = {
+const BORDER_PATHS: Record<BorderPlacement, string[]> = {
   all: ['M2 2H18V18H2Z', 'M10 2V18', 'M2 10H18'],
   inner: ['M10 2V18', 'M2 10H18'],
-  horizontal: ['M2 2H18', 'M2 10H18', 'M2 18H18'],
-  vertical: ['M2 2V18', 'M10 2V18', 'M18 2V18'],
+  horizontal: ['M2 10H18'],
+  vertical: ['M10 2V18'],
   outer: ['M2 2H18V18H2Z'],
   left: ['M2 2V18'],
   top: ['M2 2H18'],
@@ -247,16 +462,36 @@ const BORDER_PATHS: Record<string, string[]> = {
   none: []
 };
 
-function BorderGlyph({ placement }: { placement: string }) {
+/** Renders one exact dotted-guide and solid-edge border placement sample. */
+export function BorderGlyph({ placement }: { placement: BorderPlacement }) {
   return <svg className="border-placement-glyph" viewBox="0 0 20 20" aria-hidden="true">
     <path className="border-guide" d="M2 2H18V18H2ZM10 2V18M2 10H18" />
     {BORDER_PATHS[placement]?.map((path) => <path className="border-selected" d={path} key={path} />)}
   </svg>;
 }
 
+/** Combines one formatting icon with the effective color rail beneath it. */
+function ColorToolGlyph({ name, color }: {
+  name: 'text' | 'paint-bucket';
+  color: string | 'mixed';
+}) {
+  const effectiveColor = color === 'mixed' ? '#64748b' : color;
+  return (
+    <span
+      className="command-color-tool"
+      data-mixed={color === 'mixed'}
+      style={{ '--tool-color': effectiveColor } as CSSProperties}
+    >
+      <Icon name={name} />
+      <i />
+    </span>
+  );
+}
+
 export function FormattingToolbar({ context, presentation, stateFor, onCommand }: CommandSurfaceProps) {
   const [open, setOpen] = useState<ToolPopover>();
   const [popoverLeft, setPopoverLeft] = useState(8);
+  const [customColors, setCustomColors] = useState<string[]>([]);
   const root = useRef<HTMLDivElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLElement | undefined>(undefined);
@@ -266,6 +501,10 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
     onCommand(id, element);
     setOpen(undefined);
     if (restore) requestAnimationFrame(() => restore.focus());
+  };
+  const chooseCustomColor: ColorPaletteProps['onCustomColor'] = (kind, color, element) => {
+    setCustomColors((current) => addSessionCustomColor(current, color));
+    invoke(colorCommand(kind, color), element);
   };
   const toggle = (name: ToolPopover, element: HTMLElement) => {
     trigger.current = element;
@@ -318,7 +557,13 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
   const formattingDisabled = context.selectionKind === 'none';
   const formattingReason = context.selectionKind === 'none' ? 'Select cells first.' : undefined;
   const pressed = (value: boolean | 'mixed') => value;
-  const button = (id: CommandId, label: string, glyph: string, value?: boolean | 'mixed', low = false) => {
+  const button = (
+    id: CommandId,
+    label: string,
+    icon: IconName,
+    value?: boolean | 'mixed',
+    low = false
+  ) => {
     const state = stateForCommand(id, context, stateFor);
     return <button
       className={low ? 'command-tool-low' : undefined}
@@ -329,42 +574,31 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
       disabled={!state.enabled}
       title={state.reason}
       onClick={(event) => invoke(id, event.currentTarget)}
-    ><span aria-hidden="true">{glyph}</span></button>;
+    ><Icon name={icon} /></button>;
   };
-  const popoverButton = (name: ToolPopover, label: string, glyph: string, low = true) => <button
-    className={low ? 'command-tool-low' : undefined}
-    type="button"
-    aria-label={label}
-    aria-haspopup="dialog"
-    aria-expanded={open === name}
-    disabled={formattingDisabled}
-    title={formattingReason}
-    onClick={(event) => toggle(name, event.currentTarget)}
-  ><span aria-hidden="true">{glyph}</span><span className="tool-caret" aria-hidden="true">⌄</span></button>;
-  const paletteChoices = (kind: 'text' | 'fill') => ({
-    main: kind === 'text' ? [
-      ['format.text.reset', 'Reset text color', 'transparent'],
-      ['format.text.color.475569', 'Slate', '#475569'],
-      ['format.text.color.1d4ed8', 'Royal blue', '#1d4ed8'],
-      ['format.text.color.9f1239', 'Rose', '#9f1239']
-    ] : [
-      ['format.fill.reset', 'Reset fill', 'transparent'],
-      ['format.fill.color.e2e8f0', 'Light slate', '#e2e8f0'],
-      ['format.fill.color.dbeafe', 'Light blue', '#dbeafe'],
-      ['format.fill.color.fef3c7', 'Light yellow', '#fef3c7']
-    ],
-    standard: kind === 'text' ? [
-      ['format.text.black', 'Charcoal', '#111827'],
-      ['format.text.blue', 'Blue', '#174ea6'],
-      ['format.text.red', 'Red', '#b42318'],
-      ['format.text.color.15803d', 'Green', '#15803d']
-    ] : [
-      ['format.fill.gray', 'Gray', '#64748b'],
-      ['format.fill.blue', 'Blue', '#3b82f6'],
-      ['format.fill.yellow', 'Yellow', '#facc15'],
-      ['format.fill.color.dcfce7', 'Green', '#dcfce7']
-    ]
-  }) as { main: Array<[CommandId, string, string]>; standard: Array<[CommandId, string, string]> };
+  const popoverButton = (
+    name: ToolPopover,
+    label: string,
+    glyph: ReactNode,
+    options: { caret?: boolean, low?: boolean } = {}
+  ) => {
+    const { caret = false, low = true } = options;
+    return (
+      <button
+        className={low ? 'command-tool-low' : undefined}
+        type="button"
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open === name}
+        disabled={formattingDisabled}
+        title={formattingReason}
+        onClick={(event) => toggle(name, event.currentTarget)}
+      >
+        <span className="command-tool-mark" aria-hidden="true">{glyph}</span>
+        {caret && <Icon className="tool-caret" name="chevron-down" />}
+      </button>
+    );
+  };
   const selectedFor = (id: CommandId): boolean | 'mixed' => {
     if (id === 'format.text.reset') return presentation.textColor === 'mixed' ? 'mixed' : presentation.textColor === '#20242a';
     if (id === 'format.fill.reset') return presentation.fillColor === 'mixed' ? 'mixed' : presentation.fillColor === 'transparent';
@@ -384,79 +618,56 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
     if (id.startsWith('format.wrap.')) return presentation.wrap === 'mixed' ? 'mixed' : presentation.wrap === id.slice('format.wrap.'.length);
     return false;
   };
-  const iconChoices = (items: Array<[CommandId, string, string]>) => <div className="command-choice-grid">
-    {items.map(([id, label, glyph]) => <button
+  const iconChoices = (items: Array<[CommandId, string, IconName]>) => <div className="command-choice-grid">
+    {items.map(([id, label, icon]) => <button
       key={id} type="button" aria-label={label} title={label}
       aria-pressed={selectedFor(id)} onClick={(event) => invoke(id, event.currentTarget)}
-    ><span aria-hidden="true">{glyph}</span></button>)}
+    ><Icon className="command-choice-icon" name={icon} /></button>)}
   </div>;
-  const borderChoices = [
-    ['format.border.all', 'All borders', 'all'], ['format.border.inner', 'Inner borders', 'inner'],
-    ['format.border.horizontal', 'Horizontal borders', 'horizontal'], ['format.border.vertical', 'Vertical borders', 'vertical'],
-    ['format.border.outer', 'Outer borders', 'outer'], ['format.border.left', 'Left border', 'left'],
-    ['format.border.top', 'Top border', 'top'], ['format.border.right', 'Right border', 'right'],
-    ['format.border.bottom', 'Bottom border', 'bottom'], ['format.border.none', 'No borders', 'none']
-  ] as Array<[CommandId, string, string]>;
   const renderPalette = (kind: 'text' | 'fill') => {
-    const choices = paletteChoices(kind);
     const current = kind === 'text' ? presentation.textColor : presentation.fillColor;
-    const grid = (label: string, items: Array<[CommandId, string, string]>) => <>
-      <span className="palette-label">{label}</span>
-      <div className={`color-swatch-grid color-swatch-grid-${label.toLowerCase()}`}>{items.map(([id, name, color]) => <button
-        key={id} type="button" aria-label={name} title={name} aria-pressed={selectedFor(id)}
-        style={{ '--swatch': color } as CSSProperties} onClick={(event) => invoke(id, event.currentTarget)}
-      ><span aria-hidden="true" /></button>)}</div>
-    </>;
     return <div className="formatting-choice-section">
       <strong>{kind === 'text' ? 'Text color' : 'Fill color'}</strong>
       {current === 'mixed' && <span className="mixed-value-note">Mixed selection</span>}
-      {grid('Main', choices.main)}{grid('Standard', choices.standard)}
-      <button type="button" disabled title="Custom colors are deferred">Custom…</button>
-      {kind === 'fill' && <button type="button" disabled title="Conditional formatting is representative only">Conditional formatting…</button>}
+      <ColorPalette
+        kind={kind}
+        current={current}
+        customColors={customColors}
+        selectedFor={selectedFor}
+        onCommand={invoke}
+        onCustomColor={chooseCustomColor}
+      />
     </div>;
   };
-  const renderBorders = () => <div className="formatting-choice-section formatting-border-layout">
-    <strong>Borders</strong>
-    <div className="command-choice-grid command-border-grid">{borderChoices.map(([id, label, placement]) => <button
-      key={id} type="button" aria-label={label} title={label} aria-pressed={selectedFor(id)}
-      onClick={(event) => invoke(id, event.currentTarget)}
-    ><BorderGlyph placement={placement} /></button>)}</div>
-    <label>Border color <input
-      type="color" aria-label="Border color"
-      value={presentation.borderColor === 'mixed' ? '#4b5563' : presentation.borderColor}
-      onChange={(event) => invoke(`format.border.color.${event.currentTarget.value.slice(1)}`, event.currentTarget)}
-    /></label>
-    <div className="border-color-grid" aria-label="Border color presets">{([
-      ['4b5563', 'Charcoal border'], ['174ea6', 'Blue border'], ['b42318', 'Red border']
-    ] as const).map(([color, label]) => {
-      const id = `format.border.color.${color}` as CommandId;
-      return <button key={color} type="button" aria-label={label} title={label}
-        aria-pressed={selectedFor(id)} style={{ '--swatch': `#${color}` } as CSSProperties}
-        onClick={(event) => invoke(id, event.currentTarget)}><span aria-hidden="true" /></button>;
-    })}</div>
-    {presentation.borderColor === 'mixed' && <span className="mixed-value-note">Mixed border colors</span>}
-    <span className="palette-label">Border style</span>
-    <div className="border-style-grid">{(['solid', 'medium', 'thick', 'dashed', 'dotted', 'double'] as const).map((style) => {
-      const id = `format.border.style.${style}` as CommandId;
-      return <button key={style} type="button" aria-label={`${style} border`} title={`${style} border`}
-        aria-pressed={selectedFor(id)} onClick={(event) => invoke(id, event.currentTarget)}>
-        <span className={`border-style-sample border-style-${style}`} aria-hidden="true" />
-      </button>;
-    })}</div>
-  </div>;
+  const renderBorders = () => <BorderFormattingAccordion
+    presentation={presentation}
+    customColors={customColors}
+    selectedFor={selectedFor}
+    onCommand={invoke}
+    onCustomColor={chooseCustomColor}
+  />;
   const horizontalChoices = () => <div className="formatting-choice-section"><strong>Horizontal alignment</strong>{iconChoices([
-    ['format.align.left', 'Align left', '≡'], ['format.align.center', 'Align center', '≣'], ['format.align.right', 'Align right', '≡']
+    ['format.align.left', 'Align left', 'align-left'], ['format.align.center', 'Align center', 'align-center'], ['format.align.right', 'Align right', 'align-right']
   ])}</div>;
   const verticalChoices = () => <div className="formatting-choice-section"><strong>Vertical alignment</strong>{iconChoices([
-    ['format.vertical.top', 'Align top', '⇧'], ['format.vertical.middle', 'Align middle', '↕'], ['format.vertical.bottom', 'Align bottom', '⇩']
+    ['format.vertical.top', 'Align top', 'align-top'], ['format.vertical.middle', 'Align middle', 'align-middle'], ['format.vertical.bottom', 'Align bottom', 'align-bottom']
   ])}</div>;
   const wrappingChoices = () => <div className="formatting-choice-section"><strong>Wrapping</strong>{iconChoices([
-    ['format.wrap.wrap', 'Wrap text', '↩'], ['format.wrap.clip', 'Clip text', '⊣'], ['format.wrap.overflow', 'Overflow text', '→']
+    ['format.wrap.wrap', 'Wrap text', 'wrap'], ['format.wrap.clip', 'Clip text', 'clip'], ['format.wrap.overflow', 'Overflow text', 'overflow']
   ])}</div>;
+  const horizontalIcon: IconName = presentation.horizontal === 'center'
+    ? 'align-center'
+    : presentation.horizontal === 'right' ? 'align-right' : 'align-left';
+  const verticalIcon: IconName = presentation.vertical === 'top'
+    ? 'align-top'
+    : presentation.vertical === 'bottom' ? 'align-bottom' : 'align-middle';
+  const wrapIcon: IconName = presentation.wrap === 'wrap'
+    ? 'wrap'
+    : presentation.wrap === 'overflow' ? 'overflow' : 'clip';
   return <div ref={root} className="formatting-toolbar" role="toolbar" aria-label="Formatting tools">
     <div className="formatting-tool-group">
-      <button type="button" aria-label="Undo" disabled={!context.canUndo || context.hasDraft} title={commandState('history.undo', context).reason} onClick={(event) => invoke('history.undo', event.currentTarget)}>↶</button>
-      <button type="button" aria-label="Redo" disabled={!context.canRedo || context.hasDraft} title={commandState('history.redo', context).reason} onClick={(event) => invoke('history.redo', event.currentTarget)}>↷</button>
+      <button type="button" aria-label="Undo" disabled={!context.canUndo || context.hasDraft} title={commandState('history.undo', context).reason} onClick={(event) => invoke('history.undo', event.currentTarget)}><Icon name="undo" /></button>
+      <button type="button" aria-label="Redo" disabled={!context.canRedo || context.hasDraft} title={commandState('history.redo', context).reason} onClick={(event) => invoke('history.redo', event.currentTarget)}><Icon name="redo" /></button>
     </div>
     <span className="formatting-divider" aria-hidden="true" />
     <div className="formatting-tool-group command-font-controls">
@@ -475,7 +686,7 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
         const current = presentation.fontSize === 'mixed' ? 12 : presentation.fontSize;
         const next = [10, 12, 14, 16, 18].filter((value) => value < current).at(-1) || 10;
         invoke(`format.size.${next}` as CommandId, event.currentTarget);
-      }}>−</button>
+      }}><Icon name="minus" /></button>
       <input
         type="number"
         inputMode="numeric"
@@ -496,20 +707,20 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
         const current = presentation.fontSize === 'mixed' ? 12 : presentation.fontSize;
         const next = [10, 12, 14, 16, 18].find((value) => value > current) || 18;
         invoke(`format.size.${next}` as CommandId, event.currentTarget);
-      }}>+</button>
+      }}><Icon name="plus" /></button>
     </div>
     <span className="formatting-divider" aria-hidden="true" />
     <div className="formatting-tool-group">
-      {button('format.bold', 'Bold', 'B', presentation.bold)}
-      {button('format.italic', 'Italic', 'I', presentation.italic)}
-      {button('format.underline', 'Underline', 'U', presentation.underline)}
-      {popoverButton('text', 'Text color', 'A')}
-      {popoverButton('fill', 'Fill color', '▣')}
-      {popoverButton('border', 'Borders', '▦')}
-      {popoverButton('horizontal', 'Horizontal alignment', '≡')}
-      {popoverButton('vertical', 'Vertical alignment', '↕')}
-      {popoverButton('wrap', 'Wrap', '↩')}
-      {popoverButton('more', 'More formatting', '•••', false)}
+      {button('format.bold', 'Bold', 'bold', presentation.bold)}
+      {button('format.italic', 'Italic', 'italic', presentation.italic)}
+      {button('format.underline', 'Underline', 'underline', presentation.underline)}
+      {popoverButton('text', 'Text color', <ColorToolGlyph name="text" color={presentation.textColor} />)}
+      {popoverButton('fill', 'Fill color', <ColorToolGlyph name="paint-bucket" color={presentation.fillColor} />)}
+      {popoverButton('border', 'Borders', <Icon name="borders" />, { caret: true })}
+      {popoverButton('horizontal', 'Horizontal alignment', <Icon name={horizontalIcon} />)}
+      {popoverButton('vertical', 'Vertical alignment', <Icon name={verticalIcon} />)}
+      {popoverButton('wrap', 'Wrap', <Icon name={wrapIcon} />)}
+      {popoverButton('more', 'More formatting', <Icon name="ellipsis-vertical" />, { caret: true, low: false })}
     </div>
     {open && <div
       ref={popover}

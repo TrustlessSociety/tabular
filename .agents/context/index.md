@@ -6,7 +6,16 @@ This is the durable product and creative knowledge base for Tabular. The
 PostgreSQL-native product contract was accepted and promoted when research Spec
 00001 Froze on 2026-07-31. The creative reconstruction preserves r007 Round 2,
 and Frozen Spec 00003 supplies the accepted direct-library application,
-security, migration, PostgreSQL, and process boundaries.
+security, migration, PostgreSQL, and process boundaries. User-directed,
+verified implementation-review corrections from Spec 00003 Tasks 00014 and
+00014A through 00014J, including the deletion, menu, row-numbering, exact drag,
+production iconography, compact formatting-popover, rendered Border-style, and
+page-session custom-color outcomes, were promoted by 2026-08-05.
+
+The exact pointer-driven inserted-column drag acceptance passed on 2026-08-05
+and its detailed evidence remains Spec 00003-local. Final human acceptance is
+the remaining evidence gate; its pending status does not restore the superseded
+product behavior recorded by earlier wireframes.
 
 It does **not** authorize production implementation or PostgreSQL migrations.
 Implementation requires an accepted task plan from a Frozen spec.
@@ -36,9 +45,10 @@ Implementation requires an accepted task plan from a Frozen spec.
 
 The reconstruction used the written specifications and review notes from
 `wireframes/r001-postgres-native-core/` through
-`wireframes/r007-integrated-views-activity/`, plus the current Tabular research
-package. No screenshots, wireframe assets, HTML, CSS, JavaScript, or other raw
-source material were copied into `.agents/resources/` or this KB.
+`wireframes/r007-integrated-views-activity/`, the current Tabular research
+package, and the accepted/verified implementation-review records in Spec 00003.
+No screenshots, wireframe assets, HTML, CSS, JavaScript, or other raw source
+material were copied into `.agents/resources/` or this KB.
 
 ## Current product vocabulary
 
@@ -70,6 +80,8 @@ authority.
   focused create-table builder.
 - Retain the spreadsheet-first interaction model: the grid is the place to
   name columns, configure them, and enter values.
+- Derive connection, database, schema, and identity labels from the configured
+  PostgreSQL target; `Acme Inc.` remains a historical wireframe example only.
 - Use the reviewed grayscale wireframe language. Do not copy Google Drive or
   Google Sheets branding, colors, global navigation, or unrelated features.
 - Treat source screenshots as interaction inspiration only; the detail in this

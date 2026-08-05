@@ -110,6 +110,9 @@ test('activity center renders filters, unread progress, safe results, and recove
   assert.match(html, /aria-valuenow="64"/);
   assert.match(html, /Activity could not catch up/);
   assert.match(html, /last visible snapshot is still shown/);
+  assert.match(html, /data-icon="warning"/);
+  assert.match(html, /data-icon="import"/);
+  assert.match(html, /data-icon="file-down"/);
 });
 
 test('dead-letter details expose failure, retry, acknowledgement, and preserved-audit copy', () => {
@@ -150,7 +153,17 @@ test('activity empty state and server-provided retention capability remain disti
     ...handlers
   }));
   assert.match(empty, /No matching activity/);
+  assert.match(empty, /data-icon="activity"/);
   assert.match(empty, /Show all activity/);
+
+  const loading = renderToStaticMarkup(createElement(ActivityCenter, {
+    items: [],
+    summary: summarizeActivity([]),
+    filter: 'all',
+    loading: true,
+    ...handlers
+  }));
+  assert.match(loading, /data-icon="loader"/);
 
   const base: ActivityPageProps = {
     application: 'Tabular',

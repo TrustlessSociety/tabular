@@ -197,6 +197,37 @@ operations, and exclusions.
   directly; System activity stays discoverable with permission-filtered
   contents; acknowledged dead letters retain their audit record.
 
+## Post-r007 Spec 00003 implementation-review overrides
+
+Final human-review corrections in Spec 00003 supersede several visual-only
+r003-r005 assumptions without rewriting their history:
+
+- Runtime connection/database/schema/identity labels come from the configured
+  PostgreSQL target; `Acme Inc.` is sample provenance, not a shipped identity.
+- The first slice exposes normal signed-out PostgreSQL-native sign-in. Browser
+  acceptance cannot begin behind a fixture route or injected session.
+- New file opens one File name dialog with an inferred PostgreSQL table preview,
+  then creates and opens an immediately editable blank spreadsheet with hidden
+  stable row identity. It no longer starts as a route-only Untitled File.
+- Valid edits autosave on blur; invalid/incomplete values remain correctable
+  drafts. Body cell, named header, whole column, row, and whole header row are
+  distinct selection targets, and the active cell owns keyboard focus.
+- Default Price output is a neutral grouped number with two decimals. No peso
+  or other currency symbol is hard-coded by the semantic field.
+- Inserted blank rows remain inert until edited. Insert column left/right creates
+  a tab-local blank immediately; only persisted named columns are drag sources,
+  while every visible header is an exact drop boundary. A tracked blank can be
+  deleted without DDL; a real PostgreSQL column remains protected.
+- View shows only Show, Freeze, and Zoom. Format shows Number, Text, Alignment,
+  Wrapping, Font size, and Clear formatting. Redundant chevrons and disabled
+  Full screen/Theme/Rotation/Smart chips/Merge cells placeholders are removed.
+- The header corner is visibly blank and selects all headers; the first value
+  row and formula coordinate are row 1.
+
+Tasks 00014A-00014D and the deletion/menu/row-numbering parts of 00014E passed
+agent acceptance. Exact pointer-driven inserted-column drag acceptance remains
+Spec 00003 evidence and is not claimed complete here.
+
 ## Review and evidence boundary
 
 The history draws from accepted review notes and browser feedback. Some later
@@ -212,11 +243,14 @@ Before calling a reconstruction complete, verify all of the following:
   table-screen Import top-bar button.
 - The sample database shows Operations and Finance schema folders; schema views
   show Files/Views tabs plus authorized New file and Import actions.
-- New file is blank Untitled File and derives its table name from title.
+- New file asks for File name, previews the inferred PostgreSQL table, and opens
+  the created file as an immediately editable blank spreadsheet.
 - Column settings contains separate Field, Format, constraints, Advanced, and
   the exact two-template Relation sequence.
-- Input/output/edit/error/reorder behavior matches r003 current rules.
-- File/Edit/View/Format and tool popovers match r004 current rules.
+- Input/output/edit/error/reorder behavior matches the current grid contract,
+  including the post-r007 overrides above.
+- File/Edit/View/Format and tool popovers match the current command-surface
+  contract; deferred placeholders are not shown merely for orientation.
 - File includes Export, Views, and New view in the accepted order and does not
   restore a persistent saved-view bar.
 - Saved views are reachable from folder discovery and the source table; System

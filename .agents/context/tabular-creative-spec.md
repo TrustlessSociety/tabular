@@ -2,8 +2,9 @@
 
 ## Status and design intent
 
-**Accepted creative baseline:** r007 Round 2, user approved on 2026-08-01.
-Use this document for visual and interaction reconstruction only. The
+**Accepted creative baseline:** r007 Round 2, user approved on 2026-08-01, with
+user-directed Spec 00003 implementation-review corrections promoted on
+2026-08-04. Use this document for visual and interaction reconstruction. The
 [PostgreSQL-native product contract](tabular-product-contract.md), accepted on
 2026-07-31, supersedes r005 product-policy assumptions including hierarchy,
 authority, persistence, interfaces, and first-slice scope.
@@ -17,7 +18,7 @@ such as Table settings, Advanced column settings, validation, and relations.
 
 | Familiar concept | Tabular meaning | Important boundary |
 | --- | --- | --- |
-| Acme Inc. | Example server/connection root | Database and schema levels remain visible beneath it. |
+| Configured connection name | Server/connection root; `Acme Inc.` is a historical sample only | Database and schema levels remain visible beneath it. |
 | Folder | A PostgreSQL schema shown with familiar folder treatment: Operations or Finance | Canonical schema boundary inside one database. |
 | File | A user-named spreadsheet people open from the explorer | Maps to one PostgreSQL table. |
 | Table | The PostgreSQL-backed data object behind a file | Use as a familiar domain term where needed; do not use "spreadsheet" and "table" interchangeably in the same UI sentence. |
@@ -72,22 +73,24 @@ This is a compact grayscale wireframe, not a branded Google clone.
 
 ### Explorer shell
 
-- Full-width top bar: compact Acme Inc. mark at left, a restrained `Search files`
-  field, icon-only System activity link with an accessible name, and account
-  action at right.
+- Full-width top bar: compact configured connection name at left, a restrained
+  `Search files` field, icon-only System activity link with an accessible name,
+  and account action at right.
 - There is no persistent left navigation panel, Drive-style global navigation,
   owner/storage metadata, or root-level create/import action.
-- Content starts with an Acme Inc. breadcrumb, then the root folder count or an
-  open folder's Files/Views tabs, list/grid toggle, and one content region.
+- Content starts with the configured connection/database breadcrumb, then the
+  root folder count or an open folder's Files/Views tabs, list/grid toggle, and
+  one content region.
 
 ### Spreadsheet shell
 
-- Full-width top bar: Acme Inc. mark is a route to the explorer; breadcrumb
-  contains the current folder and the current file name. Do not show a `Files`
-  breadcrumb between Acme Inc. and the folder.
+- Full-width top bar: configured connection name is a route to the explorer;
+  breadcrumb contains database, current folder, and current file name. Do not
+  insert a generic `Files` crumb.
 - The current file name is inline renameable. Click to edit; Enter or click-away
-  commits; Escape cancels. This changes the display name only unless a future
-  confirmed migration flow says otherwise.
+  commits; Escape cancels. An accepted rename updates the display name and
+  physical PostgreSQL relation through the governed DDL/reconciliation boundary
+  without exposing an internal migrator confirmation.
 - Under the top bar: File/Edit/View/Format menubar, then WYSIWYG toolbar, then
   the coordinate band and sheet canvas. Do not insert a persistent saved-view
   bar between the menubar and toolbar.
@@ -100,18 +103,20 @@ This is a compact grayscale wireframe, not a branded Google clone.
 | Route/state | User goal | Required visible state |
 | --- | --- | --- |
 | `pages/browse.html` | Start at the organization root | Operations and Finance folders; list/grid toggle; scoped search; no page heading, explanatory paragraph, New file, or Import. |
-| `pages/browse.html?folder=operations` | Find a file or saved view inside a folder | `Acme Inc. › Operations`, Files/Views tabs with scoped counts/search, list/grid toggle, and adjacent `New file` + `Import` actions. |
+| `pages/browse.html?folder=operations` | Find a file or saved view inside a folder | Configured connection/database › Operations, Files/Views tabs with scoped counts/search, list/grid toggle, and adjacent `New file` + `Import` actions. |
 | `pages/browse.html?folder=finance` | Find a Finance file | Equivalent Finance folder view, its files, and the same folder-only actions. |
 | `pages/table.html?folder=operations&table=customer-orders` | Work in an existing file | Focused spreadsheet with Customer orders data, command surface, canvas, and contextual panel. |
-| `pages/table.html?new=1&folder=operations&table=untitled-file` | Start a new blank file | `Untitled File`, inline rename enabled, 0 records, 1,000 logical rows, no named columns. |
+| Open-folder New file dialog | Name a new blank file | **Create a blank spreadsheet**, required File name, inferred PostgreSQL table preview, Cancel, and Create file. |
+| Reconciled normal table route after create | Start entering columns and values | Entered file name, 0 records, 1,000 logical rows, no named columns, durable hidden row identity, and an immediately editable first row. |
 | `pages/table.html?folder=operations&table=customer-orders&dialog=views` | Open or create a table view | File-menu Views dialog grouped by Personal/Shared, or a No saved views creation state. |
 | `pages/table.html?folder=operations&table=customer-orders&view=ready` | Work in a saved view | New browser tab, compact active-view breadcrumb/title, saved filtering/presentation, and no persistent view bar. |
 | `pages/import.html?folder=operations` | Create one new file by importing values | Folder-aware values-only import wizard. |
 | `pages/system-activity.html` | Monitor and recover background operations | Summary cards; All/Active/Needs attention/Completed filters; job detail; dead-letter actions; administrator retention. |
 
-`create-table.html` is deliberately not a current route. A new file opens
-directly into the blank spreadsheet so column configuration happens in the
-actual grid and panel instead of a partial builder.
+`create-table.html` is deliberately not a current route. One bounded file-name
+dialog creates the governed PostgreSQL table, then the reconciled normal route
+opens directly into the blank spreadsheet so column configuration happens in
+the actual grid instead of a partial schema builder.
 
 ## Screen reconstruction rules
 
@@ -138,12 +143,13 @@ PostgreSQL views remain read-only files in Files.
 - Second band: semantic field names. Named headers are label-only; field/storage
   copy does not appear underneath them. Current example: Order ID, Customer,
   Email, Status, Total, Paid, Ordered at.
-- First sticky column: numbered row headers. Four representative populated
-  rows precede blank rows; the sheet represents 1,000 logical rows.
+- First sticky column: a visibly blank header corner followed by value-row labels
+  beginning at 1. The corner remains the whole-header-row selection target but
+  owns no value-row or formula coordinate.
 - Body values render through their output formats, not their input controls:
-  status may be a compact badge, price formatted with currency, boolean as
-  Yes/No, relation as its saved display template, and date-time in compact
-  human-readable form.
+  status may be a compact badge, default Price comma-grouped with two decimals
+  and no symbol, boolean as Yes/No, relation as its saved display template, and
+  date-time in compact human-readable form.
 - Bottom: row-count number input, `Add Rows` button, logical capacity label,
   and status line such as record/row/named-column totals.
 
@@ -174,14 +180,17 @@ document-level overflow.
 
 ## Accessibility and interaction baseline
 
-- The canvas is an accessible grid with clear active-cell, row, column, and
-  range state. Row and column headers have matching header semantics.
+- The canvas is an accessible grid with clear active-cell, range, row,
+  named-header, whole-column, and whole-header-row states. Row and column
+  headers have matching semantics; the initial active cell owns keyboard focus
+  without requiring a pointer click.
 - All visual-only icon choices expose accessible names and keyboard focus.
 - Menus use menubar/menu semantics, keep focus management predictable, close
   with Escape/click-away, restore focus to the trigger, and clamp to the
   viewport.
 - Right-click target selection occurs before its menu opens. Shift+F10 or the
-  Menu key opens the correct menu for the active cell/row/column target.
+  Menu key opens the correct menu for the active cell, relation, row, named
+  header, whole column, whole header row, or explorer target.
 - Hover-only error explanations wait one second; selection/focus opens them
   immediately. No validation popover opens automatically after a reorder.
 

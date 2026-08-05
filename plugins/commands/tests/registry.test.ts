@@ -26,6 +26,9 @@ const BASE_CONTEXT = {
   canConfigureFile: true,
   canSaveViews: true,
   canMoveRows: true,
+  canMoveRowUp: true,
+  canMoveRowDown: true,
+  canSortSelection: true,
   relationSelection: true
 } satisfies CommandContext;
 
@@ -120,14 +123,12 @@ test('registry exposes the exact four accepted menus, order, labels, hints, and 
             'view.zoom.150|150%||',
             'view.zoom.200|200%||'
           ]
-        },
-        'view.fullscreen|Full screen||'
+        }
       ]
     },
     {
       label: 'Format',
       entries: [
-        'format.theme|Theme||',
         {
           submenu: 'Number',
           entries: [
@@ -165,8 +166,6 @@ test('registry exposes the exact four accepted menus, order, labels, hints, and 
             'format.wrap.overflow|Overflow||'
           ]
         },
-        'format.rotation|Rotation||',
-        'format.smart-chips|Smart chips||',
         {
           submenu: 'Font size',
           entries: [
@@ -177,7 +176,6 @@ test('registry exposes the exact four accepted menus, order, labels, hints, and 
             'format.size.18|18||'
           ]
         },
-        'format.merge|Merge cells||',
         '---',
         'format.clear|Clear formatting||'
       ]
@@ -186,7 +184,8 @@ test('registry exposes the exact four accepted menus, order, labels, hints, and 
 });
 
 test('command state applies deferred, permission, target, draft, and read-only boundaries', () => {
-  //Deferred commands remain visible for orientation but are never actionable.
+  //Deferred command identities remain inert whether they are hidden from the
+  //accepted menus or retained visibly for orientation.
   const deferred = [
     'file.copy',
     'file.version-history',
@@ -196,12 +195,9 @@ test('command state applies deferred, permission, target, draft, and read-only b
     'format.smart-chips',
     'format.merge',
     'row.resize',
-    'column.insert-left',
-    'column.insert-right',
     'column.move-left',
     'column.move-right',
-    'column.resize',
-    'column.delete'
+    'column.resize'
   ] as const;
   for (const id of deferred) {
     assert.deepEqual(commandState(id, BASE_CONTEXT), {
@@ -216,6 +212,30 @@ test('command state applies deferred, permission, target, draft, and read-only b
   assert.deepEqual(commandState('view.list', BASE_CONTEXT), { enabled: true });
   assert.deepEqual(commandState('view.new', BASE_CONTEXT), { enabled: true });
   assert.deepEqual(commandState('row.move-up', BASE_CONTEXT), { enabled: true });
+  assert.deepEqual(commandState('column.insert-left', {
+    ...BASE_CONTEXT,
+    selectionKind: 'column'
+  }), { enabled: true });
+  assert.deepEqual(commandState('column.insert-right', {
+    ...BASE_CONTEXT,
+    selectionKind: 'header'
+  }), { enabled: true });
+  assert.deepEqual(commandState('column.insert-left', BASE_CONTEXT), {
+    enabled: false,
+    reason: 'Select a persisted column header first.'
+  });
+  assert.deepEqual(commandState('column.delete', {
+    ...BASE_CONTEXT,
+    selectionKind: 'column'
+  }), {
+    enabled: false,
+    reason: 'Only an inserted blank column can be removed directly.'
+  });
+  assert.deepEqual(commandState('column.delete', {
+    ...BASE_CONTEXT,
+    selectionKind: 'column',
+    canDeleteColumn: true
+  }), { enabled: true });
   assert.deepEqual(commandState('row.move-down', {
     ...BASE_CONTEXT,
     canMoveRows: false,
@@ -223,6 +243,31 @@ test('command state applies deferred, permission, target, draft, and read-only b
   }), {
     enabled: false,
     reason: 'Clear the explicit sort before changing shared row order.'
+  });
+  assert.deepEqual(commandState('row.move-up', {
+    ...BASE_CONTEXT,
+    selectionKind: 'row',
+    canMoveRowUp: false,
+    rowMoveUpReason: 'Select a committed row before moving it.'
+  }), {
+    enabled: false,
+    reason: 'Select a committed row before moving it.'
+  });
+  assert.deepEqual(commandState('row.move-down', {
+    ...BASE_CONTEXT,
+    selectionKind: 'row',
+    canMoveRowDown: false
+  }), {
+    enabled: false,
+    reason: 'The selected committed row is already last.'
+  });
+  assert.deepEqual(commandState('column.sort-asc', {
+    ...BASE_CONTEXT,
+    selectionKind: 'column',
+    canSortSelection: false
+  }), {
+    enabled: false,
+    reason: 'Name this column before sorting it.'
   });
   assert.deepEqual(commandState('view.new', { ...BASE_CONTEXT, canSaveViews: false }), {
     enabled: false,

@@ -35,6 +35,16 @@ authority, transport, and recovery separately.
 | 00012 | Product durable jobs/outbox/activity; D-006 | r007-integrated-views-activity | `plugins/operations`, worker/migrator consumers | operation tests, `test:postgres:operations`, `output/playwright/task-00012` |
 | 00013 | Product governed MCP/harness; D-003, D-004, D-007; G-007 | None | `plugins/mcp`, shared capability contracts | MCP contract and `test:postgres:mcp-parity` matrix; Task 00013 transcript/result |
 | 00014 | Brief completion criteria; every decision/gap; P-001/P-002 limits; PostgreSQL-native authentication and human-accessible review | accepted r003–r007 cumulative surface plus sign-in/sign-out, immediately editable blank spreadsheet, unnamed-coordinate value entry, sparse-row retention, retained first-row recovery, blur autosave, distinct cell/named-header/whole-column selection, column drag/drop, WYSIWYG formatting, and neutral Price display | feature plugins plus PostgreSQL `LOGIN` authentication, durable application sessions and invalid-value drafts, serialized blur autosave, stable unnamed metadata over hidden JSON, persistent hidden row ranks, logical selection/presentation projection, reproducible local review setup, fixture removal, hidden durable row identity, tab-local column layout/presentation, and explicit release/operations tooling | Fresh executable `verify:release`, `npm run verify`, `test:postgres:all`, signed-out-to-signed-in browser acceptance without fixture/session injection, named blank-file create/edit/physical-rename persistence, sparse unnamed-cell draft reload, exact-one-row promotion, multi-cell blur autosave, exact body-cell/named-header/whole-column states, header-only WYSIWYG formatting, persistent header reorder, neutral two-decimal Price display, operational/restore/load evidence, and desktop/narrow/Safari/VoiceOver package |
+| 00014A | Task 00014 final-review keyboard rejection; grid interaction Context | Active-cell focus continuity across load, navigation, editing, cancellation, and live refresh | `plugins/grid` adapter and `plugins/ui` workbench | Focused keyboard/focus tests, complete fast suite, clean build, static validators, and signed-in Browser acceptance |
+| 00014B | Task 00014 final-review command and formatting rejection; command/grid Context | Whole-header-row selection, target-aware context menus, header formatting, relations, and transient sorting | `plugins/commands`, `plugins/grid`, and `plugins/ui` | Focused component/registry/workbench tests, complete fast suite, clean build, static validators, and signed-in Browser acceptance |
+| 00014C | Task 00014 final-review insertion rejection; row-order and DDL Context | Inert blank-row insertion and requested-side column insertion | `plugins/grid`, `plugins/ui`, and existing files/DDL boundary | Focused insertion tests, complete fast suite, clean build, static validators, and signed-in Browser acceptance |
+| 00014D | Task 00014 final-review insertion-parity rejection; spreadsheet interaction Context | Visible header emphasis, one-sided row-rank allocation, and immediate tab-local blank-column insertion | `plugins/grid` and `plugins/ui` | Focused presentation/rank/insertion tests, complete fast suite, clean build, static validators, and signed-in Browser acceptance |
+| 00014E | Task 00014 final-review drag/delete rejection; spreadsheet command and grid Context | Exact blank-header drop boundaries, blank-column deletion, caret/menu cleanup, and row-1 coordinate alignment | `plugins/grid`, `plugins/ui`, and `plugins/commands` | Technical verification and blank deletion/menu/numbering Browser checks passed; exact pointer-driven drag acceptance passed 2026-08-05 |
+| 00014F | User-directed production icon inventory and correction screenshots; creative and command Context | Shared SVG vocabulary, exact Borders/alignment diagrams, and distinct import, Saved Views, Activity, source, warning, and result marks | `plugins/ui`, `plugins/commands`, `plugins/saved-views`, `plugins/import-export`, `plugins/operations`, and `plugins/explorer` | 26 focused render tests, all 251 full-suite tests, clean production/static verification, reduced-motion review, and signed-in desktop/narrow Browser evidence passed 2026-08-05 |
+| 00014G | Task 00014F final-review density correction and supplied screenshots | Text-only Border section headings, color control below its label, and intrinsic three-choice popover width | `plugins/commands` | 6 focused command tests, all 251 full-suite tests, clean production/static verification, and signed-in desktop/narrow Browser evidence passed 2026-08-05 |
+| 00014H | Task 00014G final-review color/interaction correction and supplied palette screenshot | Exact shared text/fill/border palette order and initially-open Border visible accordion | `plugins/commands` | 8 focused command tests, all 253 full-suite tests, clean production/static verification, Agent Workspace validation, and signed-in desktop/narrow Browser evidence passed 2026-08-05 |
+| 00014I | Task 00014H final-review simplification | Remove deferred Conditional formatting from standalone and narrow fill/background color surfaces | `plugins/commands` | 8 focused command tests, all 253 full-suite tests, clean production/static verification, Agent Workspace validation, and signed-in desktop/narrow Browser evidence passed 2026-08-05 |
+| 00014J | Task 00014H final-review Border/custom-color correction | Distinct rendered dashed, dotted, and double cell edges plus one shared, deduplicated, page-session custom-color row | `plugins/commands` and `plugins/grid` | 22 focused command/adapter tests, all 255 full-suite tests, clean production/static verification, Agent Workspace validation, and signed-in desktop/narrow Browser evidence passed 2026-08-05 |
 
 ## Coverage rules
 
@@ -46,13 +56,21 @@ authority, transport, and recovery separately.
 - Task files hold exact implementation, verification, and agent-acceptance
   notes. `tasks/status.md` is the current execution ledger; this matrix is the
   cross-source index and never overrides a failed or blocked task result.
-- Corrective Task 00014 is agent-verified after its seventh human-review
-  feedback pass. Fresh executable Browser and PostgreSQL proof covers saved-row
-  recommit, unnamed-cell hidden-JSON drafts at sparse ranked positions, exact-
-  one-row promotion, multi-cell blur autosave, bidirectional header reorder, distinct cell/named-
-  header/whole-column selection, header-only formatting, and neutral Price
-  through the running normal PostgreSQL-native path. Final human acceptance
-  remains pending.
+- Parent Task 00014 and corrective side quests 00014A through 00014J are
+  agent-verified. Side quest 00014E passed its exact pointer-driven Browser drag
+  acceptance, and 00014F passed production/static verification plus desktop and
+  narrow Browser review on 2026-08-05. Side quest 00014G passed its production,
+  desktop, and narrow checks the same day. Side quest 00014H then passed exact
+  palette-order, single-open accordion, production, desktop, and narrow checks.
+  Side quest 00014I then passed removal from both fill/background rendering
+  paths with production, desktop, and narrow checks. Side quest 00014J passed
+  distinct dashed/dotted/double projection, shared custom-color reuse, narrow
+  containment, and refresh-reset checks. Final human acceptance remains
+  separate and pending.
+- Fresh executable Browser and PostgreSQL proof covers saved-row recommit,
+  unnamed-cell hidden-JSON drafts at sparse ranked positions, exact-one-row
+  promotion, multi-cell blur autosave, selection modes, header formatting, and
+  neutral Price through the running normal PostgreSQL-native path.
   A test double proves adapter behavior but never a human-accessible
   authentication target, stale evidence is not executable acceptance, and an
   isolated source snapshot is not mislabeled a clean Git checkout.

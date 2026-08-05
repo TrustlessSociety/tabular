@@ -47,6 +47,7 @@
   font-size: 26px;
   line-height: 1;
 }
+.saved-view-close svg { width: 17px; height: 17px; }
 
 .saved-view-body {
   min-height: 0;
@@ -105,11 +106,14 @@
 
 .saved-view-row summary {
   width: 36px;
+  display: grid;
+  place-items: center;
   padding: 7px;
   cursor: pointer;
   list-style: none;
   text-align: center;
 }
+.saved-view-row summary svg { width: 17px; height: 17px; }
 
 .saved-view-row details > div {
   position: absolute;

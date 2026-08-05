@@ -2,9 +2,10 @@
 
 ## Status
 
-Accepted from Spec 00002 Rounds 2 and 3, the approved r007 design closure, and
-Frozen Spec 00003 on 2026-08-01. These are durable boundaries for implementation
-planning; production work still requires an accepted task plan.
+Accepted from Spec 00002 Rounds 2 and 3, the approved r007 design closure,
+Frozen Spec 00003 on 2026-08-01, and verified Spec 00003 implementation-review
+corrections promoted on 2026-08-04. These are durable boundaries for
+implementation planning; production work still requires an accepted task plan.
 
 ## Direct application composition
 
@@ -41,9 +42,12 @@ planning; production work still requires an accepted task plan.
 
 ## Authority and migrations
 
-- Normalize a verified identity-provider subject into an application identity,
-  then resolve its current allowlisted PostgreSQL role. Provider claims and
-  cookie content never grant a database role directly.
+- The first slice authenticates an existing safe PostgreSQL `LOGIN` role through
+  a short-lived ordinary connection, binds verified database/role identities to
+  an application identity, and resolves only current roles the web authority may
+  safely assume. Never read or retain a password hash. A future provider subject
+  maps into the same boundary; provider claims and cookie content never grant a
+  database role directly.
 - Browser sessions use opaque rotated identifiers with server-side subject,
   role mapping, CSRF secret, creation/activity/expiry, and revocation state.
   Production cookies require HTTPS, `Secure`, `HttpOnly`, a deliberate
@@ -71,6 +75,9 @@ planning; production work still requires an accepted task plan.
 
 - Browser selection, edit, validation, and undo keys include file identity and
   stable row/column identity; coordinates alone are insufficient.
+- Valid single-cell edits serialize and save on blur through the same durable
+  action boundary. Invalid or incomplete attempts remain actor-owned drafts;
+  there is no separate manual Commit path for ordinary valid edits.
 - Presentation state is distinct from PostgreSQL field metadata and canonical
   row mutations. Unsaved column order/visibility, filters, sorting, and cell
   presentation are current-tab state; private/shared saved views are their
@@ -97,6 +104,14 @@ planning; production work still requires an accepted task plan.
 - Stable row and column identities are the selection authority. The adapter
   projects cell/range/row/column selection into mounted cells and restores it
   after virtual unmounts, data reloads, and column-order changes.
+- The visibly active cell owns focus after stable grid readiness, keyboard
+  editor close/cancel, and live row/column replacement unless focus is
+  intentionally in another control. Cell, named-header, whole-column, row, and
+  whole-header-row selection remain distinct logical targets.
+- Persisted named columns are the only column-drag sources. Every visible
+  header, including a tab-local inserted blank, is an exact left/right drop
+  target. A blank remains non-draggable until it becomes a real PostgreSQL
+  column.
 - Begin with vertical virtualization and ordinary internal horizontal
   scrolling. Do not depend on Tabulator's experimental horizontal virtual DOM
   until a measured column-scale requirement and focused target validation exist.
@@ -117,6 +132,13 @@ load, deployment, backup, and rollback targets.
 
 Re-audit the direct dependency graph during implementation. Never expose Vite's
 development server as a production surface.
+
+Browser release acceptance starts signed out at the ordinary application
+origin, signs in through the visible PostgreSQL login form, and exercises public
+product routes. A fixture-only URL, `TestIdentityProvider`, `__acceptance`,
+direct service call, injected cookie, or stale browser artifact cannot prove a
+human-accessible path. Review setup/reset may target only an explicitly
+disposable loopback PostgreSQL environment with bounded cleanup.
 
 Evidence labels must remain honest: executable, prior-evidence, guide,
 target-validation, and visible-gap findings are not interchangeable.

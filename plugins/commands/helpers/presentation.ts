@@ -39,6 +39,10 @@ export function presentationPoints(
 ) {
   if (!selection) return [];
   if (selection.kind === 'row') return columns.map((column) => ({ rowId: selection.rowId, columnId: column.id }));
+  if (selection.kind === 'header-row') return columns.map((column) => ({
+    rowId: GRID_HEADER_ROW_ID,
+    columnId: column.id
+  }));
   if (selection.kind === 'header') return [{
     rowId: GRID_HEADER_ROW_ID,
     columnId: selection.columnId

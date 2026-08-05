@@ -13,9 +13,10 @@ export type SelectionInspectorProps = {
 function describe(selection: LogicalGridSelection | null, columns: GridColumn[]) {
   if (!selection) return { type: 'None', anchor: '—', focus: '—' };
   if (selection.kind === 'row') return { type: 'Entire row', anchor: selection.rowId, focus: selection.rowId };
+  if (selection.kind === 'header-row') return { type: 'Entire header row', anchor: 'All columns', focus: 'Headers' };
   if (selection.kind === 'header') {
     const column = columns.find((candidate) => candidate.id === selection.columnId);
-    return { type: 'Header cell', anchor: column?.label || selection.columnId, focus: `${column?.coordinate || selection.columnId}1` };
+    return { type: 'Header cell', anchor: column?.label || selection.columnId, focus: `${column?.coordinate || selection.columnId} header` };
   }
   if (selection.kind === 'column') {
     const column = columns.find((candidate) => candidate.id === selection.columnId);

@@ -226,7 +226,7 @@ kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--
 .tabulator .tabulator-header .tabulator-col .tabulator-col-title { height: 100%; }
 .tabular-column-label { height: 100%; display: grid; grid-template-rows: 22px 29px; }
 .tabular-column-coordinate { display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--rule); color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.tabular-column-semantic { min-width: 0; display: flex; align-items: center; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+.tabular-column-semantic { min-width: 0; display: flex; align-items: center; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 .grid-stage[data-can-move-columns="true"] .tabulator-col[tabulator-field] .tabular-column-label { cursor: grab; }
 .grid-stage[data-can-move-columns="true"] .tabulator-col.tabulator-moving .tabular-column-label { cursor: grabbing; }
 .grid-stage[data-can-move-columns="true"] .tabulator-col.tabular-column-dragging { opacity: .55; }
@@ -234,7 +234,6 @@ kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--
 .grid-stage[data-can-move-columns="true"] .tabulator-col.tabular-column-drop-target[data-tabular-drop-edge="right"] { box-shadow: inset -3px 0 0 #174ea6; }
 .tabular-header-name-input { width: 100%; height: 27px; margin: 0 -8px; border: 0; outline: 2px solid var(--focus); outline-offset: -2px; padding: 0 8px; background: var(--paper); font: inherit; }
 .tabulator .tabulator-header .tabulator-row-header { min-width: 48px; }
-.tabulator .tabulator-header .tabulator-row-header .tabulator-col-title::before { content: '1'; color: var(--muted); }
 .tabulator .tabulator-row { min-height: 32px; border-bottom: 1px solid #e3e6ea; background: var(--paper); }
 .tabulator .tabulator-row:nth-child(even) { background: #fbfbfc; }
 .tabulator .tabulator-row:hover { background: #f7f8fa; }
@@ -247,10 +246,10 @@ kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--
 .tabulator .tabulator-row .tabulator-cell.tabulator-row-header.tabular-axis-row-active,
 .tabulator .tabulator-header .tabulator-row-header.tabular-axis-row-active { background: #dbe8fc; color: #0f2854; font-weight: 700; }
 .tabulator .tabular-column-coordinate.tabular-column-selected { background: #1b5fcc; color: #fff; font-weight: 700; }
-.tabulator .tabular-column-semantic.tabular-header-cell-active { position: relative; z-index: 4; background: var(--paper) !important; color: var(--ink); outline: 2px solid var(--focus); outline-offset: -2px; }
-.tabulator .tabular-column-semantic.tabular-column-selected { background: #e7effd !important; color: #0f2854; box-shadow: inset 1px 0 0 var(--focus), inset -1px 0 0 var(--focus), inset 0 2px 0 var(--focus), inset 0 -2px 0 var(--focus); }
+.tabulator .tabular-column-semantic.tabular-header-cell-active { position: relative; z-index: 4; background: var(--paper); color: var(--ink); outline: 2px solid var(--focus); outline-offset: -2px; }
+.tabulator .tabular-column-semantic.tabular-column-selected { background: #e7effd; color: #0f2854; box-shadow: inset 1px 0 0 var(--focus), inset -1px 0 0 var(--focus), inset 0 2px 0 var(--focus), inset 0 -2px 0 var(--focus); }
 .tabulator .tabulator-row .tabulator-cell.tabular-range-cell { background: #eaf2ff; box-shadow: inset 0 0 0 1px rgb(37 99 235 / 18%); }
-.tabulator .tabulator-row .tabulator-cell.tabular-active-cell { z-index: 4; background: var(--paper) !important; outline: 2px solid var(--focus); outline-offset: -2px; }
+.tabulator .tabulator-row .tabulator-cell.tabular-active-cell { z-index: 4; background: var(--paper); outline: 2px solid var(--focus); outline-offset: -2px; }
 .tabulator .tabulator-row .tabulator-cell.tabular-cell-invalid { position: relative; overflow: visible; color: var(--ink); }
 .tabulator .tabulator-row .tabulator-cell.tabular-cell-invalid::after,
 .tabulator .tabulator-row .tabulator-cell.tabulator-row-header.tabular-row-invalid::after { content: ''; position: absolute; top: 0; right: 0; border-top: 7px solid var(--danger); border-left: 7px solid transparent; }

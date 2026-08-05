@@ -9,6 +9,7 @@ import type {
 } from 'tabulator-tables';
 import type { GridColumn, GridRow } from '../helpers/contracts.js';
 import {
+  borderBackgroundLayers,
   presentationNumberDisplay,
   TabulatorGridAdapter,
   type TabulatorTableFactory,
@@ -21,6 +22,21 @@ test('presentation number formats render without changing raw values', () => {
   assert.equal(presentationNumberDisplay('0.125', 'percent'), '12.5%');
   assert.equal(presentationNumberDisplay('not-a-number', 'currency'), undefined);
   assert.equal(presentationNumberDisplay('1234.50', 'automatic'), undefined);
+});
+
+test('border presentation keeps dashed, dotted, and double edge patterns distinct', () => {
+  const dashed = borderBackgroundLayers('bottom', 'dashed', '#123456');
+  const dotted = borderBackgroundLayers('bottom', 'dotted', '#123456');
+  const double = borderBackgroundLayers('bottom', 'double', '#123456');
+
+  assert.match(dashed.backgroundImage, /repeating-linear-gradient\(to right, #123456 0 6px, transparent 6px 10px\)/);
+  assert.equal(dashed.backgroundSize, '100% 2px');
+  assert.equal(dashed.backgroundPosition, '0 100%');
+  assert.match(dotted.backgroundImage, /repeating-linear-gradient\(to right, #123456 0 2px, transparent 2px 5px\)/);
+  assert.notEqual(dotted.backgroundImage, dashed.backgroundImage);
+  assert.equal(double.backgroundImage.match(/linear-gradient/g)?.length, 2);
+  assert.equal(double.backgroundSize, '100% 1px, 100% 1px');
+  assert.equal(double.backgroundPosition, '0 100%, 0 calc(100% - 3px)');
 });
 
 class FakeClassList {
@@ -45,6 +61,7 @@ class FakeElement {
   width?: number;
   readonly styles = new Map<string, string>();
   readonly listeners = new Map<string, Set<(event: any) => void>>();
+  readonly descendants = new Map<string, FakeElement>();
   draggable = false;
   left = 0;
   readonly style: Record<string, unknown> & {
@@ -88,7 +105,7 @@ class FakeElement {
       toJSON: () => ({})
     };
   }
-  querySelector() { return undefined; }
+  querySelector(selector: string) { return this.descendants.get(selector); }
   querySelectorAll() { return [] as unknown as NodeListOf<Element>; }
 }
 
@@ -123,6 +140,12 @@ class FakeTable implements TabulatorTablePort {
     for (const definition of definitions) {
       const field = String(definition.field);
       const element = new FakeElement();
+      const coordinate = new FakeElement();
+      coordinate.classList.add('tabular-column-coordinate');
+      const semantic = new FakeElement();
+      semantic.classList.add('tabular-column-semantic');
+      element.descendants.set('.tabular-column-coordinate', coordinate);
+      element.descendants.set('.tabular-column-semantic', semantic);
       this.columns.set(field, {
         getField: () => field,
         getElement: () => element as unknown as HTMLElement,
@@ -265,7 +288,15 @@ test('row and column movement are mounted only with current authority', async ()
     canMoveColumns: false
   });
   assert.equal(options[0]!.movableRows, false);
-  assert.equal((options[0]!.rowHeader as ColumnDefinition).rowHandle, false);
+  const deniedRowHeader = options[0]!.rowHeader as ColumnDefinition;
+  assert.equal(deniedRowHeader.rowHandle, false);
+  const rowNumberFormatter = deniedRowHeader.formatter as unknown as (
+    cell: CellComponent
+  ) => string;
+  const firstRowHeaderCell = {
+    getRow: () => ({ getPosition: () => 1 } as unknown as RowComponent)
+  } as unknown as CellComponent;
+  assert.equal(rowNumberFormatter(firstRowHeaderCell), '1');
   assert.equal(options[0]!.movableColumns, false);
   denied.destroy();
 
@@ -346,6 +377,55 @@ test('column movement emits the current logical order', async () => {
   adapter.destroy();
 });
 
+test('named columns can use an inserted blank header as an exact drop boundary', async () => {
+  let table!: FakeTable;
+  const adapter = new TabulatorGridAdapter((_container, options) => (table = new FakeTable(options)));
+  const moved: string[][] = [];
+  const insertedBlank = {
+    id: 'draft_inserted',
+    coordinate: 'B',
+    label: '',
+    editable: true,
+    kind: 'text',
+    storageCodec: 'text'
+  } satisfies GridColumn;
+  adapter.on('columnMove', ({ columnIds }) => moved.push(columnIds));
+  await adapter.mount(new FakeElement() as unknown as HTMLElement, {
+    rows,
+    columns: [ columns[0]!, insertedBlank, columns[1]!, columns[2]! ],
+    canMoveColumns: true
+  });
+  table.emit('tableBuilt');
+  const source = table.columns.get('status')!;
+  const blank = table.columns.get('draft_inserted')!;
+  source.element.left = 240;
+  blank.element.left = 120;
+  const transfer = {
+    value: '',
+    effectAllowed: '',
+    dropEffect: '',
+    setData(_type: string, value: string) { this.value = value; },
+    getData() { return this.value; }
+  };
+
+  assert.equal(source.element.draggable, true);
+  assert.equal(blank.element.draggable, false);
+  source.element.dispatch('dragstart', { dataTransfer: transfer });
+  blank.element.dispatch('dragover', {
+    clientX: 130,
+    dataTransfer: transfer,
+    preventDefault() {}
+  });
+  blank.element.dispatch('drop', {
+    clientX: 130,
+    dataTransfer: transfer,
+    preventDefault() {}
+  });
+
+  assert.deepEqual(moved, [[ 'order', 'status', 'draft_inserted', 'total' ]]);
+  adapter.destroy();
+});
+
 test('adapter owns Tabulator configuration and restores logical selection through view changes', async () => {
   let table: FakeTable | undefined;
   const factory: TabulatorTableFactory = (_container, options) => {
@@ -386,6 +466,9 @@ test('adapter owns Tabulator configuration and restores logical selection throug
     anchor: { rowId: '2', columnId: 'status' },
     focus: { rowId: '2', columnId: 'status' }
   });
+  const activeCell = (table.getRow('2') as FakeRow).cells.get('status')!.element;
+  assert.equal(adapter.focusActive(), true, 'the visible active cell accepts keyboard focus');
+  assert.equal(activeCell.focused, 1);
 
   adapter.replaceColumns([columns[2], columns[1], columns[0]]);
   assert.deepEqual([...table.columns.keys()], ['total', 'status', 'order']);
@@ -458,6 +541,9 @@ test('adapter translates keyboard-safe cell, range, row, column, and edit state 
   assert.equal(row.cells.get('status')?.element.attributes.get('aria-selected'), 'true');
   assert.equal(row.cells.get('status')?.element.tabIndex, -1, 'column selection does not outline a body cell');
   assert.equal(table.columns.get('status')?.element.attributes.get('aria-selected'), 'true');
+  adapter.select({ kind: 'header-row' });
+  assert.deepEqual(adapter.selection(), { kind: 'header-row' });
+  assert.equal(adapter.editActive(), false, 'whole-header-row selection is never a body-cell edit');
   assert.equal(adapter.navigate('down'), true, 'navigation resumes from a band selection focus point');
   assert.deepEqual(adapter.selection(), {
     kind: 'cell',
@@ -694,7 +780,14 @@ test('presentation state projects onto mounted cells and clears safely when virt
         horizontal: 'center',
         vertical: 'top',
         wrap: 'wrap',
-        border: 'bottom'
+        border: 'bottom',
+        borderStyle: 'dashed'
+      },
+      '["__tabular_header__","status"]': {
+        fillColor: '#fef3c7',
+        horizontal: 'right',
+        vertical: 'bottom',
+        wrap: 'wrap'
       }
     }
   });
@@ -708,7 +801,28 @@ test('presentation state projects onto mounted cells and clears safely when virt
   assert.equal(formatted.style.textAlign, 'center');
   assert.equal(formatted.classList.contains('tabular-presentation-v-top'), true);
   assert.equal(formatted.classList.contains('tabular-presentation-wrap'), true);
-  assert.equal(formatted.style.boxShadow, 'inset 0 -2px 0 #4b5563');
+  assert.equal(formatted.dataset.borderStyle, 'dashed');
+  assert.equal(formatted.style.backgroundImage, 'repeating-linear-gradient(to right, #4b5563 0 6px, transparent 6px 10px)');
+  assert.equal(formatted.style.backgroundSize, '100% 2px');
+  assert.equal(formatted.style.backgroundPosition, '0 100%');
+  adapter.select({ kind: 'header-row' });
+  const formattedHeader = table.columns.get('status')!.element
+    .querySelector('.tabular-column-semantic') as FakeElement;
+  assert.equal(formattedHeader.style.backgroundColor, '#fef3c7');
+  assert.equal(formattedHeader.style.textAlign, 'right');
+  assert.equal(formattedHeader.style.justifyContent, 'flex-end');
+  assert.equal(formattedHeader.classList.contains('tabular-presentation-v-bottom'), true);
+  assert.equal(formattedHeader.classList.contains('tabular-presentation-wrap'), true);
+  assert.equal(formattedHeader.classList.contains('tabular-header-cell-active'), true);
+
+  adapter.setPresentation({
+    '["__tabular_header__","status"]': { bold: false }
+  });
+  assert.equal(formattedHeader.style.fontWeight, '400');
+  adapter.setPresentation({
+    '["__tabular_header__","status"]': { bold: true }
+  });
+  assert.equal(formattedHeader.style.fontWeight, '700');
 
   adapter.setPresentation({});
   const cleared = (table.getRow('1') as FakeRow).cells.get('status')!.element;
@@ -717,5 +831,10 @@ test('presentation state projects onto mounted cells and clears safely when virt
   assert.equal(cleared.style.backgroundColor, '');
   assert.equal(cleared.classList.contains('tabular-presentation-v-top'), false);
   assert.equal(cleared.classList.contains('tabular-presentation-wrap'), false);
+  assert.equal(formattedHeader.style.backgroundColor, '');
+  assert.equal(formattedHeader.style.fontWeight, '');
+  assert.equal(formattedHeader.style.justifyContent, '');
+  assert.equal(formattedHeader.classList.contains('tabular-presentation-v-bottom'), false);
+  assert.equal(formattedHeader.classList.contains('tabular-presentation-wrap'), false);
   adapter.destroy();
 });

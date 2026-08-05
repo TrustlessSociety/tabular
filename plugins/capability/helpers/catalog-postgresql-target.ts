@@ -43,6 +43,7 @@ type NativeColumn = {
   columnName: string;
   attributeNumber: number;
   codec: PostgreSqlColumnCodec;
+  collatable: boolean;
   key: boolean;
   editable: boolean;
   generated: boolean;
@@ -134,6 +135,7 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
         columnName: column.name,
         attributeNumber: column.attribute_number,
         codec,
+        collatable: ['text', 'varchar', 'bpchar', 'name'].includes(column.type_name),
         key: keySet.has(column.attribute_number),
         editable: !keySet.has(column.attribute_number) && !column.generated_kind,
         generated: Boolean(column.generated_kind),
@@ -558,12 +560,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     if (insertAt < 0) changed();
     const desired = [...remaining];
     desired.splice(insertAt, 0, moving);
-    const lower = desired[insertAt - 1]?.rank || 0n;
-    const upper = desired[insertAt + 1]?.rank || MAX_RANK;
     const ranksUsable = ordered.every((entry) => entry.rank !== undefined)
+      && ordered.every((entry) => entry.rank! % RANK_GAP === 0n)
       && new Set(ordered.map((entry) => String(entry.rank))).size === ordered.length;
-    const midpoint = lower < upper ? lower + (upper - lower) / 2n : 0n;
-    const rebalanced = !ranksUsable || midpoint <= lower || midpoint >= upper;
+    const rebalanced = !ranksUsable;
     if (rebalanced) {
       if (BigInt(desired.length + 1) * RANK_GAP >= MAX_RANK) changed();
       for (let index = 0; index < desired.length; index += 1) {
@@ -576,7 +576,13 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
         );
       }
     } else {
-      await updateRank(database, definition, rank, moving.rowId, rankText(midpoint));
+      const availableRanks = ordered.map((entry) => entry.rank!);
+      for (let index = 0; index < desired.length; index += 1) {
+        const entry = desired[index]!;
+        const nextRank = availableRanks[index]!;
+        if (entry.rank === nextRank) continue;
+        await updateRank(database, definition, rank, entry.rowId, rankText(nextRank));
+      }
     }
     return { fileId: target.fileId, rebalanced };
   }
@@ -1259,7 +1265,7 @@ function queryOrder(
   const ordered = new Set(sorts.map((sort) => sort.column.columnId));
   const clauses = sorts.map(({ column, direction }) => {
     const identifier = quoteIdentifier(column.columnName);
-    const expression = column.codec === 'text' ? `${identifier} COLLATE "C"` : identifier;
+    const expression = column.collatable ? `${identifier} COLLATE "C"` : identifier;
     return `${expression} ${direction.toUpperCase()} NULLS LAST`;
   });
   if (!sorts.length && rank && !ordered.has(rank.columnId)) {
@@ -1269,7 +1275,7 @@ function queryOrder(
   for (const key of definition.keyColumns) {
     if (ordered.has(key.columnId)) continue;
     const identifier = quoteIdentifier(key.columnName);
-    clauses.push(`${key.codec === 'text' ? `${identifier} COLLATE "C"` : identifier} ASC NULLS LAST`);
+    clauses.push(`${key.collatable ? `${identifier} COLLATE "C"` : identifier} ASC NULLS LAST`);
   }
   return clauses.join(', ');
 }

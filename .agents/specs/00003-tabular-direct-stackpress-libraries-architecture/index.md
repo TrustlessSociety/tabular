@@ -1,11 +1,10 @@
 # Spec 00003: Tabular Direct Stackpress Libraries Architecture
 
-Status: **Frozen 2026-08-01; Task 00014 latest corrective pass verified 2026-08-04.** Research is
-complete, both architecture Proofs passed, P-001 received human acceptance, and
-reusable architecture truth is in Context. The replacement sprint is accepted;
-Task 00014 is agent-verified after correcting sparse drafts, exact partial-row
-validation, retained invalid-value tokens, and stale launch/browser gates. Final
-human review is available; acceptance remains pending.
+Status: **Frozen 2026-08-01; Task 00014 and side quests 00014A through 00014J
+verified.** Research is complete, both architecture
+Proofs passed, P-001 received human acceptance, and reusable architecture truth
+is in Context. The replacement sprint is accepted. Exact pointer-driven drag
+acceptance passed on 2026-08-05; explicit user acceptance remains pending.
 
 This spec is the architecture reset for Tabular's production implementation.
 It composes the focused Stackpress repositories directly and removes the
@@ -26,10 +25,13 @@ the accepted product or visible-behavior contracts.
   completed result ledger plus remaining evidence limits.
 - [Accepted Sprint](tasks/sprint.md): load for the gated direct-library
   implementation sequence and task-level verification/acceptance rules.
-- [Task Status](tasks/status.md): load for verified Tasks 00001-00014, wave
-  gates, and the pending final human-review contract.
+- [Task Status](tasks/status.md): load for verified Tasks 00001-00014, corrective
+  side quests 00014A-00014J, wave gates, and the pending final human-review
+  contract.
 - [Implementation Traceability](tasks/traceability.md): load for requirement,
   decision, proof, wireframe, task, test, runtime, and evidence mapping.
+- [Production Icon Inventory](icon-inventory.md): load when auditing current
+  SVGs, text glyphs, badges, status indicators, or planning icon cleanup.
 
 ## Authority And Relationship
 

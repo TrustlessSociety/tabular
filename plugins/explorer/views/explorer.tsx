@@ -276,7 +276,7 @@ export default function ExplorerPage(props: ExplorerPageProps) {
 
           {scenario === 'loading' ? (
             <div className="explorer-state" role="status" aria-live="polite">
-              <span className="loading-mark" aria-hidden="true" />
+              <Icon className="loading-mark" name="loader" />
               <strong>Loading {collectionName}</strong>
               <p>Your current folder and view will stay selected.</p>
               <button type="button" onClick={() => setScenario('ready')}>Show loaded items</button>

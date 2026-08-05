@@ -4,6 +4,7 @@ import type { ExplorerFile } from '../../explorer/helpers/contracts.js';
 import type { FileDescription } from '../../files/helpers/contracts.js';
 import {
   buildColumnSettingsAction,
+  matchingRelationConstraintName,
   type ColumnForm
 } from '../components/column-settings-panel.js';
 import type { GridColumn } from '../helpers/contracts.js';
@@ -49,4 +50,38 @@ test('relation settings preserve explicit non-adjacent composite source mapping 
   assert.deepEqual(action.columnIds, [tenant, customer]);
   assert.deepEqual(action.targetColumnIds, [targetTenant, targetCustomer]);
   assert.equal(action.columnIds.includes(spacer), false);
+});
+
+test('existing relation settings recover the saved eligible target key by stable columns', () => {
+  const source = 'col_source';
+  const targetA = 'col_target_a';
+  const targetB = 'col_target_b';
+  const column: GridColumn = {
+    id: source,
+    coordinate: 'A',
+    label: 'Customer',
+    relation: {
+      sourceColumnIds: [source],
+      targetFileId: 'obj_target',
+      targetLabel: 'Customers',
+      targetColumnIds: [targetA, targetB],
+      pickerTemplate: '{{label}}',
+      outputTemplate: '{{label}}'
+    }
+  };
+  const description = {
+    constraints: [
+      { name: 'customers_code_key', kind: 'u', columnIds: [targetB] },
+      { name: 'customers_pkey', kind: 'p', columnIds: [targetA, targetB] }
+    ]
+  } as Pick<FileDescription, 'constraints'>;
+
+  assert.equal(
+    matchingRelationConstraintName(column, description),
+    'customers_pkey'
+  );
+  assert.equal(
+    matchingRelationConstraintName({ ...column, relation: { ...column.relation!, targetColumnIds: [targetB, targetA] } }, description),
+    ''
+  );
 });

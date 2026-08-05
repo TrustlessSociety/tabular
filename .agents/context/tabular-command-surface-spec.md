@@ -20,13 +20,17 @@ separate record/filter/sort toolbar above the grid.
 - Menus use separators to group actions, compact line icons where useful,
   keyboard-shortcut hints, disabled states, and nested submenus only where they
   clarify a real route.
+- File, Edit, View, Format, Text color, Fill color, Horizontal alignment,
+  Vertical alignment, and Wrapping do not render redundant down chevrons. Their
+  menu/dialog semantics and accessible expanded state remain explicit.
 - Pointer: click menu label, item, or sub-trigger. Keyboard: Down opens, Up/Down
   moves items, Left/Right changes top-level menus, Right opens a submenu, Enter
   invokes, and Escape closes one level/restores focus.
 - Click-away, grid focus, another menu, or a terminal action closes the open
   surface. Positioning is viewport-clamped and never participates in grid layout.
-- Any command acts on the existing selected cell/range/row/column. Right-click
-  selects its target first, then opens the matching menu.
+- Any command acts on the existing selected cell/range/row/named-header/
+  whole-column/whole-header-row target. Right-click selects its target first,
+  then opens the matching menu.
 - Presentation commands create one in-memory undoable action. They never change
   raw cell values, semantic Field, Format, constraints, PostgreSQL storage, or
   row validity.
@@ -35,8 +39,10 @@ separate record/filter/sort toolbar above the grid.
 
 File contains these actions in this order:
 
-1. **New** — opens a blank Untitled File in the current folder. It does not
-   open a create-table builder.
+1. **New** — opens the current folder's **Create a blank spreadsheet** dialog,
+   asks for File name, shows the inferred PostgreSQL table, and opens the
+   reconciled blank spreadsheet after Create file succeeds. It does not open a
+   schema builder.
 2. **Open** — returns to/opens the file explorer.
 3. **Import** — opens the folder-aware, values-only import flow that creates a
    new file. It is not import-to-existing-file.
@@ -100,7 +106,9 @@ View contains the compact spreadsheet viewing vocabulary:
   - No rows, 1 row, 2 rows, and Up to row 50.
   - No columns, 1 column, 2 columns, and Up to column M.
 - **Zoom** — familiar values such as 50%, 75%, 90%, 100%, 125%, 150%, and 200%.
-- **Full screen**.
+
+View exposes only Show, Freeze, and Zoom in the current slice. Full screen is
+not shown until it has accepted behavior.
 
 Freeze and zoom are view state only. They do not change records or schema. Use
 the visible current selection to make an “up to current row/column” choice
@@ -113,20 +121,18 @@ configuration panel.
 
 | Group | Items and behavior |
 | --- | --- |
-| Theme | Representative route; no persisted product theme claim. |
 | Number | Submenu of presentation choices. Never changes the actual Field, configured output Format, PostgreSQL storage, constraints, or invalid stored values. |
 | Text | Text appearance commands, including the controls duplicated in the toolbar. |
 | Alignment | Opens horizontal and vertical alignment choices. |
 | Wrapping | Wrap/overflow behavior for selected presentation. |
-| Rotation | Visible but unavailable/deferred. |
-| Smart chips | Visible but unavailable/deferred. |
 | Font size | Nested size choices 10, 12, 14, 16, 18. |
-| Merge cells | Visible but unavailable/deferred. |
 | Clear formatting | Removes presentation formatting from the selection without altering raw value or schema. |
 
-Conditional formatting and Alternating colors must **not** appear in Format.
-Conditional formatting remains only as a lower-priority route within the
-Fill-color palette, matching the reviewed command language.
+Theme, Rotation, Smart chips, and Merge cells are not visible placeholders.
+They may return only with separately accepted behavior.
+
+Conditional formatting and Alternating colors must **not** appear in Format or
+any formatting popover.
 
 ## Formatting toolbar
 
@@ -178,22 +184,47 @@ popover can never push grid columns or the coordinate/field bands.
 
 ### Text and fill color
 
-- Use compact palette grids rather than immediate cycling controls.
-- Main swatches are approximately 20px; Standard swatches approximately 22px.
-  The swatch scale must remain visibly smaller than a 14px interface type line
-  and not dominate the toolbar.
-- The palette includes Reset, a neutral/color main grid, Standard colors, and
-  Custom affordance. Fill color may additionally offer the representative
-  Conditional formatting route.
+- Text color, background/fill color, and Border color use one shared palette
+  component rather than independent preset lists.
+- The palette begins with Reset, then renders the supplied main colors in this
+  exact 10-column row order:
+
+  ```text
+  #000000 #434343 #666666 #999999 #b7b7b7 #cccccc #d9d9d9 #efefef #f3f3f3 #ffffff
+  #980000 #ff0000 #ff9900 #ffff00 #00ff00 #00ffff #4a86e8 #0000ff #9900ff #ff00ff
+  #e6b8af #f4cccc #fce5cd #fff2cc #d9ead3 #d0e0e3 #c9daf8 #cfe2f3 #d9d2e9 #ead1dc
+  #dd7e6b #ea9999 #f9cb9c #ffe599 #b6d7a8 #a2c4c9 #a4c2f4 #9fc5e8 #b4a7d6 #d5a6bd
+  #cc4125 #e06666 #f6b26b #ffd966 #93c47d #76a5af #6d9eeb #6fa8dc #8e7cc3 #c27ba0
+  #a61c00 #cc0000 #e69138 #f1c232 #6aa84f #45818e #3c78d8 #3d85c6 #674ea7 #a64d79
+  #85200c #990000 #b45f06 #bf9000 #38761d #134f5c #1155cc #0b5394 #351c75 #741b47
+  #5b0f00 #660000 #783f04 #7f6000 #274e13 #0c343d #1c4587 #073763 #20124d #4c1130
+  ```
+
+- Standard follows in this exact order: `#000000`, `#ffffff`, `#4285f4`,
+  `#ea4335`, `#fbbc04`, `#34a853`, `#fa6d03`, `#46bdc6`.
+- Main and Standard swatches are compact circles that retain exact hex values
+  in their accessible names and visible selected state.
+- Custom remains a native color input. A chosen custom color is appended once,
+  immediately to the right of the circular plus control, in one shared
+  page-session list reused by the text, background/fill, and Border palettes.
+  The list resets on page refresh and is never shared between users. Do not add
+  a Conditional formatting row to the background/fill color popover.
 - Accessible names expose color meaning; a visible checked state identifies the
   active choice.
 - The palette is interaction inspiration from familiar spreadsheets, not
-  authorization for custom color persistence or automatic formatting rules.
+  authorization for persisted custom colors or automatic formatting rules.
 
 ### Borders
 
-Borders opens an icon-only, two-row placement grid with no visible text labels.
-Each 46px hit target contains a compact roughly 20px glyph. The visual order is:
+Borders is a single-open accordion with these sections in order:
+
+1. **Border visible**, expanded initially
+2. **Border color**
+3. **Border style**
+
+Opening either later section collapses the prior section. Border visible
+contains an icon-only, two-row placement grid. Each 46px hit target contains a
+compact roughly 20px glyph. The visual order is:
 
 1. All borders
 2. Inner borders
@@ -210,19 +241,21 @@ Each glyph uses the selected edge as a solid line and non-selected grid edges
 as dotted guide lines. The control keeps accessible name/tooltips even though
 the labels are not visible.
 
-To the right of the grid, provide:
-
-- **Border color** with a compact color picker.
-- **Border style** with solid, medium, thick, dashed, dotted, and double line
-  choices, rendered visually as line samples.
+Border color reuses the exact shared Reset, main, Standard, and Custom palette
+specified above. Border style contains solid, medium, thick, dashed, dotted,
+and double line choices rendered visually as line samples. The three accordion
+labels are bold text with disclosure chevrons and no leading decorative icons.
 
 Placement, color, and style are in-memory presentation state. The specified
-review renderer does not need to promise a production-complete border engine.
+renderer paints solid, medium, thick, dashed, dotted, and double lines on the
+chosen cell edges without changing cell geometry.
 
 ### Horizontal and vertical alignment
 
-Each alignment control opens a compact icon-only, three-choice popover. Do not
-render words such as Left, Center, or Right inside the popover.
+Each alignment control opens a compact icon-only, three-choice popover. Its
+width is intrinsic to the heading and three controls; it must not retain the
+five-column width used by Borders. Do not render words such as Left, Center, or
+Right inside the popover.
 
 - Horizontal: left, center, right.
 - Vertical: top, middle, bottom.
@@ -238,7 +271,7 @@ change Column settings Format.
 
 ## Target-specific right-click menus
 
-All three menus are fixed/floating surfaces. They must never move a sticky
+Target-specific menus are fixed/floating surfaces. They must never move a sticky
 field header, change row height, or push the selected column down. A visible
 header overflow button is intentionally absent; column actions rely on
 right-click and header double-click.
@@ -270,12 +303,24 @@ Target: selected row header.
 - Delete row, visually separated and confirmed.
 
 Deleting a row is structurally/destructively different from clearing values.
-The reviewer-facing action stops at an explicit confirmation; it does not make
-a live database mutation.
+It requires an explicit confirmation and then executes through the authorized,
+journal-backed PostgreSQL row action. Cancellation makes no mutation.
+
+### Whole-header-row context menu
+
+Target: the visibly blank corner that selects all visible headers without
+selecting PostgreSQL records.
+
+- Copy where supported.
+- Clear header formatting.
+
+All accepted header presentation axes apply across the selected headers. The
+corner remains blank and owns no row/formula coordinate.
 
 ### Column context menu
 
-Target: selected coordinate/header. This is the most schema-aware menu.
+Target: selected named header, whole column, or tab-local inserted blank. This
+is the most schema-aware menu.
 
 1. Cut
 2. Copy
@@ -295,15 +340,27 @@ Target: selected coordinate/header. This is the most schema-aware menu.
 16. Separator
 17. Delete column
 
-Rename/configure route into the column-configuration flow. Sort represents a
-sheet order command; it does not imply a physical PostgreSQL row order.
-Delete column is visually separated, requires confirmation, and does not claim
-an immediate schema mutation.
+Insert column left/right immediately creates and selects a tab-local blank on
+the requested side; it does not open Column settings. Naming or typing into that
+explicit insertion promotes it through the authorized PostgreSQL column-create
+boundary. Rename/configure apply only to persisted columns and route into the
+column-configuration flow.
+
+Sort represents a transient sheet-order command; it does not imply physical
+PostgreSQL row order. Sorting is unavailable for unnamed logical columns and
+must explain that the column needs a name. Row moves likewise disable at the
+first/last committed boundary and for non-committed retained rows instead of
+offering a silent no-op.
+
+Delete column is enabled only for a tracked tab-local blank insertion and
+removes it immediately without PostgreSQL DDL or confirmation. A real
+PostgreSQL column stays disabled until the confirmed destructive DDL workflow
+exists.
 
 ## Keyboard and layout acceptance
 
-- Shift+F10/Menu must invoke the row, column, or cell menu matching the active
-  target.
+- Shift+F10/Menu must invoke the cell, relation, row, named-header,
+  whole-column, whole-header-row, or explorer menu matching the active target.
 - Error, tool, top-level, submenu, and context popovers must stack above the
   canvas and remain in the viewport.
 - Opening a context menu keeps coordinate band, field header, and data cell
@@ -315,8 +372,8 @@ an immediate schema mutation.
 
 ## Deferred behavior
 
-Menus illustrate a familiar command language, but theme persistence, advanced
-number semantics, cut/paste coverage, structural operations, version history,
-freezing persistence, full-screen behavior, border rendering fidelity, and
-multi-user formatting outside an explicitly saved shared view are not
-production commitments.
+Advanced number semantics, cut/paste coverage, destructive real-column DDL,
+version history, freezing persistence, full-screen behavior, theme, rotation,
+smart chips, merge cells, border rendering fidelity, and multi-user formatting
+outside an explicitly saved shared view are not production commitments. Do not
+show unavailable items merely as orientation placeholders.

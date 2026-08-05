@@ -78,9 +78,9 @@
 .activity-recovery strong { font-size: 12px; }
 .activity-recovery small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .activity-recovery button { margin-left: auto; flex: 0 0 auto; }
-.activity-recovery-mark,
-.activity-loading-mark { width: 24px; height: 24px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid #d9aaa5; border-radius: 50%; color: var(--danger); font-weight: 800; }
-.activity-loading-mark { border: 2px solid var(--rule); border-top-color: #5d6670; animation: activity-spin .9s linear infinite; }
+.activity-recovery-mark { width: 24px; height: 24px; flex: 0 0 auto; display: grid; place-items: center; color: var(--danger); }
+.activity-recovery-mark svg { width: 20px; height: 20px; }
+.activity-loading-mark { width: 22px; height: 22px; flex: 0 0 auto; color: #5d6670; animation: activity-spin .9s linear infinite; }
 
 .activity-table-wrap { min-width: 0; overflow-x: auto; }
 .activity-table { width: 100%; min-width: 920px; border-collapse: collapse; table-layout: fixed; }
@@ -123,6 +123,7 @@
 
 .activity-empty { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 8px; padding: 32px; color: var(--muted); text-align: center; }
 .activity-empty-mark { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--rule-strong); border-radius: 50%; color: var(--ink); }
+.activity-empty-mark svg { width: 18px; height: 18px; }
 .activity-empty h3 { margin: 4px 0 0; color: var(--ink); font-size: 14px; }
 .activity-empty p { max-width: 360px; margin: 0; font-size: 11px; line-height: 1.5; }
 .activity-empty button { margin-top: 4px; }

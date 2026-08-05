@@ -4,12 +4,13 @@
 
 - Spec: `00003-tabular-direct-stackpress-libraries-architecture`
 - Implementation plan: **accepted 2026-08-01**
-- Implementation state: Task 00014 agent-verified after its eighth corrective
-  pass and completion audit; current launch and browser gates passed
-- Active task: 00014 Release readiness
-- Task sequence: Stable Tasks 00001-00014
+- Implementation state: Task 00014 and corrective side quests 00014A through
+  00014J agent-verified
+- Active task: Final human review
+- Task sequence: Stable Tasks 00001-00014 plus required side quests 00014A,
+  00014B, 00014C, 00014D, 00014E, 00014F, 00014G, 00014H, 00014I, and 00014J
 - Per-task human acceptance: `none`
-- Final human review: Available; explicit user acceptance remains pending
+- Final human review: In progress; explicit user acceptance remains pending
 
 ## Task Record Convention
 
@@ -43,18 +44,39 @@ every task file; tasks finish at `verified` after all applicable steps pass.
 | [00012 Workers and activity](00012-workers-activity.md) | verified | Passed | Passed | Complete |
 | [00013 MCP and harness parity](00013-mcp-harness-parity.md) | verified | Passed | Not required | Complete |
 | [00014 Release readiness](00014-release-readiness.md) | verified | Passed | Passed | Complete |
+| [00014A Spreadsheet keyboard focus](00014A-spreadsheet-keyboard-focus.md) | verified | Passed | Passed | Complete |
+| [00014B Context menus and header formatting](00014B-context-menus-header-formatting.md) | verified | Passed | Passed | Complete |
+| [00014C Row and column insertion](00014C-row-column-insertion.md) | verified | Passed | Passed | Complete |
+| [00014D Direct spreadsheet insertion parity](00014D-direct-spreadsheet-insertion-parity.md) | verified | Passed | Passed | Complete |
+| [00014E Inserted column drag and delete boundaries](00014E-inserted-column-drag-boundaries.md) | verified | Passed | Passed | Complete |
+| [00014F Production iconography](00014F-production-iconography.md) | verified | Passed | Passed | Complete |
+| [00014G Formatting popover density](00014G-formatting-popover-density.md) | verified | Passed | Passed | Complete |
+| [00014H Color palettes and Border accordion](00014H-color-palettes-border-accordion.md) | verified | Passed | Passed | Complete |
+| [00014I Remove Conditional formatting row](00014I-remove-conditional-formatting-row.md) | verified | Passed | Passed | Complete |
+| [00014J Border styles and session custom colors](00014J-border-style-and-session-custom-colors.md) | verified | Passed | Passed | Complete |
 
 ## Wave Gates
 
 - Foundation: 00001-00005 verified on a clean PostgreSQL 18 target.
 - Browser: 00006-00009 verified with applicable agent acceptance passed.
 - Integration: 00010-00013 verified; agent acceptance passed where applicable.
-- Release: 00014 is agent-verified after correcting the shared sparse-draft
-  handle, hidden-rank load order, and over-broad partial-row errors.
+- Release: 00014 and corrective side quests 00014A through 00014J are
+  agent-verified.
 
 ## Final Human Review
 
-Tasks 00001-00014 are agent-verified. The final human review remains pending:
+Tasks 00001-00014 and side quests 00014A through 00014J are agent-verified.
+Side quest 00014G passed its technical and desktop/narrow Browser checks on
+2026-08-05, so final human review may proceed.
+Side quest 00014H passed its technical and desktop/narrow Browser checks on
+2026-08-05, including exact shared palette order and Border accordion state.
+Side quest 00014I passed its technical and desktop/narrow Browser checks on
+2026-08-05, including removal from standalone and More rendering paths.
+Side quest 00014J passed its technical and desktop/narrow Browser checks on
+2026-08-05, including distinct non-solid Border rendering, shared reusable
+custom colors after the plus control, narrow containment, and refresh reset.
+The exact pointer-driven 00014E Browser drag sequence passed on 2026-08-05, so
+the final human review can resume:
 
 1. Does the final implementation match the wireframes in shape and functionality?
 2. Does the source use Ingest configuration, plugin registration, and bootstrap?

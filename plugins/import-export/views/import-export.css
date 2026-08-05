@@ -316,10 +316,11 @@
   border-radius: 4px;
   background: var(--import-subtle);
   color: var(--import-ink);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  font-weight: 700;
 }
+
+.import-source-icon svg,
+.import-source-summary-icon svg { width: 21px; height: 21px; }
+.import-database-icon svg { width: 15px; height: 15px; }
 
 .import-source-icon {
   width: 38px;
@@ -436,12 +437,9 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border: 1px solid var(--import-rule-strong);
-  border-radius: 50%;
   color: var(--import-ink);
-  font-size: 10px;
-  font-weight: 700;
 }
+.import-wizard-notice-icon svg { width: 18px; height: 18px; }
 
 .import-status {
   display: grid;
@@ -700,11 +698,9 @@
   display: grid;
   place-items: center;
   margin-bottom: 4px;
-  border: 1px solid var(--import-rule-strong);
-  border-radius: 50%;
-  background: var(--import-subtle);
-  font-size: 24px;
+  color: var(--import-ink);
 }
+.import-result-icon svg { width: 56px; height: 56px; }
 
 .import-result-actions {
   display: flex;

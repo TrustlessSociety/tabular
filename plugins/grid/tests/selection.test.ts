@@ -4,8 +4,15 @@ import {
   coverageFor,
   coverageForIndexMaps,
   LogicalSelectionStore,
-  selectionLabel
+  selectionLabel,
+  spreadsheetRowNumber
 } from '../helpers/selection.js';
+
+test('spreadsheet value rows use one-based numbers without reserving row one for headers', () => {
+  assert.equal(spreadsheetRowNumber(0), 1);
+  assert.equal(spreadsheetRowNumber(1), 2);
+  assert.equal(spreadsheetRowNumber(999), 1_000);
+});
 
 test('logical selection extends from its stable anchor and reports range coverage', () => {
   const store = new LogicalSelectionStore();
@@ -83,6 +90,21 @@ test('named headers stay distinct from whole columns and reconcile by stable col
   store.reconcile(new Set(), new Set([ 'status' ]));
   assert.deepEqual(store.get(), { kind: 'header', columnId: 'status' });
   store.reconcile(new Set(), new Set([ 'order' ]));
+  assert.equal(store.get(), null);
+});
+
+test('the whole header row remains distinct from named headers and record rows', () => {
+  const store = new LogicalSelectionStore();
+  store.selectHeaderRow();
+  assert.deepEqual(store.get(), { kind: 'header-row' });
+  assert.equal(selectionLabel(store.get()), 'Header row');
+  assert.deepEqual(
+    coverageFor(store.get(), { rowId: 'row-1', columnId: 'status' }, ['row-1'], ['status']),
+    { activeCell: false, activeRow: false, activeColumn: false, inRange: false }
+  );
+  store.reconcile(new Set(), new Set(['status']));
+  assert.deepEqual(store.get(), { kind: 'header-row' });
+  store.reconcile(new Set(), new Set());
   assert.equal(store.get(), null);
 });
 

@@ -102,11 +102,15 @@ sprint replaces it; task files and production code still wait for plan acceptanc
 
 ### G-003: What is the identity, session, and CSRF contract?
 
-- Status: Answered by R-003 and P-001; live provider remains target validation.
-- Decision: verified provider subject -> application identity -> current
-  allowlisted database role. Use opaque rotated server-side sessions, expiry,
+- Status: Provider-neutral boundary answered by R-003/P-001; the first-slice
+  human target was later closed by Task 00014 and G-011 with PostgreSQL-native
+  sign-in. A third-party provider is a future option, not a release blocker.
+- Decision: verify an existing safe PostgreSQL `LOGIN` role through a
+  short-lived connection, bind its live database/role identities to the
+  application identity, and use opaque rotated server-side sessions, expiry,
   idle/revocation state, production-secure cookies, exact origin, and a
-  session-bound synchronizer token. A cookie or provider claim grants no role.
+  session-bound synchronizer token. A future provider maps into this boundary;
+  neither a cookie nor a provider claim grants a database role.
 
 ### G-004: Does the handwritten data layer retain migration guarantees?
 
@@ -158,3 +162,20 @@ sprint replaces it; task files and production code still wait for plan acceptanc
 - Status: Answered and executed after Freeze.
 - Decision: `tasks/sprint.md` is the replacement proposal. The old proposal is
   historical; neither proposal becomes task authority until the new one is accepted.
+
+### G-011: Which post-Freeze implementation corrections change Context?
+
+- Status: Answered by explicit user review and verified Tasks 00014 and
+  00014A-00014J; promoted by 2026-08-05.
+- Decision: promote the PostgreSQL-native sign-in and fresh-acceptance boundary,
+  reachable named-file lifecycle, blur autosave, stable sparse drafts, distinct
+  selection/focus behavior, neutral Price display, target-aware commands,
+  direct blank row/column insertion, blank-only deletion, visible-menu cleanup,
+  row-1 coordinate contract, production iconography, compact formatting
+  popover hierarchy, exact shared color palettes, and the single-open Border
+  accordion, with no deferred Conditional formatting row in background/fill
+  palettes. Render every selected Border style distinctly, and retain
+  deduplicated custom colors across all three palettes for the current page
+  session only. Keep exact pointer-drag completion evidence, task
+  sequencing, test counts, screenshots, credentials, and disposable setup
+  details spec-local; only final implementation acceptance remains open.

@@ -6,6 +6,11 @@ import type {
 
 export type SelectionListener = (selection: LogicalGridSelection | null) => void;
 
+/** Converts a zero-based visible row index into its spreadsheet row number. */
+export function spreadsheetRowNumber(index: number) {
+  return index + 1;
+}
+
 function samePoint(left: GridPoint, right: GridPoint) {
   return left.rowId === right.rowId && left.columnId === right.columnId;
 }
@@ -17,6 +22,7 @@ function between(value: number, left: number, right: number) {
 export function selectionLabel(selection: LogicalGridSelection | null) {
   if (!selection) return 'No selection';
   if (selection.kind === 'row') return `Row ${selection.rowId}`;
+  if (selection.kind === 'header-row') return 'Header row';
   if (selection.kind === 'header') return `Header ${selection.columnId}`;
   if (selection.kind === 'column') return `Column ${selection.columnId}`;
   const start = `${selection.anchor.columnId}:${selection.anchor.rowId}`;
@@ -56,7 +62,7 @@ export function coverageForIndexMaps(
   if (selection.kind === 'row') {
     return { ...empty, activeRow: point.rowId === selection.rowId };
   }
-  if (selection.kind === 'header') return empty;
+  if (selection.kind === 'header' || selection.kind === 'header-row') return empty;
   if (selection.kind === 'column') {
     return { ...empty, activeColumn: point.columnId === selection.columnId };
   }
@@ -131,6 +137,10 @@ export class LogicalSelectionStore {
     return this.set({ kind: 'header', columnId });
   }
 
+  selectHeaderRow() {
+    return this.set({ kind: 'header-row' });
+  }
+
   clear() {
     if (!this.#selection) return;
     this.#selection = null;
@@ -145,7 +155,9 @@ export class LogicalSelectionStore {
     );
     const valid = selection.kind === 'row'
       ? rowIds.has(selection.rowId)
-      : selection.kind === 'column' || selection.kind === 'header'
+      : selection.kind === 'header-row'
+        ? columnIds.size > 0
+        : selection.kind === 'column' || selection.kind === 'header'
         ? columnIds.has(selection.columnId)
         : validPoint(selection.anchor) && validPoint(selection.focus);
     if (!valid) this.clear();

@@ -4,6 +4,7 @@ import type { GridGesture } from '../../grid/components/grid-canvas.js';
 import { ColumnSettingsPanel } from '../../grid/components/column-settings-panel.js';
 import type { GridCellIssue, GridCellPresentation, GridCellValue, GridColumn, GridFilter, GridResource, GridRow, GridSort, LogicalGridSelection } from '../../grid/helpers/contracts.js';
 import { GRID_HEADER_ROW_ID } from '../../grid/helpers/contracts.js';
+import { spreadsheetRowNumber } from '../../grid/helpers/selection.js';
 import {
   applyGridDraft,
   applyMutationVersions,
@@ -60,7 +61,19 @@ import {
 import { presentationPatchForCommand } from '../../commands/events/dispatcher.js';
 import { commandState, shortcutCommand } from '../../commands/helpers/registry.js';
 import { DraftPersistenceRegistry } from '../helpers/draft-persistence.js';
-import { padSpreadsheetRows } from '../helpers/spreadsheet-rows.js';
+import {
+  applyBlankColumnInsertions,
+  applyColumnInsertion,
+  reconcileBlankColumnInsertions,
+  removeBlankColumnInsertion,
+  type BlankColumnInsertion,
+  type ColumnInsertionRequest
+} from '../helpers/column-insertion.js';
+import {
+  committedRowIdsInVisibleOrder,
+  padSpreadsheetRows,
+  rankForInsertedRow
+} from '../helpers/spreadsheet-rows.js';
 import {
   applyServerDraftIssues,
   conflictingDraftTargets,
@@ -109,6 +122,11 @@ type PendingUnnamedCell = {
   columnId: string;
   rowId: string;
   value: GridCellValue;
+};
+type PendingInsertDraft = Extract<GridEditDraft, { kind: 'insert' }>;
+type PendingColumnInsertion = ColumnInsertionRequest & {
+  confirmed: boolean;
+  sourceDraftId?: string;
 };
 type WorkbenchHistoryFrame =
   | { kind: 'data'; frame: GridHistoryFrame }
@@ -207,6 +225,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   const [physicalNameOverridden] = useState(false);
   const [baseRows, setBaseRows] = useState<GridRow[]>([]);
   const [gridColumns, setGridColumns] = useState<GridColumn[]>(() => props.route.newFile ? BLANK_COLUMNS : []);
+  const [blankColumnInsertions, setBlankColumnInsertions] = useState<BlankColumnInsertion[]>([]);
   const allGridColumns = useRef<GridColumn[]>([]);
   const [versions, setVersions] = useState<Record<string, string>>({});
   const [rowRanks, setRowRanks] = useState<Record<string, string>>({});
@@ -217,6 +236,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   const [gridUnavailable, setGridUnavailable] = useState<string>();
   const [editDraft, setEditDraft] = useState<GridEditDraft>();
   const [retainedDrafts, setRetainedDrafts] = useState<RetainedGridDraft[]>([]);
+  const [pendingInsertDrafts, setPendingInsertDrafts] = useState<PendingInsertDraft[]>([]);
   const [automaticDrafts, setAutomaticDrafts] = useState<GridEditDraft[]>([]);
   const [draftState, setDraftState] = useState<DraftState>('none');
   const draftPersistence = useRef(
@@ -270,6 +290,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   const [deleteCandidate, setDeleteCandidate] = useState<string>();
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const [columnSettingsId, setColumnSettingsId] = useState<string>();
+  const pendingColumnInsertion = useRef<PendingColumnInsertion | undefined>(undefined);
   const settingsTrigger = useRef<HTMLButtonElement>(null);
   const columnSettingsTrigger = useRef<HTMLElement>(null);
   const deleteTrigger = useRef<HTMLElement>(null);
@@ -291,27 +312,43 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   versionsRef.current = versions;
   selectionRef.current = selection;
   editDraftRef.current = editDraft;
+  const visibleRowRanks = useMemo(() => {
+    const visibleRanks = { ...rowRanks };
+    for (const draft of [
+      ...retainedDrafts.map((entry) => entry.draft),
+      ...pendingInsertDrafts,
+      ...automaticDrafts,
+      ...(editDraft ? [editDraft] : [])
+    ]) {
+      if (draft.kind === 'insert' && draft.rowRank) {
+        visibleRanks[draft.row.id] = draft.rowRank;
+      }
+    }
+    return visibleRanks;
+  }, [rowRanks, retainedDrafts, pendingInsertDrafts, automaticDrafts, editDraft]);
   const rows = useMemo(() => {
     const retainedRows = retainedDrafts.reduce(
       (current, entry) => applyGridDraft(current, entry.draft),
       baseRows
     );
-    const automaticRows = automaticDrafts.reduce(
+    const pendingRows = pendingInsertDrafts.reduce(
       (current, draft) => applyGridDraft(current, draft),
       retainedRows
     );
+    const automaticRows = automaticDrafts.reduce(
+      (current, draft) => applyGridDraft(current, draft),
+      pendingRows
+    );
     const visibleRows = editDraft ? applyGridDraft(automaticRows, editDraft) : automaticRows;
-    const visibleRanks = { ...rowRanks };
-    for (const draft of [
-      ...retainedDrafts.map((entry) => entry.draft),
-      ...automaticDrafts,
-      ...(editDraft ? [editDraft] : [])
-    ]) {
-      if (draft.kind === 'insert' && draft.rowRank) visibleRanks[draft.row.id] = draft.rowRank;
-    }
-    return padSpreadsheetRows(visibleRows, visibleRanks, BLANK_ROWS);
-  }, [baseRows, rowRanks, retainedDrafts, automaticDrafts, editDraft]);
-  const columns = gridColumns;
+    return padSpreadsheetRows(visibleRows, visibleRowRanks, BLANK_ROWS);
+  }, [baseRows, retainedDrafts, pendingInsertDrafts, automaticDrafts, editDraft, visibleRowRanks]);
+  const committedRowIds = useMemo(
+    () => committedRowIdsInVisibleOrder(rows, baseRows),
+    [rows, baseRows]
+  );
+  const columns = useMemo(() => spreadsheetColumns(
+    applyBlankColumnInsertions(gridColumns, blankColumnInsertions)
+  ), [gridColumns, blankColumnInsertions]);
   const cellIssues = useMemo<GridCellIssue[]>(
     () => [
       ...retainedDrafts.flatMap((entry) => (
@@ -368,36 +405,62 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       ));
     }
   };
-  const commandContext = useMemo<CommandContext>(() => ({
-    selectionKind: selection?.kind || 'none',
-    canUndo: undoStack.length > 0,
-    canRedo: redoStack.length > 0,
-    hasDraft: Boolean(editDraft),
-    readOnly: file.readOnly,
-    canMutateValues: !file.readOnly && columns.some((column) => column.editable !== false),
-    canMutateSelection: !file.readOnly && Boolean(selection) && (
-      selection?.kind === 'row'
-        ? columns.some((column) => column.editable !== false)
-        : selection?.kind === 'column'
-          ? columns.find((column) => column.id === selection.columnId)?.editable !== false
-            && columns.some((column) => column.id === selection.columnId)
-          : formattingPoints.some((point) =>
-            columns.find((column) => column.id === point.columnId)?.editable !== false
-          )
-    ),
-    canCreateFile: folder.permissions.createFile,
-    canImportFile: folder.permissions.importFile,
-    canConfigureFile: folder.permissions.configureFile && !file.readOnly,
-    canSaveViews: gridMode === 'live' && file.id.startsWith('obj_'),
-    canMoveRows: savedViewCapabilities.canMoveRows && sorts.length === 0
-      && realtimeState !== 'access-lost',
-    rowOrderReason: sorts.length
-      ? 'Clear the explicit sort before changing shared row order.'
-      : savedViewCapabilities.rowOrderReason,
-    relationSelection: columns.find((column) => column.id === selectedColumnFrom(selection))?.kind === 'relation',
-    currentRowLabel: selectedRowLabel(selection, rows),
-    currentColumnLabel: columns.find((column) => column.id === selectedColumnFrom(selection))?.coordinate
-  }), [selection, undoStack.length, redoStack.length, editDraft, file.readOnly, folder.permissions, rows, columns, realtimeState, savedViewCapabilities, sorts.length, gridMode, file.id]);
+  const commandContext = useMemo<CommandContext>(() => {
+    const rowId = selectedRowFrom(selection);
+    const committedRowIndex = rowId ? committedRowIds.indexOf(rowId) : -1;
+    const column = columns.find((candidate) => candidate.id === selectedColumnFrom(selection));
+    const blankInsertion = blankColumnInsertions.find((insertion) => (
+      insertion.id === column?.id
+    ));
+    const committedRowRequired = 'Select a committed row before moving it.';
+    const persistedColumn = Boolean(column?.label.trim() && !column.id.startsWith('draft_'));
+    return {
+      selectionKind: selection?.kind || 'none',
+      canUndo: undoStack.length > 0,
+      canRedo: redoStack.length > 0,
+      hasDraft: Boolean(editDraft),
+      readOnly: file.readOnly,
+      canMutateValues: !file.readOnly && columns.some((candidate) => candidate.editable !== false),
+      canMutateSelection: !file.readOnly && Boolean(selection) && (
+        selection?.kind === 'row'
+          ? columns.some((candidate) => candidate.editable !== false)
+          : selection?.kind === 'column'
+            ? columns.find((candidate) => candidate.id === selection.columnId)?.editable !== false
+              && columns.some((candidate) => candidate.id === selection.columnId)
+            : formattingPoints.some((point) =>
+              columns.find((candidate) => candidate.id === point.columnId)?.editable !== false
+            )
+      ),
+      canCreateFile: folder.permissions.createFile,
+      canImportFile: folder.permissions.importFile,
+      canConfigureFile: folder.permissions.configureFile && !file.readOnly,
+      canSaveViews: gridMode === 'live' && file.id.startsWith('obj_'),
+      canMoveRows: savedViewCapabilities.canMoveRows && sorts.length === 0
+        && realtimeState !== 'access-lost',
+      canMoveRowUp: committedRowIndex > 0,
+      canMoveRowDown: committedRowIndex >= 0 && committedRowIndex < committedRowIds.length - 1,
+      rowMoveUpReason: committedRowIndex < 0
+        ? committedRowRequired
+        : 'The selected committed row is already first.',
+      rowMoveDownReason: committedRowIndex < 0
+        ? committedRowRequired
+        : 'The selected committed row is already last.',
+      rowOrderReason: sorts.length
+        ? 'Clear the explicit sort before changing shared row order.'
+        : savedViewCapabilities.rowOrderReason,
+      canDeleteColumn: Boolean(blankInsertion) && creatingColumnId !== column?.id,
+      columnDeleteReason: creatingColumnId === column?.id
+        ? 'Finish creating this column first.'
+        : 'Deleting PostgreSQL columns requires the confirmed DDL workflow.',
+      canSortSelection: persistedColumn && gridMode === 'live',
+      sortReason: persistedColumn
+        ? 'Sorting requires a live PostgreSQL-backed file.'
+        : 'Name this column before sorting it.',
+      relationSelection: column?.kind === 'relation',
+      currentRowLabel: selectedRowLabel(selection, rows),
+      currentColumnLabel: column?.coordinate
+    };
+  }, [selection, undoStack.length, redoStack.length, editDraft, file.readOnly, folder.permissions, rows, committedRowIds, columns, blankColumnInsertions, creatingColumnId, realtimeState, savedViewCapabilities, sorts.length, gridMode, file.id, formattingPoints]);
 
   useEffect(() => {
     document.title = activeSavedView || initialSavedView
@@ -412,6 +475,11 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(key)
     ));
     presentationLoaded.current = true;
+  }, [file.id]);
+
+  useEffect(() => {
+    setBlankColumnInsertions([]);
+    pendingColumnInsertion.current = undefined;
   }, [file.id]);
 
   useEffect(() => {
@@ -540,6 +608,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       }
       setEditDraft(undefined);
       editDraftRef.current = undefined;
+      setPendingInsertDrafts([]);
       setAutomaticDrafts([]);
       setDraftState('none');
       setRetainedDrafts(recovered);
@@ -682,15 +751,43 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     if (!activeSavedView?.definition.includes.columnLayout) {
       refreshedColumns = restoreColumnOrder(refreshedColumns, file.id);
     }
+    const pendingInsertion = pendingColumnInsertion.current;
+    let appliedInsertion: PendingColumnInsertion | undefined;
+    if (pendingInsertion?.confirmed) {
+      const applied = applyColumnInsertion(refreshedColumns, pendingInsertion);
+      if (applied) {
+        refreshedColumns = applied.columns;
+        appliedInsertion = pendingInsertion;
+        pendingColumnInsertion.current = undefined;
+        if (pendingInsertion.sourceDraftId) {
+          setBlankColumnInsertions((current) => current.filter((insertion) => (
+            insertion.id !== pendingInsertion.sourceDraftId
+          )));
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem(
+            `tabular.column-order.${file.id}`,
+            JSON.stringify(refreshedColumns.map((column) => column.id))
+          );
+        }
+        setFeedback(
+          `Inserted ${applied.createdColumn.label} ${pendingInsertion.placement} of the selected column`
+        );
+      }
+    }
     allGridColumns.current = refreshedColumns;
     if (resource.data.view && activeSavedView?.id === resource.data.view.id) {
       applyResolvedView(resource.data.view, resource.data.rows, refreshedColumns);
     }
+    const projectedColumns = activeSavedView?.definition.includes.columnLayout
+      ? projectSavedViewColumns(refreshedColumns, activeSavedView.definition)
+      : refreshedColumns;
+    const visibleColumns = appliedInsertion
+      ? applyColumnInsertion(projectedColumns, appliedInsertion)?.columns || projectedColumns
+      : projectedColumns;
     return {
       rows: resource.data.rows,
-      columns: activeSavedView?.definition.includes.columnLayout
-        ? spreadsheetColumns(projectSavedViewColumns(refreshedColumns, activeSavedView.definition))
-        : spreadsheetColumns(refreshedColumns),
+      columns: spreadsheetColumns(visibleColumns),
       versions: resource.data.versions,
       rowRanks: resource.data.rowRanks || {},
       schemaVersion: resource.data.schemaVersion,
@@ -884,6 +981,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     );
     const candidate = requested
       || editDraft
+      || pendingInsertDrafts.find((draft) => (
+        selectedRowId && draftContainsRow(draft, selectedRowId)
+      ))
       || retainedDrafts.find((entry) => (
         selectedRowId && draftContainsRow(entry.draft, selectedRowId)
       ))?.draft;
@@ -910,6 +1010,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
     setRetainedDrafts((current) => current.filter((entry) => (
       entry.draft.id !== candidate.id
+    )));
+    setPendingInsertDrafts((current) => current.filter((draft) => (
+      draft.id !== candidate.id
     )));
     setAutomaticDrafts((current) => current.filter((draft) => draft.id !== candidate.id));
     if (editDraft?.id === candidate.id) {
@@ -1409,6 +1512,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     const reordered = reorderColumns(columns, columnIds);
     const namedIds = columnIds.filter((columnId) => !columnId.startsWith('draft_'));
     allGridColumns.current = reorderColumns(allGridColumns.current, namedIds);
+    setBlankColumnInsertions((current) => (
+      reconcileBlankColumnInsertions(columnIds, current)
+    ));
     setGridColumns(spreadsheetColumns(reordered.filter((column) => !column.id.startsWith('draft_'))));
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(`tabular.column-order.${file.id}`, JSON.stringify(namedIds));
@@ -1463,6 +1569,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     if (
       gesture.type === 'clear'
       && selection
+      && selection.kind !== 'header-row'
       && selection.kind !== 'header'
       && selection.kind !== 'column'
     ) {
@@ -1546,13 +1653,30 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       return;
     }
     try {
-      const selectedIndex = baseRows.findIndex((row) => row.id === selectedRowId());
-      stageGridDraft(stageInsertRow(
+      const selectedIndex = rows.findIndex((row) => row.id === selectedRowId());
+      if (selectedIndex < 0) throw new Error('Select a spreadsheet row first');
+      const insertAt = selectedIndex + (placement === 'below' ? 1 : 0);
+      const actualColumns = columns.filter((column) => !column.id.startsWith('draft_'));
+      const staged = stageInsertRow(
         baseRows,
-        columns,
-        Math.max(0, selectedIndex + (placement === 'below' ? 1 : 0)),
-        nextCommandId('insert')
+        actualColumns,
+        insertAt,
+        nextCommandId('insert'),
+        rankForInsertedRow(rows, visibleRowRanks, insertAt)
+      );
+      if (staged.kind !== 'insert') throw new Error('The new row draft is unavailable');
+      setPendingInsertDrafts((current) => [...current, staged]);
+      const firstEditable = actualColumns.find((column) => (
+        column.editable !== false && !column.generated
       ));
+      if (firstEditable) {
+        requestGridSelection({
+          kind: 'cell',
+          anchor: { rowId: staged.row.id, columnId: firstEditable.id },
+          focus: { rowId: staged.row.id, columnId: firstEditable.id }
+        });
+      }
+      setFeedback(`Inserted a blank row ${placement}; type a value to begin validation`);
     } catch (caught) {
       setFeedback(caught instanceof Error ? caught.message : 'A row could not be inserted');
     }
@@ -1581,6 +1705,13 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
 
   const copySelectionValue = () => {
     if (!selection) return;
+    if (selection.kind === 'header-row') {
+      const labels = columns.map((column) => column.label).join('\t');
+      workbenchClipboard.current = labels;
+      void navigator.clipboard?.writeText(labels).catch(() => undefined);
+      setFeedback(`Copied ${columns.length} headers`);
+      return;
+    }
     if (selection.kind === 'header') {
       const label = columns.find((column) => column.id === selection.columnId)?.label || '';
       workbenchClipboard.current = label;
@@ -1787,6 +1918,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   const createNamedColumn = async (columnId: string, displayName: string) => {
     const name = displayName.trim();
     if (!columnId.startsWith('draft_') || !name || creatingColumnId) return;
+    const blankInsertion = blankColumnInsertions.find((insertion) => (
+      insertion.id === columnId
+    ));
     const existingColumnIds = new Set(allGridColumns.current.map((column) => column.id));
     setCreatingColumnId(columnId);
     setFeedback(`Creating PostgreSQL column ${normalizePhysicalName(name)}…`);
@@ -1809,6 +1943,15 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       setCreatingColumnId(undefined);
       setFeedback(message);
       return;
+    }
+    if (blankInsertion) {
+      pendingColumnInsertion.current = {
+        anchorColumnId: blankInsertion.anchorColumnId,
+        knownColumnIds: [...existingColumnIds],
+        placement: blankInsertion.placement,
+        confirmed: true,
+        sourceDraftId: blankInsertion.id
+      };
     }
     const refreshed = await readLiveGridSnapshot();
     if (!refreshed) {
@@ -1839,9 +1982,14 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
     const placeholder = columns.find((column) => column.id === point.columnId);
     if (!placeholder?.id.startsWith('draft_')) return;
+    const blankInsertion = blankColumnInsertions.find((insertion) => (
+      insertion.id === placeholder.id
+    ));
     const logicalColumnIndex = columns.findIndex((column) => column.id === placeholder.id);
     const actualColumnCount = columns.filter((column) => !column.id.startsWith('draft_')).length;
-    const missingColumnCount = logicalColumnIndex - actualColumnCount + 1;
+    const missingColumnCount = blankInsertion
+      ? 1
+      : logicalColumnIndex - actualColumnCount + 1;
     if (missingColumnCount < 1) return;
     setCreatingColumnId(placeholder.id);
     setFeedback(`Preparing unnamed column ${placeholder.coordinate}…`);
@@ -1880,18 +2028,29 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
         return;
       }
     }
+    if (blankInsertion) {
+      pendingColumnInsertion.current = {
+        anchorColumnId: blankInsertion.anchorColumnId,
+        knownColumnIds: allGridColumns.current.map((column) => column.id),
+        placement: blankInsertion.placement,
+        confirmed: true,
+        sourceDraftId: blankInsertion.id
+      };
+    }
     const created = await createUnstructuredGridColumn(
       file.id,
       missingColumnCount,
       props.csrfToken
     );
     if (created.status === 'error') {
+      if (blankInsertion) pendingColumnInsertion.current = undefined;
       setCreatingColumnId(undefined);
       setFeedback(created.error.message);
       return;
     }
     const target = created.data.at(-1);
     if (!target) {
+      if (blankInsertion) pendingColumnInsertion.current = undefined;
       setCreatingColumnId(undefined);
       setFeedback('The unnamed spreadsheet column could not be retained');
       return;
@@ -2010,7 +2169,10 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setPresentation(after);
     setUndoStack((history) => [...history, { kind: 'presentation' as const, label, before, after }].slice(-100));
     setRedoStack([]);
-    setFeedback(`${label} applied to ${formattingPoints.length} ${formattingPoints.length === 1 ? 'cell' : 'cells'} · current tab`);
+    const target = selection?.kind === 'header-row' || selection?.kind === 'header'
+      ? formattingPoints.length === 1 ? 'header' : 'headers'
+      : formattingPoints.length === 1 ? 'cell' : 'cells';
+    setFeedback(`${label} applied to ${formattingPoints.length} ${target} · current tab`);
   };
 
   const stateForCommand = (id: CommandId, base: CommandState): CommandState => {
@@ -2159,7 +2321,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       const rowId = selectedRowId();
       if (!rowId) return;
       const move = rowMoveByDirection(
-        baseRows.map((row) => row.id),
+        committedRowIds,
         rowId,
         id === 'row.move-up' ? 'up' : 'down'
       );
@@ -2167,8 +2329,43 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       return;
     }
     if (id === 'column.insert-left' || id === 'column.insert-right') {
+      const columnId = selectedColumnId();
+      const selectedColumn = columns.find((column) => column.id === columnId);
+      if (!selectedColumn) {
+        setFeedback('Select a column header first');
+        return;
+      }
+      const insertion = {
+        id: `draft_${nextCommandId('column_insert')}`,
+        anchorColumnId: selectedColumn.id,
+        placement: id === 'column.insert-left' ? 'left' as const : 'right' as const
+      };
       if (contextMenu) restoreContextFocus.current = false;
-      openColumnSettings(undefined, contextMenu?.trigger || trigger);
+      setBlankColumnInsertions((current) => [...current, insertion]);
+      requestGridSelection({ kind: 'header', columnId: insertion.id });
+      setFeedback(`Inserted a blank column to the ${insertion.placement}`);
+      return;
+    }
+    if (id === 'column.delete') {
+      const columnId = selectedColumnId();
+      const columnIndex = columns.findIndex((column) => column.id === columnId);
+      const selectedColumn = columns[columnIndex];
+      const removable = blankColumnInsertions.some((insertion) => (
+        insertion.id === columnId
+      ));
+      if (!columnId || !selectedColumn || !removable) {
+        setFeedback('Deleting PostgreSQL columns requires the confirmed DDL workflow');
+        return;
+      }
+      const nextColumn = columns[columnIndex + 1] || columns[columnIndex - 1];
+      if (contextMenu) restoreContextFocus.current = false;
+      setBlankColumnInsertions((current) => removeBlankColumnInsertion(
+        columns.map((column) => column.id),
+        current,
+        columnId
+      ));
+      if (nextColumn) requestGridSelection({ kind: 'header', columnId: nextColumn.id });
+      setFeedback(`Removed blank column ${selectedColumn.coordinate}`);
       return;
     }
     if (id === 'column.rename' || id === 'column.configure' || id === 'relation.configure') {
@@ -2179,6 +2376,11 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     if (id === 'column.sort-asc' || id === 'column.sort-desc') {
       const columnId = selectedColumnId();
       if (!columnId) return;
+      const selectedColumn = columns.find((column) => column.id === columnId);
+      if (!selectedColumn?.label.trim() || selectedColumn.id.startsWith('draft_')) {
+        setFeedback('Name this column before sorting it');
+        return;
+      }
       const nextSort: GridSort = {
         columnId,
         direction: id === 'column.sort-asc' ? 'asc' : 'desc'
@@ -2375,7 +2577,11 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
               const retainedEntry = retainedDrafts.find((entry) => (
                 draftContainsRow(entry.draft, point.rowId)
               ));
+              const pendingInsertDraft = pendingInsertDrafts.find((draft) => (
+                draftContainsRow(draft, point.rowId)
+              ));
               const currentDraft = retainedEntry?.draft
+                || pendingInsertDraft
                 || (editDraft && draftContainsRow(editDraft, point.rowId)
                   ? editDraft
                   : undefined);
@@ -2424,6 +2630,11 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
                       columns,
                       relationOption.patch
                     );
+                    if (pendingInsertDraft) {
+                      setPendingInsertDrafts((current) => current.filter((draft) => (
+                        draft.id !== pendingInsertDraft.id
+                      )));
+                    }
                     void saveCorrectedGridDraft(updated);
                     return;
                   }
@@ -2449,6 +2660,20 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
                 if (currentDraft.kind === 'insert') {
                   try {
                     const corrected = updateInsertDraft(currentDraft, columns, point, value);
+                    if (pendingInsertDraft) {
+                      if (insertDraftIsEmpty(corrected, columns)) {
+                        setPendingInsertDrafts((current) => current.map((draft) => (
+                          draft.id === corrected.id ? corrected : draft
+                        )));
+                        setFeedback('Blank row is ready; type a value to begin validation');
+                        return;
+                      }
+                      setPendingInsertDrafts((current) => current.filter((draft) => (
+                        draft.id !== pendingInsertDraft.id
+                      )));
+                      void saveCorrectedGridDraft(corrected);
+                      return;
+                    }
                     if (insertDraftIsEmpty(corrected, columns)) {
                       void cancelGridDraft(
                         'Cleared the empty row and removed its retained errors',
@@ -2609,8 +2834,15 @@ function selectedColumnFrom(selection: LogicalGridSelection | null) {
   if (selection.kind === 'header' || selection.kind === 'column') {
     return selection.columnId;
   }
-  if (selection.kind === 'row') return undefined;
+  if (selection.kind === 'row' || selection.kind === 'header-row') return undefined;
   return selection.focus.columnId;
+}
+
+function selectedRowFrom(selection: LogicalGridSelection | null) {
+  if (!selection) return undefined;
+  if (selection.kind === 'row') return selection.rowId;
+  if (selection.kind === 'cell' || selection.kind === 'range') return selection.focus.rowId;
+  return undefined;
 }
 
 function projectSavedViewColumns(columns: GridColumn[], definition: SavedViewDefinition) {
@@ -2686,10 +2918,10 @@ function rowMoveByDirection(
 
 function selectedRowLabel(selection: LogicalGridSelection | null, rows: readonly GridRow[]) {
   if (!selection || selection.kind === 'column') return undefined;
-  if (selection.kind === 'header') return '1';
+  if (selection.kind === 'header' || selection.kind === 'header-row') return undefined;
   const rowId = selection.kind === 'row' ? selection.rowId : selection.focus.rowId;
   const index = rows.findIndex((row) => row.id === rowId);
-  return index < 0 ? undefined : String(index + 2);
+  return index < 0 ? undefined : String(spreadsheetRowNumber(index));
 }
 
 function commandFeedbackLabel(id: CommandId) {
@@ -2772,6 +3004,9 @@ function selectionForRows(
   const rowIds = new Set(rows.map((row) => row.id));
   const columnIds = new Set(columns.map((column) => column.id));
   if (selection.kind === 'row') return rowIds.has(selection.rowId)
+    ? selection
+    : selectionAfterRowRemoval(selection, rows, columns, 0);
+  if (selection.kind === 'header-row') return columnIds.size
     ? selection
     : selectionAfterRowRemoval(selection, rows, columns, 0);
   if (selection.kind === 'header') return columnIds.has(selection.columnId)

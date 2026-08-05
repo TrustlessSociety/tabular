@@ -2,10 +2,11 @@
 
 ## Status
 
-Accepted reusable product truth from Frozen research Spec 00001, 2026-07-31.
-Use this contract before the creative reconstruction documents. It supersedes
-their older generic-spreadsheet, visual-only-folder, role-bundle, formula,
-history, recovery, and extension assumptions.
+Accepted reusable product truth from Frozen research Spec 00001, 2026-07-31,
+plus user-directed and verified Spec 00003 implementation-review corrections
+promoted on 2026-08-04. Use this contract before the creative reconstruction
+documents. It supersedes their older generic-spreadsheet, visual-only-folder,
+role-bundle, formula, history, recovery, and extension assumptions.
 
 ## Product
 
@@ -54,18 +55,38 @@ structured sort, filter, relation, or constraint semantics until the user names
 and transactionally promotes them into a real PostgreSQL column. A failed
 promotion leaves the JSON values intact.
 
-Typing beneath an unnamed spreadsheet coordinate creates a stable unnamed
-Tabular column-metadata record; it never infers a display name or creates a
-physical PostgreSQL column. The entered value is retained in the actor-owned
-row draft and, when that row is promotable, is stored under the stable column
-ID in the target's Tabular-hidden `jsonb` field.
+Typing beneath an ordinary trailing unnamed spreadsheet coordinate creates a
+stable unnamed Tabular column-metadata record; it never infers a display name or
+creates a physical PostgreSQL column. The entered value is retained in the
+actor-owned row draft and, when that row is promotable, is stored under the
+stable column ID in the target's Tabular-hidden `jsonb` field.
+
+An explicit Insert column left/right command is different structural intent. It
+creates a tab-local blank beside the selected persisted column; naming or typing
+into that explicit insertion promotes it through the governed PostgreSQL
+column-create boundary while preserving its requested side.
+
+A newly created editable file installs a collision-safe, Tabular-UI-hidden
+stable row identity through the governed owner/migrator boundary before the
+blank spreadsheet opens. This lets its first logical row become a durable
+record without inventing a visible primary key. It does not silently make an
+existing keyless table writable; that table still needs an explicit authorized
+stable-identity migration.
 
 ## Authority
 
-Internal authenticated users map to existing PostgreSQL roles. Actual
-memberships, grants, ownership, column privileges, and RLS are authoritative.
-Tabular defines no fixed database-role bundles and never uses owner, superuser,
-or `BYPASSRLS` authority to widen a caller.
+For the first slice, an existing safe PostgreSQL `LOGIN` role is the human
+identity registry. Tabular verifies its credentials through a short-lived
+ordinary PostgreSQL connection, never reads or stores the password hash, binds
+the verified database/role identities to a durable application session, and
+re-resolves current role membership. PostgreSQL administrators own account
+lifecycle; Tabular adds no password registry or self-sign-up. A future external
+identity provider must map into this same application-identity boundary rather
+than granting a role from claims or cookie content.
+
+Actual memberships, grants, ownership, column privileges, and RLS are
+authoritative. Tabular defines no fixed database-role bundles and never uses
+owner, superuser, or `BYPASSRLS` authority to widen a caller.
 
 Target `SELECT` implies ordinary Tabular metadata, the actor's own drafts, and
 redacted activity currently visible to that actor. Sensitive records require
@@ -80,13 +101,28 @@ administration remain operator-owned.
 
 ## Grid, Draft, And Collaboration Contract
 
-- Use a bounded two-axis virtualized grid with logical selection independent of
-  mounted DOM cells.
+- Use bounded vertical virtualization with ordinary internal horizontal
+  scrolling and logical selection independent of mounted DOM cells. Horizontal
+  virtual DOM remains a measured later optimization, not a first-slice
+  dependency.
 - Use typed edge-to-edge editors, output formats at rest, stable row/column
-  identities, accessible grid semantics, and deterministic keyboard focus.
+  identities, accessible grid semantics, and deterministic keyboard focus. The
+  visibly active cell owns focus after stable load, editor close, cancellation,
+  and mounted-row/column replacement unless another control intentionally owns
+  it.
+- Keep body-cell, named-header, whole-column, row, and whole-header-row
+  selections logically and visually distinct. Header presentation never turns
+  a header into PostgreSQL record data.
 - Treat paste, fill, clear, and multi-cell edit as one atomic domain action.
 - Keep incomplete new rows and pending invalid values as persistent drafts;
   PostgreSQL constraints, triggers, grants, and RLS make the final decision.
+- Save valid changed cells automatically on blur through the durable action
+  boundary; retain only invalid or incomplete values as correctable drafts. Do
+  not expose a manual Commit guardrail for ordinary valid edits.
+- An explicitly inserted blank row is inert and tab-local until its first
+  non-blank edit. It creates no stored draft or required-field error merely by
+  being inserted, and clearing its last entered value removes the empty
+  artifact.
 - The first changed cell in a logical blank row creates a persistent draft with
   that row's Tabular-hidden rank. A draft at logical row 20 must reload at row
   20; rows 1 through 19 remain visual blank positions and must not become empty
@@ -121,6 +157,10 @@ application-level rejection. Best-effort formatters may improve their display
 or link behavior but must not silently rewrite the stored string. Native
 PostgreSQL constraints and triggers remain authoritative and may still reject a
 value.
+
+The default Price presentation is currency-neutral: comma-grouped with exactly
+two decimal places and no hard-coded symbol. A currency symbol belongs to an
+explicit configured output format, not the semantic field alone.
 
 PostgreSQL generated columns support native deterministic same-row computed
 values. Spreadsheet formula definitions, evaluation, compatibility, and

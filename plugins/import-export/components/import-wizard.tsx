@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
+import { Icon } from '../../ui/components/icon.js';
 
 export type ImportSourceKind = 'csv' | 'xlsx' | 'google-sheets';
 
@@ -121,25 +122,21 @@ export type ImportWizardProps = {
 const SOURCE_OPTIONS: Array<{
   kind: ImportSourceKind;
   label: string;
-  icon: string;
   description: string;
 }> = [
   {
     kind: 'csv',
     label: 'CSV',
-    icon: 'CSV',
     description: 'Upload a comma-separated file and preserve each source token.'
   },
   {
     kind: 'xlsx',
     label: 'XLSX',
-    icon: 'XLSX',
     description: 'Import cached values from an Excel workbook.'
   },
   {
     kind: 'google-sheets',
     label: 'Google Sheets',
-    icon: 'G',
     description: 'Connect once and import the latest calculated values.'
   }
 ];
@@ -251,7 +248,7 @@ function ChooseSourceStep(props: {
                     aria-describedby={availability?.reason ? reasonId : undefined}
                     onChange={() => wizard.onSelectSource(option.kind)}
                   />
-                  <span className="import-source-icon" aria-hidden="true">{option.icon}</span>
+                  <span className="import-source-icon" aria-hidden="true"><Icon name="file-spreadsheet" /></span>
                   <strong>{option.label}</strong>
                   <span>{option.description}</span>
                   {availability?.reason && (
@@ -279,7 +276,7 @@ function ChooseSourceStep(props: {
         )}
 
         <div className="import-wizard-notice" role="note" aria-label="Values only">
-          <span className="import-wizard-notice-icon" aria-hidden="true">!</span>
+          <span className="import-wizard-notice-icon" aria-hidden="true"><Icon name="warning" /></span>
           <span>
             <strong>Values only.</strong> Formulas, formatting, comments, notes, hyperlinks, and workbook behavior are not recreated.
           </span>
@@ -424,7 +421,7 @@ function PreviewValuesStep(props: {
           <ul className="import-warning-list" aria-label="Import warnings">
             {warnings.map((warning) => (
               <li key={warning.id}>
-                <span className="import-wizard-notice-icon" aria-hidden="true">!</span>
+                <span className="import-wizard-notice-icon" aria-hidden="true"><Icon name="warning" /></span>
                 <span><strong>{warning.title}</strong> {warning.detail}</span>
               </li>
             ))}
@@ -556,7 +553,7 @@ function ImportStep(props: {
 
         {wizard.targetQualifiedName && (
           <div className="import-wizard-notice" role="note" aria-label="PostgreSQL destination">
-            <span className="import-database-icon" aria-hidden="true">DB</span>
+            <span className="import-database-icon" aria-hidden="true"><Icon name="database" /></span>
             <span>
               The {wizard.folderLabel} folder will include this table. Advanced data source:{' '}
               <strong className="import-technical" translate="no">{wizard.targetQualifiedName}</strong>.
@@ -596,6 +593,7 @@ function ImportStep(props: {
 /** Renders the selected source and its parsed dimensions. */
 function SourceSummary(props: { source: ImportSourceSummary; ready?: boolean }) {
   const { source } = props;
+  const sourceLabel = SOURCE_OPTIONS.find((option) => option.kind === source.kind)?.label || 'File';
   const dimensions = `${NUMBER_FORMAT.format(source.rowCount)} rows · ${NUMBER_FORMAT.format(source.columnCount)} columns`;
   const metadata = props.ready && source.metadata
     ? source.metadata
@@ -603,12 +601,10 @@ function SourceSummary(props: { source: ImportSourceSummary; ready?: boolean }) 
 
   return (
     <div className="import-source-summary">
-      <span className="import-source-summary-icon" aria-hidden="true">
-        {SOURCE_OPTIONS.find((option) => option.kind === source.kind)?.icon || 'FILE'}
-      </span>
+      <span className="import-source-summary-icon" aria-hidden="true"><Icon name="file-spreadsheet" /></span>
       <span className="import-source-summary-copy">
         <strong>{source.name}</strong>
-        <span>{metadata}</span>
+        <span>{sourceLabel} · {metadata}</span>
       </span>
       {props.ready && <span className="import-ready-badge">Values ready</span>}
     </div>
@@ -816,7 +812,7 @@ function ResultState(props: {
   const isSuccess = props.status.kind === 'success';
   return (
     <section className="import-result" role="status" aria-live="polite">
-      <span className="import-result-icon" aria-hidden="true">{isSuccess ? '✓' : '×'}</span>
+      <span className="import-result-icon" aria-hidden="true"><Icon name={isSuccess ? 'success' : 'canceled'} /></span>
       <h2>{props.status.title}</h2>
       <p>{props.status.message}</p>
       <div className="import-result-actions">

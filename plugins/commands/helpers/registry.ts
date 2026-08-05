@@ -54,13 +54,11 @@ export const COMMAND_MENUS: readonly CommandMenu[] = [{
     ] },
     { type: 'submenu', label: 'Zoom', entries: [50, 75, 90, 100, 125, 150, 200].map((value) => (
       command(`view.zoom.${value}` as CommandId, `${value}%`)
-    )) },
-    command('view.fullscreen', 'Full screen')
+    )) }
   ]
 }, {
   label: 'Format',
   entries: [
-    command('format.theme', 'Theme'),
     { type: 'submenu', label: 'Number', entries: [
       command('format.number.auto', 'Automatic'),
       command('format.number.plain', 'Number'),
@@ -86,12 +84,9 @@ export const COMMAND_MENUS: readonly CommandMenu[] = [{
       command('format.wrap.clip', 'Clip'),
       command('format.wrap.overflow', 'Overflow')
     ] },
-    command('format.rotation', 'Rotation'),
-    command('format.smart-chips', 'Smart chips'),
     { type: 'submenu', label: 'Font size', entries: [10, 12, 14, 16, 18].map((value) => (
       command(`format.size.${value}` as CommandId, String(value))
     )) },
-    command('format.merge', 'Merge cells'),
     separator,
     command('format.clear', 'Clear formatting')
   ]
@@ -101,13 +96,12 @@ const DEFERRED = new Set<CommandId>([
   'file.copy', 'file.version-history',
   'view.fullscreen', 'format.theme', 'format.rotation', 'format.smart-chips',
   'format.merge', 'row.resize',
-  'column.insert-left', 'column.insert-right',
-  'column.move-left', 'column.move-right', 'column.resize', 'column.delete'
+  'column.move-left', 'column.move-right', 'column.resize'
 ]);
 const FORMATTING = (id: CommandId) => id.startsWith('format.');
 const CONFIGURES_SCHEMA = new Set<CommandId>([
   'column.insert-left', 'column.insert-right', 'column.rename', 'column.configure',
-  'column.delete', 'relation.configure'
+  'relation.configure'
 ]);
 const MUTATES_SELECTED_VALUES = new Set<CommandId>([
   'edit.cut', 'edit.paste', 'edit.cell', 'edit.clear',
@@ -119,6 +113,7 @@ const MUTATES_TABLE_ROWS = new Set<CommandId>([
 const NEEDS_SELECTION = new Set<CommandId>([
   'edit.cut', 'edit.copy', 'edit.paste', 'edit.cell', 'edit.clear', 'row.clear', 'column.clear',
   'column.sort-asc', 'column.sort-desc', 'column.rename', 'column.configure',
+  'column.insert-left', 'column.insert-right', 'column.delete',
   'row.insert-above', 'row.insert-below', 'row.delete', 'relation.configure'
   , 'row.move-up', 'row.move-down'
 ]);
@@ -145,9 +140,21 @@ export function commandState(id: CommandId, context: CommandContext): CommandSta
   if (NEEDS_SELECTION.has(id) && context.selectionKind === 'none') {
     return { enabled: false, reason: 'Select a target first.' };
   }
+  if ((id === 'column.insert-left' || id === 'column.insert-right')
+    && context.selectionKind !== 'header' && context.selectionKind !== 'column') {
+    return { enabled: false, reason: 'Select a persisted column header first.' };
+  }
+  if (id === 'column.delete' && !context.canDeleteColumn) {
+    return {
+      enabled: false,
+      reason: context.columnDeleteReason
+        || 'Only an inserted blank column can be removed directly.'
+    };
+  }
   if ((id === 'edit.cut' || id === 'edit.paste' || id === 'edit.clear')
     && (
       context.selectionKind === 'row'
+      || context.selectionKind === 'header-row'
       || context.selectionKind === 'header'
       || context.selectionKind === 'column'
     )) {
@@ -173,6 +180,25 @@ export function commandState(id: CommandId, context: CommandContext): CommandSta
     return {
       enabled: false,
       reason: context.rowOrderReason || 'Shared row-order permission is required.'
+    };
+  }
+  if (id === 'row.move-up' && context.canMoveRowUp === false) {
+    return {
+      enabled: false,
+      reason: context.rowMoveUpReason || 'The selected committed row is already first.'
+    };
+  }
+  if (id === 'row.move-down' && context.canMoveRowDown === false) {
+    return {
+      enabled: false,
+      reason: context.rowMoveDownReason || 'The selected committed row is already last.'
+    };
+  }
+  if ((id === 'column.sort-asc' || id === 'column.sort-desc')
+    && context.canSortSelection === false) {
+    return {
+      enabled: false,
+      reason: context.sortReason || 'Name this column before sorting it.'
     };
   }
   if (context.hasDraft && (

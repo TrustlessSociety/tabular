@@ -5,9 +5,9 @@
 Integrate all completed work, close traceability and operational gaps, run the
 full technical and UI proof, and assemble the package for one final human review.
 
-Status: `verified`; the latest corrective pass completed on 2026-08-04 after
-restoring spreadsheet error tokens for retained non-empty invalid insert cells
-without marking untouched required siblings. Depends on Tasks 00001-00013.
+Status: `verified`; later final-review corrections are tracked by required side
+quests 00014A through 00014J in `tasks/status.md`. All ten side quests are
+verified; final human acceptance remains pending. Depends on Tasks 00001-00013.
 
 ## Implementation Steps
 
@@ -440,9 +440,9 @@ Latest corrective verification completed on 2026-08-04:
 
 ## Human Acceptance
 
-None at task level. The separate final human review is now available through
-the running normal signed-out-to-dashboard environment, but remains pending
-until the user performs and explicitly accepts it.
+None at task level. The required corrective side quests have passed; the
+separate final human review remains pending until the user explicitly accepts
+the overall implementation.
 
 ## Agent Acceptance
 

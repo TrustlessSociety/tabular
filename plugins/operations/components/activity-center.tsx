@@ -1,4 +1,4 @@
-import { Icon } from '../../ui/components/icon.js';
+import { Icon, type IconName } from '../../ui/components/icon.js';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 export type ActivityFilter = 'all' | 'active' | 'attention' | 'completed';
@@ -136,7 +136,7 @@ export function ActivityCenter(props: ActivityCenterProps) {
 
         {props.error ? (
           <div className="activity-recovery" role="alert">
-            <span className="activity-recovery-mark" aria-hidden="true">!</span>
+            <span className="activity-recovery-mark" aria-hidden="true"><Icon name="warning" /></span>
             <span>
               <strong>Activity could not catch up</strong>
               <small>{props.error} Your last visible snapshot is still shown.</small>
@@ -145,7 +145,7 @@ export function ActivityCenter(props: ActivityCenterProps) {
           </div>
         ) : props.loading ? (
           <div className="activity-recovery" role="status" aria-live="polite">
-            <span className="activity-loading-mark" aria-hidden="true" />
+            <Icon className="activity-loading-mark" name="loader" />
             <span>
               <strong>Refreshing activity</strong>
               <small>Replaying from the last durable event cursor.</small>
@@ -180,7 +180,7 @@ export function ActivityCenter(props: ActivityCenterProps) {
             </div>
           ) : (
             <div className="activity-empty">
-              <span className="activity-empty-mark" aria-hidden="true">✓</span>
+              <span className="activity-empty-mark" aria-hidden="true"><Icon name="activity" /></span>
               <h3>{props.filter === 'all' ? 'No system activity yet' : 'No matching activity'}</h3>
               <p>{props.filter === 'all'
                 ? 'Long-running imports, exports, and maintenance will appear here.'
@@ -429,12 +429,12 @@ function humanKind(kind: string) {
   return kind.split(/[._-]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') || 'Operation';
 }
 
-function iconForKind(kind: string): 'import' | 'open' | 'table' | 'activity' {
+function iconForKind(kind: string): IconName {
   const normalized = kind.toLowerCase();
   if (normalized.includes('import')) return 'import';
-  if (normalized.includes('export')) return 'open';
+  if (normalized.includes('export')) return 'file-down';
   if (normalized.includes('view') || normalized.includes('schema')) return 'table';
-  return 'activity';
+  return 'operation';
 }
 
 function formatTimestamp(value: string) {

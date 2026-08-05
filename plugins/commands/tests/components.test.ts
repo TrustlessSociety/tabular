@@ -3,8 +3,14 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
+  BorderGlyph,
+  BorderFormattingAccordion,
+  COLOR_PALETTE_ROWS,
+  ColorPalette,
   FormattingToolbar,
+  STANDARD_COLOR_PALETTE,
   SpreadsheetMenuBar,
+  addSessionCustomColor,
   anchoredPopoverLeft,
   type PresentationToolbarState
 } from '../components/command-surface.js';
@@ -29,6 +35,9 @@ const CONTEXT = {
   canConfigureFile: true,
   canSaveViews: true,
   canMoveRows: true,
+  canMoveRowUp: true,
+  canMoveRowDown: true,
+  canSortSelection: true,
   relationSelection: false
 } satisfies CommandContext;
 
@@ -71,10 +80,11 @@ test('closed command surface statically renders exact top-level and toolbar sema
   }));
   assert.match(menus, /role="menubar" aria-label="Spreadsheet menus"/);
   assert.equal(menus.match(/class="command-menu-trigger"/g)?.length, 4);
-  assert.match(menus, />File<span aria-hidden="true">⌄<\/span>/);
-  assert.match(menus, />Edit<span aria-hidden="true">⌄<\/span>/);
-  assert.match(menus, />View<span aria-hidden="true">⌄<\/span>/);
-  assert.match(menus, />Format<span aria-hidden="true">⌄<\/span>/);
+  assert.match(menus, />File<\/button>/);
+  assert.match(menus, />Edit<\/button>/);
+  assert.match(menus, />View<\/button>/);
+  assert.match(menus, />Format<\/button>/);
+  assert.doesNotMatch(menus, /⌄/);
   assert.equal(menus.match(/tabindex="0"/g)?.length, 1);
   assert.equal(menus.match(/tabindex="-1"/g)?.length, 3);
   assert.doesNotMatch(menus, /class="command-menu"/);
@@ -104,7 +114,129 @@ test('closed command surface statically renders exact top-level and toolbar sema
     /aria-label="Underline" aria-keyshortcuts="Meta\+U Control\+U" aria-pressed="true"/
   );
   assert.match(toolbar, /aria-label="Text color" aria-haspopup="dialog"/);
+  for (const icon of [
+    'undo',
+    'redo',
+    'minus',
+    'plus',
+    'bold',
+    'italic',
+    'underline',
+    'text',
+    'paint-bucket',
+    'borders',
+    'align-left',
+    'align-middle',
+    'clip',
+    'ellipsis-vertical'
+  ]) {
+    assert.match(toolbar, new RegExp(`data-icon="${icon}"`));
+  }
+  for (const label of [
+    'Text color',
+    'Fill color',
+    'Horizontal alignment',
+    'Vertical alignment',
+    'Wrap'
+  ]) {
+    //Each requested popover keeps its behavior and accessible disclosure state
+    //without rendering the redundant visual caret.
+    const control = toolbar.match(
+      new RegExp(`<button[^>]*aria-label="${label}"[^>]*>.*?<\\/button>`)
+    )?.[0];
+    assert.ok(control, `${label} control should render`);
+    assert.doesNotMatch(control, /⌄/);
+  }
   assert.doesNotMatch(toolbar, /Display format/);
+  assert.doesNotMatch(toolbar, /[↶↷⇧⇩↕≡≣▦▣]/);
+});
+
+test('border placement diagrams distinguish guide geometry from exact selected edges', () => {
+  const horizontal = renderToStaticMarkup(createElement(BorderGlyph, {
+    placement: 'horizontal'
+  }));
+  const vertical = renderToStaticMarkup(createElement(BorderGlyph, {
+    placement: 'vertical'
+  }));
+  const none = renderToStaticMarkup(createElement(BorderGlyph, {
+    placement: 'none'
+  }));
+
+  assert.match(horizontal, /class="border-guide"/);
+  assert.match(horizontal, /class="border-selected" d="M2 10H18"/);
+  assert.doesNotMatch(horizontal, /class="border-selected" d="M2 (?:2|18)H18"/);
+  assert.match(vertical, /class="border-selected" d="M10 2V18"/);
+  assert.doesNotMatch(vertical, /class="border-selected" d="M(?:2|18) 2V18"/);
+  assert.doesNotMatch(none, /class="border-selected"/);
+});
+
+test('color palettes preserve the supplied main and Standard order for every color surface', () => {
+  assert.equal(COLOR_PALETTE_ROWS.length, 8);
+  assert.ok(COLOR_PALETTE_ROWS.every((row) => row.length === 10));
+  assert.deepEqual([...STANDARD_COLOR_PALETTE], [
+    '#000000', '#ffffff', '#4285f4', '#ea4335',
+    '#fbbc04', '#34a853', '#fa6d03', '#46bdc6'
+  ]);
+
+  for (const kind of ['text', 'fill', 'border'] as const) {
+    const palette = renderToStaticMarkup(createElement(ColorPalette, {
+      kind,
+      current: kind === 'fill' ? 'transparent' : '#000000',
+      customColors: [],
+      selectedFor: () => false,
+      onCommand: () => undefined,
+      onCustomColor: () => undefined
+    }));
+    assert.equal(palette.match(/data-palette-group="main"/g)?.length, 80);
+    assert.equal(palette.match(/data-palette-group="standard"/g)?.length, 8);
+    const renderedOrder = [...palette.matchAll(/title="(#[0-9A-F]{6})"/g)]
+      .map((match) => match[1]?.toLowerCase());
+    assert.deepEqual(renderedOrder, [
+      ...COLOR_PALETTE_ROWS.flat(),
+      ...STANDARD_COLOR_PALETTE
+    ]);
+    assert.match(palette, new RegExp(`aria-label="Custom ${kind === 'fill' ? 'background' : kind} color"`));
+    assert.doesNotMatch(palette, /Conditional formatting/);
+  }
+});
+
+test('session custom colors append once and render to the right of the plus control', () => {
+  const first = addSessionCustomColor([], '#123456');
+  const second = addSessionCustomColor(first, '#ABCDEF');
+  assert.deepEqual(addSessionCustomColor(second, '#123456'), ['#123456', '#abcdef']);
+
+  const palette = renderToStaticMarkup(createElement(ColorPalette, {
+    kind: 'text',
+    current: '#123456',
+    customColors: second,
+    selectedFor: (id) => id === 'format.text.color.123456',
+    onCommand: () => undefined,
+    onCustomColor: () => undefined
+  }));
+  const customRow = palette.match(/<div class="custom-color-row">([\s\S]*?)<\/div>/)?.[1] || '';
+  assert.ok(customRow.indexOf('custom-color-control') < customRow.indexOf('data-palette-group="custom"'));
+  assert.equal(customRow.match(/data-palette-group="custom"/g)?.length, 2);
+  assert.match(customRow, /title="#123456"/);
+  assert.match(customRow, /title="#ABCDEF"/);
+});
+
+test('Border accordion initially exposes only Border visible', () => {
+  const accordion = renderToStaticMarkup(createElement(BorderFormattingAccordion, {
+    presentation: PRESENTATION,
+    customColors: [],
+    selectedFor: () => false,
+    onCommand: () => undefined,
+    onCustomColor: () => undefined
+  }));
+
+  assert.match(accordion, /aria-label="Border formatting"/);
+  assert.match(accordion, /aria-expanded="true"[^>]*><span>Border visible<\/span>/);
+  assert.match(accordion, /aria-expanded="false"[^>]*><span>Border color<\/span>/);
+  assert.match(accordion, /aria-expanded="false"[^>]*><span>Border style<\/span>/);
+  assert.equal(accordion.match(/class="border-accordion-panel"/g)?.length, 1);
+  assert.equal(accordion.match(/class="border-placement-glyph"/g)?.length, 10);
+  assert.doesNotMatch(accordion, /aria-label="border color palette"/);
+  assert.doesNotMatch(accordion, /aria-label="solid border"/);
 });
 
 test('no-selection toolbar disables presentation controls without hiding them', () => {
@@ -191,6 +323,16 @@ test('context menus render target-specific commands, permission states, and clam
     'row.delete'
   ]);
 
+  const headerRow = renderToStaticMarkup(createElement(CommandContextMenu, {
+    menu: { target: 'header-row', x: 20, y: 20 },
+    context: { ...CONTEXT, selectionKind: 'header-row' },
+    onCommand: () => undefined,
+    onClose: () => undefined
+  }));
+  assert.match(headerRow, /aria-label="header-row context menu"/);
+  assert.deepEqual(commandIds(headerRow), ['edit.copy', 'format.clear']);
+  assert.match(headerRow, />Clear header formatting<\/button>/);
+
   //Relation, column, and explorer surfaces keep their own exact shared-command
   //routes without growing page-specific action implementations.
   const relation = renderToStaticMarkup(createElement(CommandContextMenu, {
@@ -230,6 +372,37 @@ test('context menus render target-specific commands, permission states, and clam
     'column.resize',
     'column.delete'
   ]);
+  assert.match(
+    column,
+    /data-command="column.delete"[^>]*disabled=""[^>]*title="Only an inserted blank column can be removed directly\."/
+  );
+
+  const removableBlankColumn = renderToStaticMarkup(createElement(CommandContextMenu, {
+    menu: { target: 'column', x: 20, y: 20 },
+    context: { ...CONTEXT, selectionKind: 'column', canDeleteColumn: true },
+    onCommand: () => undefined,
+    onClose: () => undefined
+  }));
+  assert.match(
+    removableBlankColumn,
+    /data-command="column.delete"[^>]*aria-disabled="false"[^>]*>Delete column/
+  );
+
+  const unnamedColumn = renderToStaticMarkup(createElement(CommandContextMenu, {
+    menu: { target: 'column', x: 20, y: 20 },
+    context: {
+      ...CONTEXT,
+      selectionKind: 'column',
+      canSortSelection: false,
+      sortReason: 'Name this column before sorting it.'
+    },
+    onCommand: () => undefined,
+    onClose: () => undefined
+  }));
+  assert.match(
+    unnamedColumn,
+    /data-command="column.sort-asc"[^>]*disabled=""[^>]*title="Name this column before sorting it\."/
+  );
 
   const explorer = renderToStaticMarkup(createElement(CommandContextMenu, {
     menu: { target: 'explorer', x: 20, y: 20 },

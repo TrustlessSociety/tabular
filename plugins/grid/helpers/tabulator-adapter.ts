@@ -23,7 +23,11 @@ import type {
   LogicalGridSelection
 } from './contracts.js';
 import { GRID_HEADER_ROW_ID } from './contracts.js';
-import { coverageForIndexMaps, LogicalSelectionStore } from './selection.js';
+import {
+  coverageForIndexMaps,
+  LogicalSelectionStore,
+  spreadsheetRowNumber
+} from './selection.js';
 
 type TableEventListener = (...args: any[]) => void;
 
@@ -66,6 +70,83 @@ function pointFor(cell: CellComponent): GridPoint {
 
 function presentationKey(point: GridPoint) {
   return JSON.stringify([point.rowId, point.columnId]);
+}
+
+type RenderedBorderPlacement = Exclude<NonNullable<GridCellPresentation['border']>, 'none'>;
+type RenderedBorderStyle = NonNullable<GridCellPresentation['borderStyle']>;
+type BorderEdge = 'top' | 'right' | 'bottom' | 'left';
+
+const BORDER_EDGES: Record<RenderedBorderPlacement, readonly BorderEdge[]> = {
+  all: ['top', 'right', 'bottom', 'left'],
+  inner: ['top', 'left'],
+  horizontal: ['top', 'bottom'],
+  vertical: ['left', 'right'],
+  outer: ['top', 'right', 'bottom', 'left'],
+  left: ['left'],
+  top: ['top'],
+  right: ['right'],
+  bottom: ['bottom']
+};
+
+type BorderBackgroundLayer = {
+  image: string;
+  size: string;
+  position: string;
+};
+
+/** Paints cell-edge borders without taking layout space or collapsing non-solid styles. */
+export function borderBackgroundLayers(
+  placement: RenderedBorderPlacement,
+  style: RenderedBorderStyle,
+  color: string
+) {
+  const layers: BorderBackgroundLayer[] = [];
+  const add = (edge: BorderEdge, position: string, width: number, image: string) => {
+    const horizontal = edge === 'top' || edge === 'bottom';
+    layers.push({
+      image,
+      size: horizontal ? `100% ${width}px` : `${width}px 100%`,
+      position
+    });
+  };
+  const positionFor = (edge: BorderEdge) => ({
+    top: '0 0',
+    right: '100% 0',
+    bottom: '0 100%',
+    left: '0 0'
+  })[edge];
+
+  for (const edge of BORDER_EDGES[placement]) {
+    const horizontal = edge === 'top' || edge === 'bottom';
+    if (style === 'double') {
+      const innerPosition = ({
+        top: '0 3px',
+        right: 'calc(100% - 3px) 0',
+        bottom: '0 calc(100% - 3px)',
+        left: '3px 0'
+      })[edge];
+      const image = `linear-gradient(${color}, ${color})`;
+      add(edge, positionFor(edge), 1, image);
+      add(edge, innerPosition, 1, image);
+      continue;
+    }
+
+    const width = style === 'thick' ? 4 : style === 'medium' ? 3 : 2;
+    const direction = horizontal ? 'to right' : 'to bottom';
+    const image = style === 'dashed'
+      ? `repeating-linear-gradient(${direction}, ${color} 0 6px, transparent 6px 10px)`
+      : style === 'dotted'
+        ? `repeating-linear-gradient(${direction}, ${color} 0 2px, transparent 2px 5px)`
+        : `linear-gradient(${color}, ${color})`;
+    add(edge, positionFor(edge), width, image);
+  }
+
+  return {
+    backgroundImage: layers.map((layer) => layer.image).join(', '),
+    backgroundSize: layers.map((layer) => layer.size).join(', '),
+    backgroundPosition: layers.map((layer) => layer.position).join(', '),
+    backgroundRepeat: layers.map(() => 'no-repeat').join(', ')
+  };
 }
 
 function previousValueFor(cell: CellComponent): GridCellValue {
@@ -459,7 +540,7 @@ export class TabulatorGridAdapter implements GridAdapter {
         rowHeader: {
           formatter: ((cell: CellComponent) => {
             const position = cell.getRow().getPosition(true);
-            return String((typeof position === 'number' ? position : 0) + 1);
+            return typeof position === 'number' ? String(position) : '';
           }) as unknown as string,
           width: 48,
           minWidth: 48,
@@ -630,6 +711,8 @@ export class TabulatorGridAdapter implements GridAdapter {
   }
 
   async replaceRows(rows: GridRow[]) {
+    const restoreFocus = typeof document !== 'undefined'
+      && Boolean(this.#container?.contains(document.activeElement));
     const table = this.#requireTable();
     this.#rows = rows.map((row) => ({ ...row }));
     this.#reconcileSelection();
@@ -637,6 +720,7 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#refreshActiveRowOrder();
     this.#updateAriaCounts();
     this.#renderSelection();
+    if (restoreFocus) this.focusActive();
   }
 
   async updateRows(rows: GridRow[]) {
@@ -650,6 +734,8 @@ export class TabulatorGridAdapter implements GridAdapter {
   }
 
   replaceColumns(columns: GridColumn[]) {
+    const restoreFocus = typeof document !== 'undefined'
+      && Boolean(this.#container?.contains(document.activeElement));
     const table = this.#requireTable();
     this.#columns = columns.map((column) => ({ ...column }));
     this.#refreshColumnIndexes();
@@ -657,6 +743,7 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#reconcileSelection();
     this.#updateAriaCounts();
     this.#renderSelection();
+    if (restoreFocus) this.focusActive();
   }
 
   setSort(sort: GridSort[]) {
@@ -754,6 +841,7 @@ export class TabulatorGridAdapter implements GridAdapter {
           if (
             !current
             || current.kind === 'row'
+            || current.kind === 'header-row'
             || current.kind === 'header'
             || current.kind === 'column'
             || current.focus.rowId !== point.rowId
@@ -777,7 +865,7 @@ export class TabulatorGridAdapter implements GridAdapter {
 
   editActive(initialValue?: string) {
     const selection = this.#selection.get();
-    if (selection?.kind === 'header') return false;
+    if (selection?.kind === 'header-row' || selection?.kind === 'header') return false;
     const point = selection && (selection.kind === 'cell' || selection.kind === 'range')
       ? selection.focus
       : this.#lastPoint;
@@ -794,6 +882,45 @@ export class TabulatorGridAdapter implements GridAdapter {
           editor.value = initialValue;
           editor.dispatchEvent(new Event('input', { bubbles: true }));
         });
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  focusActive() {
+    const selection = this.#selection.get();
+    const point = selection && (selection.kind === 'cell' || selection.kind === 'range')
+      ? selection.focus
+      : this.#lastPoint;
+    if (!point) return false;
+    try {
+      const table = this.#requireTable();
+      const element = table.getRow(point.rowId).getCell(point.columnId).getElement();
+      if (element.isConnected === false) {
+        void table.scrollToRow(point.rowId, 'center', false).then(() => {
+          const current = this.#selection.get();
+          if (
+            !current
+            || current.kind === 'row'
+            || current.kind === 'header-row'
+            || current.kind === 'header'
+            || current.kind === 'column'
+            || current.focus.rowId !== point.rowId
+            || current.focus.columnId !== point.columnId
+          ) return;
+          this.#renderSelection();
+          table.getRow(point.rowId).getCell(point.columnId).getElement().focus({
+            preventScroll: true
+          });
+        }).catch((error) => {
+          this.#emit('error', {
+            error: error instanceof Error ? error : new Error(String(error))
+          });
+        });
+      } else {
+        element.focus({ preventScroll: true });
       }
       return true;
     } catch {
@@ -863,15 +990,16 @@ export class TabulatorGridAdapter implements GridAdapter {
     const components = this.#table.getColumns();
     if (!components.length) return;
     this.#clearColumnDragging();
-    const named = new Set(this.#columns
+    const movable = new Set(this.#columns
       .filter((column) => !column.id.startsWith('draft_'))
       .map((column) => column.id));
     for (const column of components) {
       const columnId = column.getField();
-      if (!columnId || !named.has(columnId)) continue;
+      if (!columnId) continue;
       const element = column.getElement();
-      element.draggable = true;
-      element.setAttribute('aria-description', 'Drag to reorder column');
+      const canDrag = movable.has(columnId);
+      element.draggable = canDrag;
+      if (canDrag) element.setAttribute('aria-description', 'Drag to reorder column');
       const dragStart = (event: DragEvent) => {
         // Native drag/drop owns this gesture from here; suppress the mouse
         // fallback so the same release cannot reorder the column twice.
@@ -907,7 +1035,7 @@ export class TabulatorGridAdapter implements GridAdapter {
         const source = this.#draggedColumnId || event.dataTransfer?.getData('text/plain');
         this.#clearColumnDragClasses();
         this.#draggedColumnId = undefined;
-        if (!source || source === columnId || !named.has(source)) return;
+        if (!source || source === columnId || !movable.has(source)) return;
         const rectangle = element.getBoundingClientRect();
         const after = Number.isFinite(event.clientX)
           ? event.clientX >= rectangle.left + rectangle.width / 2
@@ -922,22 +1050,26 @@ export class TabulatorGridAdapter implements GridAdapter {
         this.#draggedColumnId = undefined;
         this.#clearColumnDragClasses();
       };
-      element.addEventListener('dragstart', dragStart);
-      element.addEventListener('mousedown', mouseDown);
+      if (canDrag) {
+        element.addEventListener('dragstart', dragStart);
+        element.addEventListener('mousedown', mouseDown);
+        element.addEventListener('dragend', dragEnd);
+      }
       element.addEventListener('dragover', dragOver);
       element.addEventListener('dragleave', dragLeave);
       element.addEventListener('drop', drop);
-      element.addEventListener('dragend', dragEnd);
       element.addEventListener('click', click);
       this.#columnDragDisposers.push(() => {
         element.draggable = false;
         element.removeAttribute('aria-description');
-        element.removeEventListener('dragstart', dragStart);
-        element.removeEventListener('mousedown', mouseDown);
+        if (canDrag) {
+          element.removeEventListener('dragstart', dragStart);
+          element.removeEventListener('mousedown', mouseDown);
+          element.removeEventListener('dragend', dragEnd);
+        }
         element.removeEventListener('dragover', dragOver);
         element.removeEventListener('dragleave', dragLeave);
         element.removeEventListener('drop', drop);
-        element.removeEventListener('dragend', dragEnd);
         element.removeEventListener('click', click);
       });
     }
@@ -945,12 +1077,9 @@ export class TabulatorGridAdapter implements GridAdapter {
 
   /** Resolves one stable drop target from the pointer's horizontal position. */
   #columnDropAt(clientX: number, source: string) {
-    const named = new Set(this.#columns
-      .filter((column) => !column.id.startsWith('draft_'))
-      .map((column) => column.id));
     const candidates = this.#requireTable().getColumns().flatMap((column) => {
       const field = column.getField();
-      if (!field || field === source || !named.has(field)) return [];
+      if (!field || field === source) return [];
       const rectangle = column.getElement().getBoundingClientRect();
       const middle = rectangle.left + rectangle.width / 2;
       const distance = clientX < rectangle.left
@@ -1024,6 +1153,7 @@ export class TabulatorGridAdapter implements GridAdapter {
       if (columnId) this.#lastPoint = { rowId: selection.rowId, columnId };
       return;
     }
+    if (selection.kind === 'header-row') return;
     const rowId = this.#lastPoint?.rowId || this.#rows[0]?.id;
     if (rowId) this.#lastPoint = { rowId, columnId: selection.columnId };
   }
@@ -1145,7 +1275,7 @@ export class TabulatorGridAdapter implements GridAdapter {
       mountedRowHeader.tabIndex = 0;
       mountedRowHeader?.setAttribute(
         'aria-label',
-        `Row ${rowIndex + 2}, not added: ${rowIssues.map((issue) => issue.message).join(' ')}`
+        `Row ${spreadsheetRowNumber(rowIndex)}, not added: ${rowIssues.map((issue) => issue.message).join(' ')}`
       );
       mountedRowHeader.setAttribute('aria-describedby', rowErrorId(currentRowId));
       let popover = mountedRowHeader.querySelector<HTMLElement>('.tabular-row-error-popover');
@@ -1170,7 +1300,7 @@ export class TabulatorGridAdapter implements GridAdapter {
       popover.append(title, list);
     } else if (mountedRowHeader) {
       mountedRowHeader.tabIndex = -1;
-      mountedRowHeader.setAttribute('aria-label', `Row ${rowIndex + 2}`);
+      mountedRowHeader.setAttribute('aria-label', `Row ${spreadsheetRowNumber(rowIndex)}`);
       mountedRowHeader.removeAttribute('aria-describedby');
       mountedRowHeader.querySelector('.tabular-row-error-popover')?.remove();
     }
@@ -1196,10 +1326,17 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
     const selection = this.#selection.get();
     this.#updateAriaCounts();
-    const rowHeader = container.querySelector('.tabulator-header .tabulator-row-header');
-    rowHeader?.setAttribute('aria-label', 'Header row 1');
+    const rowHeader = container.querySelector<HTMLElement>(
+      '.tabulator-header .tabulator-row-header'
+    );
+    rowHeader?.setAttribute('aria-label', 'Header row');
     rowHeader?.setAttribute('aria-colindex', '1');
-    rowHeader?.classList.toggle('tabular-axis-row-active', selection?.kind === 'header');
+    rowHeader?.setAttribute('aria-selected', String(selection?.kind === 'header-row'));
+    if (rowHeader) rowHeader.tabIndex = selection?.kind === 'header-row' ? 0 : -1;
+    rowHeader?.classList.toggle(
+      'tabular-axis-row-active',
+      selection?.kind === 'header' || selection?.kind === 'header-row'
+    );
     const headerRow = container.querySelector('.tabulator-header [role="row"]');
     headerRow?.setAttribute('aria-rowindex', '1');
     const mountedRows = [...container.querySelectorAll<HTMLElement>(
@@ -1237,7 +1374,8 @@ export class TabulatorGridAdapter implements GridAdapter {
         : selection?.kind === 'cell' || selection?.kind === 'range'
           ? selection.focus.columnId === field
           : false;
-      const selectedHeader = selection?.kind === 'header' && selection.columnId === field;
+      const selectedHeader = selection?.kind === 'header-row'
+        || (selection?.kind === 'header' && selection.columnId === field);
       const selectedColumn = selection?.kind === 'column' && selection.columnId === field;
       element.setAttribute('aria-colindex', String(columnIndex + 2));
       element.setAttribute('aria-selected', String(selectedHeader || selectedColumn));
@@ -1273,7 +1411,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     );
     for (const property of [
       'font-family', 'font-size', 'font-weight', 'font-style', 'text-decoration',
-      'color', 'background-color', 'text-align', 'box-shadow', 'white-space',
+      'color', 'background-color', 'background-image', 'background-size',
+      'background-position', 'background-repeat', 'text-align', 'justify-content',
+      'box-shadow', 'white-space',
       'text-overflow', 'overflow', '--tabular-number-color'
     ]) element.style.removeProperty(property);
     delete element.dataset.presentation;
@@ -1286,12 +1426,23 @@ export class TabulatorGridAdapter implements GridAdapter {
     element.dataset.presentation = 'true';
     if (style.fontFamily) element.style.fontFamily = style.fontFamily;
     if (style.fontSize) element.style.fontSize = `${style.fontSize}px`;
-    if (style.bold) element.style.fontWeight = '700';
+    if (typeof style.bold === 'boolean') {
+      element.style.fontWeight = style.bold ? '700' : '400';
+    }
     if (style.italic) element.style.fontStyle = 'italic';
     if (style.underline) element.style.textDecoration = 'underline';
     if (style.textColor) element.style.color = style.textColor;
     if (style.fillColor) element.style.backgroundColor = style.fillColor;
-    if (style.horizontal && style.horizontal !== 'auto') element.style.textAlign = style.horizontal;
+    if (style.horizontal && style.horizontal !== 'auto') {
+      element.style.textAlign = style.horizontal;
+      if (element.classList.contains('tabular-column-semantic')) {
+        element.style.justifyContent = style.horizontal === 'center'
+          ? 'center'
+          : style.horizontal === 'right'
+            ? 'flex-end'
+            : 'flex-start';
+      }
+    }
     if (style.wrap === 'wrap') element.classList.add('tabular-presentation-wrap');
     if (style.wrap === 'overflow') element.classList.add('tabular-presentation-overflow');
     if (style.vertical) element.classList.add(`tabular-presentation-v-${style.vertical}`);
@@ -1306,21 +1457,13 @@ export class TabulatorGridAdapter implements GridAdapter {
     if (style.border && style.border !== 'none') {
       const borderColor = style.borderColor || '#4b5563';
       const borderStyle = style.borderStyle || 'solid';
-      const width = borderStyle === 'thick' ? 4 : borderStyle === 'medium' || borderStyle === 'double' ? 3 : 2;
       element.dataset.borderStyle = borderStyle;
       element.dataset.borderColor = borderColor;
-      const shadows: Record<Exclude<NonNullable<GridCellPresentation['border']>, 'none'>, string> = {
-        all: `inset 0 0 0 ${width}px ${borderColor}`,
-        inner: `inset ${width}px ${width}px 0 ${borderColor}`,
-        horizontal: `inset 0 ${width}px 0 ${borderColor}, inset 0 -${width}px 0 ${borderColor}`,
-        vertical: `inset ${width}px 0 0 ${borderColor}, inset -${width}px 0 0 ${borderColor}`,
-        outer: `inset 0 0 0 ${Math.max(2, width)}px ${borderColor}`,
-        left: `inset ${width}px 0 0 ${borderColor}`,
-        top: `inset 0 ${width}px 0 ${borderColor}`,
-        right: `inset -${width}px 0 0 ${borderColor}`,
-        bottom: `inset 0 -${width}px 0 ${borderColor}`
-      };
-      element.style.boxShadow = shadows[style.border];
+      const background = borderBackgroundLayers(style.border, borderStyle, borderColor);
+      element.style.backgroundImage = background.backgroundImage;
+      element.style.backgroundSize = background.backgroundSize;
+      element.style.backgroundPosition = background.backgroundPosition;
+      element.style.backgroundRepeat = background.backgroundRepeat;
     }
   }
 

@@ -6,7 +6,7 @@ import type {
   GridRow,
   LogicalGridSelection
 } from '../helpers/contracts.js';
-import { selectionLabel } from '../helpers/selection.js';
+import { selectionLabel, spreadsheetRowNumber } from '../helpers/selection.js';
 import { TabulatorGridAdapter } from '../helpers/tabulator-adapter.js';
 
 export type GridCommand = {
@@ -49,7 +49,7 @@ export type GridGesture =
   | { type: 'row-move'; rowId: string; beforeRowId?: string; afterRowId?: string }
   | {
     type: 'context-menu';
-    target: 'cell' | 'row' | 'column';
+    target: 'cell' | 'row' | 'header-row' | 'column';
     x: number;
     y: number;
     trigger: HTMLElement;
@@ -57,7 +57,8 @@ export type GridGesture =
     columnId?: string;
   };
 
-function displaySelection(
+/** Formats logical selections with the coordinates shown to spreadsheet users. */
+export function displaySelection(
   selection: LogicalGridSelection | null,
   columns: GridColumn[],
   rows: GridRow[]
@@ -65,12 +66,13 @@ function displaySelection(
   if (!selection) return 'No selection';
   const rowCoordinate = (rowId: string) => {
     const index = rows.findIndex((candidate) => candidate.id === rowId);
-    return index < 0 ? rowId : String(index + 2);
+    return index < 0 ? rowId : String(spreadsheetRowNumber(index));
   };
   if (selection.kind === 'row') return `Row ${rowCoordinate(selection.rowId)}`;
+  if (selection.kind === 'header-row') return 'Headers';
   if (selection.kind === 'header') {
     const column = columns.find((candidate) => candidate.id === selection.columnId);
-    return `${column?.coordinate || selection.columnId}1`;
+    return `Header ${column?.coordinate || selection.columnId}`;
   }
   if (selection.kind === 'column') {
     const column = columns.find((candidate) => candidate.id === selection.columnId);
@@ -93,6 +95,7 @@ function validSelection(
   const rowIds = new Set(rows.map((row) => row.id));
   const columnIds = new Set(columns.map((column) => column.id));
   if (selection.kind === 'row') return rowIds.has(selection.rowId);
+  if (selection.kind === 'header-row') return columnIds.size > 0;
   if (selection.kind === 'header') return columnIds.has(selection.columnId);
   if (selection.kind === 'column') return columnIds.has(selection.columnId);
   return rowIds.has(selection.anchor.rowId)
@@ -224,7 +227,14 @@ export function GridCanvas({
     });
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.matches('input, textarea, select, [contenteditable="true"]')) return;
+      if (target.matches('input, textarea, select, [contenteditable="true"]')) {
+        if (event.key === 'Enter' || event.key === 'Escape') {
+          requestAnimationFrame(() => {
+            if (!target.isConnected) instance.focusActive();
+          });
+        }
+        return;
+      }
       const current = instance.selection();
       if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         if (!canMoveRowsRef.current || !current) return;
@@ -286,6 +296,7 @@ export function GridCanvas({
         if (
           !current
           || current.kind === 'row'
+          || current.kind === 'header-row'
           || current.kind === 'header'
           || current.kind === 'column'
         ) return;
@@ -318,6 +329,8 @@ export function GridCanvas({
           type: 'context-menu',
           target: current.kind === 'row'
             ? 'row'
+            : current.kind === 'header-row'
+              ? 'header-row'
             : current.kind === 'header' || current.kind === 'column'
               ? 'column'
               : 'cell',
@@ -355,10 +368,34 @@ export function GridCanvas({
       const extend = event.key.startsWith('Arrow') && event.shiftKey;
       if (instance.navigate(direction, extend)) event.preventDefault();
     };
+    const onClick = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      const rowHeader = (event.target as HTMLElement).closest<HTMLElement>(
+        '.tabulator-header .tabulator-row-header'
+      );
+      if (!rowHeader) return;
+      instance.select({ kind: 'header-row' });
+      rowHeader.focus({ preventScroll: true });
+    };
     const onContextMenu = (event: MouseEvent) => {
       const element = event.target as HTMLElement;
+      const rowHeader = element.closest<HTMLElement>(
+        '.tabulator-header .tabulator-row-header'
+      );
       const header = element.closest<HTMLElement>('.tabulator-col[tabulator-field]');
       const cell = element.closest<HTMLElement>('.tabulator-cell');
+      if (rowHeader) {
+        event.preventDefault();
+        instance.select({ kind: 'header-row' });
+        gestureCallback.current?.({
+          type: 'context-menu',
+          target: 'header-row',
+          x: event.clientX,
+          y: event.clientY,
+          trigger: rowHeader
+        });
+        return;
+      }
       if (header) {
         const columnId = header.getAttribute('tabulator-field');
         if (!columnId) return;
@@ -382,17 +419,27 @@ export function GridCanvas({
       gestureCallback.current?.({ type: 'context-menu', target: 'cell', x: event.clientX, y: event.clientY, trigger: cell, rowId, columnId });
     };
     host.current.addEventListener('keydown', onKeyDown, true);
+    host.current.addEventListener('click', onClick);
     host.current.addEventListener('contextmenu', onContextMenu);
     return () => {
       instanceReady.current = false;
       retainedSelection.current = instance.selection();
       host.current?.removeEventListener('keydown', onKeyDown, true);
+      host.current?.removeEventListener('click', onClick);
       host.current?.removeEventListener('contextmenu', onContextMenu);
       disposers.forEach((dispose) => dispose());
       instance.destroy();
       adapter.current = undefined;
     };
   }, [canMoveRows, canMoveColumns]);
+
+  useEffect(() => {
+    if (!ready || !instanceReady.current) return;
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (!activeElement || activeElement === document.body) adapter.current?.focusActive();
+    });
+  }, [ready]);
 
   useEffect(() => {
     const instance = adapter.current;
@@ -443,13 +490,17 @@ export function GridCanvas({
       <p id={instructionsId} className="sr-only">
         Use arrow keys to move the active cell, Shift plus arrow keys or Shift plus click to select a range,
         Shift plus Space to select a row, Control or Command plus Space to select a column, or activate a
-        row number or column heading. Drag a column heading to reorder columns. Double-click a cell to edit.
+        row number, the blank header corner, or a column heading. Press Enter, F2, or a printable key to edit.
+        Backspace or Delete clears the selected cells. Drag a column heading to reorder columns. Double-click
+        a cell to edit.
       </p>
       <div className="formula-strip" aria-label="Selection and formula bar">
         <output className="name-box" aria-label="Current selection">{label}</output>
         <span className="formula-function" aria-hidden="true">fx</span>
         <output className="formula-value" aria-label="Cell value">
-          {selection?.kind === 'header'
+          {selection?.kind === 'header-row'
+            ? 'All headers'
+            : selection?.kind === 'header'
             ? columns.find((column) => column.id === selection.columnId)?.label || ''
             : selection && selection.kind !== 'row' && selection.kind !== 'column'
               ? String(rows.find((row) => row.id === selection.focus.rowId)?.[selection.focus.columnId] ?? '')

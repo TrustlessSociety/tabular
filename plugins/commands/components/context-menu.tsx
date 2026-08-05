@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react';
 import type { CommandContext, CommandId } from '../helpers/contracts.js';
 import { commandState } from '../helpers/registry.js';
 
-export type ContextMenuTarget = 'cell' | 'relation' | 'row' | 'column' | 'explorer';
+export type ContextMenuTarget = 'cell' | 'relation' | 'row' | 'header-row' | 'column' | 'explorer';
 export type ContextMenuState = { target: ContextMenuTarget; x: number; y: number; trigger?: HTMLElement };
 
 const entries: Record<ContextMenuTarget, Array<CommandId | 'separator'>> = {
   cell: ['edit.cut', 'edit.copy', 'edit.paste', 'separator', 'edit.cell', 'edit.clear', 'row.insert-above', 'row.insert-below'],
   relation: ['edit.cut', 'edit.copy', 'edit.paste', 'separator', 'edit.cell', 'edit.clear', 'relation.configure'],
   row: ['edit.cut', 'edit.copy', 'edit.paste', 'separator', 'row.insert-above', 'row.insert-below', 'row.clear', 'row.move-up', 'row.move-down', 'row.resize', 'separator', 'row.delete'],
+  'header-row': ['edit.copy', 'separator', 'format.clear'],
   column: ['edit.cut', 'edit.copy', 'edit.paste', 'separator', 'column.insert-left', 'column.insert-right', 'column.rename', 'column.configure', 'separator', 'column.sort-asc', 'column.sort-desc', 'column.clear', 'column.move-left', 'column.move-right', 'column.resize', 'separator', 'column.delete'],
   explorer: ['file.open', 'separator', 'file.table-settings', 'file.copy']
 };
@@ -21,6 +22,7 @@ const labels: Partial<Record<CommandId, string>> = {
   'column.configure': 'Configure column', 'column.sort-asc': 'Sort ascending', 'column.sort-desc': 'Sort descending',
   'column.clear': 'Clear column values', 'column.move-left': 'Move column left', 'column.move-right': 'Move column right',
   'column.resize': 'Resize column', 'column.delete': 'Delete column', 'relation.configure': 'Configure relation',
+  'format.clear': 'Clear header formatting',
   'file.open': 'Open', 'file.table-settings': 'Table settings', 'file.copy': 'Make a copy'
 };
 

@@ -518,6 +518,7 @@ export function pointsForSelection(
   if (
     !selection
     || selection.kind === 'row'
+    || selection.kind === 'header-row'
     || selection.kind === 'header'
     || selection.kind === 'column'
   ) return [];

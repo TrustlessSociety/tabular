@@ -358,8 +358,26 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
     const stable = required(await first.grid.load(ownerSession.principal, orders.id));
     assert.deepEqual(stable.rows.map((row) => row[idColumn.id]), ['a', 'c', 'b', 'd']);
 
-    const concurrentVersion = stable.rowOrderVersion!;
-    const rowD = stable.rows.find((row) => row[idColumn.id] === 'd')!;
+    const exactMove = await first.savedViews.moveRow(owner, {
+      fileId: orders.id,
+      rowId: stable.rows[0]!.id,
+      beforeRowId: stable.rows[1]!.id,
+      afterRowId: stable.rows[2]!.id,
+      expectedVersion: stable.rowOrderVersion!
+    }, 'cmd_task10_move_exact_ranks');
+    assert.equal(exactMove.rebalanced, false);
+    const exactRanks = await admin.query(`
+      SELECT id, __tabular_row_v1 AS rank
+        FROM workspace.orders
+       ORDER BY __tabular_row_v1 COLLATE "C" NULLS LAST, id
+    `);
+    assert.deepEqual(exactRanks.rows.map((row) => row.id), ['c', 'a', 'b', 'd']);
+    assert.equal(exactRanks.rows.every((row) => /^[0-9]{18}000000$/.test(row.rank)), true);
+
+    const afterExactMove = required(await first.grid.load(ownerSession.principal, orders.id));
+
+    const concurrentVersion = afterExactMove.rowOrderVersion!;
+    const rowD = afterExactMove.rows.find((row) => row[idColumn.id] === 'd')!;
     const concurrentMoves = await Promise.allSettled([
       first.savedViews.moveRow(owner, {
         fileId: orders.id, rowId: rowD.id, afterRowId: rowA.id,

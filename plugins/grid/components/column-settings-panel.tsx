@@ -114,12 +114,22 @@ export function ColumnSettingsPanel({
       setTargetDescription(undefined);
       return;
     }
+    let cancelled = false;
     void loadFileDescription(form.targetFileId).then((result) => {
+      if (cancelled) return;
       if (result.ok) {
         setTargetDescription(result.data);
-        setForm((current) => ({ ...current, targetConstraintName: '' }));
+        const savedConstraintName = matchingRelationConstraintName(selected, result.data);
+        setForm((current) => ({
+          ...current,
+          targetConstraintName: current.targetConstraintName
+            || (current.targetFileId === selected?.relation?.targetFileId
+              ? savedConstraintName
+              : '')
+        }));
       } else setError(result.message);
     });
+    return () => { cancelled = true; };
   }, [form.targetFileId]);
 
   if (!open) return null;
@@ -440,6 +450,19 @@ function initialForm(column: GridColumn | undefined, file: ExplorerFile): Column
     pickerTemplate: column?.relation?.pickerTemplate || '{{label}} — {{key}}',
     outputTemplate: column?.relation?.outputTemplate || '{{label}}',
   };
+}
+
+export function matchingRelationConstraintName(
+  column: GridColumn | undefined,
+  description: Pick<FileDescription, 'constraints'>
+) {
+  const targetColumnIds = column?.relation?.targetColumnIds;
+  if (!targetColumnIds?.length) return '';
+  return description.constraints.find((constraint) => (
+    (constraint.kind === 'p' || constraint.kind === 'u')
+    && constraint.columnIds.length === targetColumnIds.length
+    && constraint.columnIds.every((columnId, index) => columnId === targetColumnIds[index])
+  ))?.name || '';
 }
 
 function normalizeColumnName(value: string) {

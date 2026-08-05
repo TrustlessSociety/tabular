@@ -56,6 +56,9 @@ test('saved-view list is one bounded dialog with personal/shared discovery and n
   assert.match(html, />My ready orders</);
   assert.match(html, />Team queue</);
   assert.match(html, /target="_blank" rel="noreferrer"/);
+  assert.match(html, /aria-label="Close saved views"[\s\S]*data-icon="close"/);
+  assert.match(html, /aria-label="Actions for My ready orders"[\s\S]*data-icon="ellipsis"/);
+  assert.doesNotMatch(html, />×<|>•••</);
   assert.match(html, /folder=operations&amp;table=orders&amp;view=team-queue-/);
   assert.match(html, />Update from current sheet</);
   assert.match(html, />Duplicate as private</);

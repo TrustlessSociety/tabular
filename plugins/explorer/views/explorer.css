@@ -91,7 +91,7 @@
 .explorer-state p { max-width: 360px; margin: 0; font-size: 12px; line-height: 1.5; }
 .explorer-state button { margin-top: 5px; }
 .explorer-state--error { color: var(--danger); }
-.loading-mark { width: 22px; height: 22px; border: 2px solid var(--rule); border-top-color: var(--focus); border-radius: 50%; animation: explorer-spin .9s linear infinite; }
+.loading-mark { width: 22px; height: 22px; color: var(--focus); animation: explorer-spin .9s linear infinite; }
 @keyframes explorer-spin { to { transform: rotate(360deg); } }
 
 .explorer-status { display: grid; grid-template-columns: 1fr 2fr auto; align-items: center; gap: 10px; border-top: 1px solid var(--rule); padding: 0 10px; color: var(--muted); font-size: 10px; }

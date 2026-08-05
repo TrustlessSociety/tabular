@@ -131,6 +131,7 @@ export type LogicalGridSelection =
   | { kind: 'cell'; anchor: GridPoint; focus: GridPoint }
   | { kind: 'range'; anchor: GridPoint; focus: GridPoint }
   | { kind: 'row'; rowId: string }
+  | { kind: 'header-row' }
   | { kind: 'header'; columnId: string }
   | { kind: 'column'; columnId: string };
 
@@ -192,6 +193,7 @@ export interface GridAdapter {
   select(selection: LogicalGridSelection): void;
   navigate(direction: GridNavigationDirection, extend?: boolean): boolean;
   editActive(initialValue?: string): boolean;
+  focusActive(): boolean;
   selection(): LogicalGridSelection | null;
   on<Event extends GridAdapterEvent>(
     event: Event,

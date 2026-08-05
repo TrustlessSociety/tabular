@@ -36,7 +36,7 @@ export type CommandId =
   | 'column.resize' | 'column.delete' | 'relation.configure';
 
 export type CommandContext = {
-  selectionKind: 'none' | 'cell' | 'range' | 'row' | 'header' | 'column';
+  selectionKind: 'none' | 'cell' | 'range' | 'row' | 'header-row' | 'header' | 'column';
   canUndo: boolean;
   canRedo: boolean;
   hasDraft: boolean;
@@ -48,7 +48,15 @@ export type CommandContext = {
   canConfigureFile: boolean;
   canSaveViews?: boolean;
   canMoveRows?: boolean;
+  canMoveRowUp?: boolean;
+  canMoveRowDown?: boolean;
+  rowMoveUpReason?: string;
+  rowMoveDownReason?: string;
   rowOrderReason?: string;
+  canDeleteColumn?: boolean;
+  columnDeleteReason?: string;
+  canSortSelection?: boolean;
+  sortReason?: string;
   relationSelection: boolean;
   currentRowLabel?: string;
   currentColumnLabel?: string;

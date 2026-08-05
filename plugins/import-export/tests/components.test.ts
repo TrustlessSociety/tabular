@@ -116,8 +116,10 @@ test('choose-source is an exact semantic one-time values-only step', () => {
   assert.match(html, /type="radio" disabled=""[^>]*name="import-source" value="google-sheets"/);
   assert.match(html, /Google credentials are unavailable in this environment/);
   assert.match(html, /type="file" accept="\.csv,text\/csv" name="import-source-file"/);
+  assert.match(html, /class="import-source-icon"[\s\S]*?data-icon="file-spreadsheet"/);
+  assert.match(html, /class="import-wizard-notice-icon"[\s\S]*?data-icon="warning"/);
   assert.match(html, />Q3-orders\.csv</);
-  assert.match(html, />248 rows · 6 columns · 38 KB</);
+  assert.match(html, />CSV · 248 rows · 6 columns · 38 KB</);
   assert.match(html, /Values only\./);
   assert.match(html, /Tabular will not keep the source synchronized/);
   assert.match(html, />Cancel<\/button>/);
@@ -135,6 +137,7 @@ test('preview exposes all mappings, exact sample tokens, warnings, and recoverab
   assert.match(html, />Northstar Market<\/td>/);
   assert.match(html, />1,280\.00<\/td>/);
   assert.match(html, /aria-label="Import warnings"/);
+  assert.match(html, /data-icon="warning"/);
   assert.match(html, /3 formula cells use cached values/);
   assert.match(html, /2 date tokens need confirmation/);
   assert.match(html, />Back<\/button>/);
@@ -200,6 +203,7 @@ test('import review preserves identity order and the actual schema-qualified tar
   assert.match(html, />6 mapped fields</);
   assert.match(html, />5 attributable items</);
   assert.match(html, />operations\.q3_orders<\/strong>/);
+  assert.match(html, /class="import-database-icon"[\s\S]*?data-icon="database"/);
   assert.doesNotMatch(html, /public\.q3_orders|Department/);
   assert.match(html, />Import values<\/button>/);
 });
@@ -254,6 +258,7 @@ test('error, progress, success, and cancellation stay explicit and recoverable',
     }
   });
   assert.match(success, />Open imported table<\/button>/);
+  assert.match(success, /class="import-result-icon"[\s\S]*?data-icon="success"/);
   assert.match(success, />Back to files<\/button>/);
 
   const canceled = renderWizard({
@@ -265,6 +270,7 @@ test('error, progress, success, and cancellation stay explicit and recoverable',
     }
   });
   assert.match(canceled, /No table was created/);
+  assert.match(canceled, /class="import-result-icon"[\s\S]*?data-icon="canceled"/);
   assert.match(canceled, />Start a new import<\/button>/);
   assert.match(canceled, />Back to files<\/button>/);
 });

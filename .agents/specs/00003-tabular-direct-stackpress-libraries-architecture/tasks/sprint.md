@@ -5,8 +5,8 @@
 - Spec: `00003-tabular-direct-stackpress-libraries-architecture`
 - Spec authority: Frozen 2026-08-01
 - Implementation plan: `accepted` 2026-08-01
-- Implementation: Tasks 00001-00014 agent-verified; final human review ready
-  and pending user acceptance
+- Implementation: Tasks 00001-00014 and corrective side quests 00014A-00014J
+  agent-verified; final human acceptance remains pending
 
 Deliver Tabular's first production slice as a maintainable PostgreSQL-native spreadsheet
 application using focused Stackpress libraries. This is an ordered backlog, not a calendar estimate.
@@ -193,6 +193,54 @@ domain outcomes without sharing transport policy or unaccepted provider doubles.
   path as the human reviewer, then runs complete desktop/narrow first-slice
   journeys including denial, validation, conflict, recovery, views, import,
   activity, and MCP-backed outcomes without injected sessions or fixture routes.
+
+### 00014F - Replace Production Iconography
+
+- Output: one shared Lucide-informed SVG vocabulary; exact Borders and alignment
+  diagrams; distinct source, state, result, Saved Views, and Activity marks;
+  dynamic color and border samples retained outside the fixed icon registry.
+- Verification: focused render tests, complete fast suite, clean production
+  build, static validators, and signed-in desktop/narrow Browser review.
+- Acceptance steps: none at task level; iconography remains part of the pending
+  final human review.
+
+### 00014G - Tighten Formatting Popover Density
+
+- Output: bold text-only Border section labels, the border-color picker below
+  its label, and intrinsic three-column alignment/wrapping popovers.
+- Verification: focused component tests, complete verifier, Agent Workspace
+  validator, and signed-in desktop/narrow Browser review.
+- Acceptance steps: none at task level; the correction remains part of the
+  pending final human review.
+
+### 00014H - Expand Color Palettes And Add Border Accordion
+
+- Output: one exact ordered palette shared by text, fill/background, and
+  border color, plus a single-open Border accordion with Border visible open
+  initially.
+- Verification: focused component tests, complete verifier, Agent Workspace
+  validator, and signed-in desktop/narrow Browser review.
+- Acceptance steps: none at task level; the correction remains part of the
+  pending final human review.
+
+### 00014I - Remove Conditional Formatting Row
+
+- Output: background/fill color surfaces end at Custom with no deferred
+  Conditional formatting row.
+- Verification: focused component tests, complete verifier, Agent Workspace
+  validator, and signed-in desktop/narrow Browser review.
+- Acceptance steps: none at task level; the correction remains part of the
+  pending final human review.
+
+### 00014J - Repair Border Styles And Retain Session Custom Colors
+
+- Output: visibly distinct dashed, dotted, and double rendered cell borders,
+  plus a shared, deduplicated page-session custom-color row after the circular
+  plus control in every color popover.
+- Verification: focused component/adapter tests, complete verifier, Agent
+  Workspace validator, and signed-in desktop/narrow Browser review.
+- Acceptance steps: none at task level; the correction remains part of the
+  pending final human review.
 
 ## Rubric Decisions And Next Gate
 
