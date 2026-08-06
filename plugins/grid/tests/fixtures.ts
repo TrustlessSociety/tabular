@@ -1,5 +1,7 @@
+//client
 import type { GridColumn, GridRow } from '../helpers/contracts.js';
 
+//The review columns value exported for module callers
 export const REVIEW_COLUMNS: GridColumn[] = [
   {
     id: 'order_id', coordinate: 'A', label: 'Order ID', width: 128,
@@ -50,7 +52,9 @@ export const REVIEW_COLUMNS: GridColumn[] = [
   { id: 'notes', coordinate: 'L', label: 'Notes', width: 220 }
 ];
 
-/** Builds deterministic rows for isolated workbench component tests. */
+/**
+ * Builds deterministic rows for isolated workbench component tests.
+ */
 export function createReviewRows(count = 1_000): GridRow[] {
   return Array.from({ length: count }, (_, index) => {
     const sequence = index + 1;

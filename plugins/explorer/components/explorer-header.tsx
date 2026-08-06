@@ -1,5 +1,9 @@
+//client
 import { Icon } from '../../ui/components/icon.js';
 
+/**
+ * Render the explorer header component.
+ */
 export function ExplorerHeader({
   connectionDisplayName,
   identityDisplayName,
@@ -7,11 +11,11 @@ export function ExplorerHeader({
   onQueryChange,
   collection = 'files'
 }: {
-  connectionDisplayName: string;
-  identityDisplayName: string;
-  query: string;
-  onQueryChange: (value: string) => void;
-  collection?: 'files' | 'views';
+  connectionDisplayName: string,
+  identityDisplayName: string,
+  query: string,
+  onQueryChange: (value: string) => void,
+  collection?: 'files' | 'views',
 }) {
   return (
     <header className="explorer-topbar">
@@ -44,7 +48,9 @@ export function ExplorerHeader({
   );
 }
 
-/** Creates a compact account mark from the verified server-side display name. */
+/**
+ * Creates a compact account mark from the verified server-side display name.
+ */
 function initials(displayName: string) {
   const words = displayName.trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]?.toLocaleUpperCase()).join('') || '?';

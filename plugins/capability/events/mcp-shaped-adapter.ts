@@ -1,9 +1,10 @@
+//client
 import type {
   CapabilityAction,
   McpAuthorizedExecutionContext as McpAuthorityType
 } from '../helpers/contracts.js';
-import { McpAuthorizedExecutionContext } from '../helpers/contracts.js';
 import type { CapabilityPluginService } from '../helpers/service.js';
+import { McpAuthorizedExecutionContext } from '../helpers/contracts.js';
 
 const toolActions = {
   tabular_record_read: 'record.read',
@@ -23,19 +24,29 @@ const toolActions = {
 
 type ToolName = keyof typeof toolActions;
 
+//The mcp shaped response contract exported for module callers
 export type McpShapedResponse =
-  | { isError: false; structuredContent: { result: unknown } }
+  | { isError: false, structuredContent: { result: unknown, }, }
   | {
-    isError: true;
+    isError: true,
     structuredContent: {
-      error: { category: string; description: string; canRetry: boolean };
-    };
+      error: { category: string, description: string, canRetry: boolean, },
+    },
   };
 
+/**
+ * Adapt mcp shaped capability behavior to its external boundary.
+ */
 export class McpShapedCapabilityAdapter {
-  constructor(private readonly capability: CapabilityPluginService) {}
+  /**
+   * Create a McpShapedCapabilityAdapter instance.
+   */
+  public constructor(private readonly capability: CapabilityPluginService) {}
 
-  async invoke(
+  /**
+   * Handle the invoke operation.
+   */
+  public async invoke(
     authority: McpAuthorityType,
     request: unknown
   ): Promise<McpShapedResponse> {
@@ -69,6 +80,9 @@ export class McpShapedCapabilityAdapter {
   }
 }
 
+/**
+ * Report the invalid MCP action condition.
+ */
 function invalidMcpAction(category: string, description: string): McpShapedResponse {
   return {
     isError: true,
@@ -78,9 +92,12 @@ function invalidMcpAction(category: string, description: string): McpShapedRespo
   };
 }
 
+/**
+ * Return the tool envelope result.
+ */
 function toolEnvelope(input: unknown): {
-  tool: ToolName;
-  arguments: Record<string, unknown>;
+  tool: ToolName,
+  arguments: Record<string, unknown>,
 } {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('The MCP-shaped request is invalid');

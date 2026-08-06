@@ -1,11 +1,16 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
 import { UI_SERVICE, createUiPluginService } from './helpers/service.js';
 
-export default function uiPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the ui plugin with the application server.
+ */
+export default function uiPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(UI_SERVICE)) {
     throw new Error(`Service already registered: ${UI_SERVICE}`);
   }

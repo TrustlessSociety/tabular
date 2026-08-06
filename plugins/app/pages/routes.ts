@@ -1,7 +1,11 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import { servePublicArtifact } from '../helpers/assets.js';
 
+//The app routes value exported for module callers
 export const APP_ROUTES = [
   '/healthz',
   '/readyz',
@@ -11,9 +15,13 @@ export const APP_ROUTES = [
   '/**'
 ] as const;
 
-/** Registers only application-shell infrastructure and the final fallback. */
+/**
+ * Registers only application-shell infrastructure and the final fallback.
+ */
 export function registerAppRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   runtime: ApplicationRuntimeService
 ) {
   server.get('/healthz', ({ res }) => {

@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type {
   GridCellPresentation,
   GridColumn,
@@ -33,7 +36,9 @@ const COLUMNS: GridColumn[] = [
   { id: 'gamma', coordinate: 'C', label: 'Gamma' }
 ];
 
-/** Creates a cell or range selection from stable row and column identities. */
+/**
+ * Creates a cell or range selection from stable row and column identities.
+ */
 function selection(
   kind: 'cell' | 'range',
   rowA: string,

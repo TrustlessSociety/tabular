@@ -1,15 +1,16 @@
-import assert from 'node:assert/strict';
+//node
 import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import {
-  ActivityCenter,
-  activityGroup,
-  summarizeActivity,
-  type ActivityItem
-} from '../components/activity-center.js';
+
+//client
+import type { ActivityItem } from '../components/activity-center.js';
 import type { ActivityPageProps } from '../pages/contracts.js';
+import { ActivityCenter, activityGroup, summarizeActivity } from '../components/activity-center.js';
 import { presentOperationActivity } from '../pages/presenter.js';
 import ActivityPage from '../views/activity-page.js';
 
@@ -284,11 +285,18 @@ test('server activity presentation keeps only authorized redacted fields and res
 });
 
 test('activity stylesheet stacks at phone width without document-level horizontal scrolling', () => {
+  //read the shipped stylesheet so the assertion covers the real responsive
+  // artifact without depending on a browser layout engine
   const css = readFileSync(new URL('../views/activity.css', import.meta.url), 'utf8');
+
+  //allow ordinary style formatting while requiring the exact mobile ownership
+  // and overflow behaviors that prevent document-level horizontal scrolling
   assert.match(css, /@media \(max-width: 600px\)/);
   assert.match(css, /\.activity-shell[\s\S]*overflow: hidden/);
   assert.match(css, /\.activity-main[\s\S]*overflow: auto/);
   assert.match(css, /\.activity-table tr[\s\S]*display: grid/);
-  assert.match(css, /\.activity-detail \{ width: 100vw/);
+  assert.match(css, /\.activity-detail\s*\{[^}]*width:\s*100vw/);
+
+  //the reviewed grayscale activity surface does not introduce gradients
   assert.doesNotMatch(css, /linear-gradient|radial-gradient/);
 });

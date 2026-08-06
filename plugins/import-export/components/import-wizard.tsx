@@ -1,128 +1,143 @@
+//modules
 import type { ChangeEvent } from 'react';
 import { useId } from 'react';
+
+//client
 import { Icon } from '../../ui/components/icon.js';
 
+//The import source kind contract exported for module callers
 export type ImportSourceKind = 'csv' | 'xlsx' | 'google-sheets';
 
+//The import wizard step contract exported for module callers
 export type ImportWizardStep = 'choose-source' | 'preview-values' | 'import';
 
+//The import source summary contract exported for module callers
 export type ImportSourceSummary = {
-  kind: ImportSourceKind;
-  name: string;
-  rowCount: number;
-  columnCount: number;
-  sizeLabel?: string;
-  metadata?: string;
+  kind: ImportSourceKind,
+  name: string,
+  rowCount: number,
+  columnCount: number,
+  sizeLabel?: string,
+  metadata?: string,
 };
 
+//The import mapping contract exported for module callers
 export type ImportMapping = {
-  id: string;
-  sourceColumn: string;
-  field: string;
-  fieldOptions: Array<{ value: string; label: string }>;
-  storage: string;
-  error?: string;
+  id: string,
+  sourceColumn: string,
+  field: string,
+  fieldOptions: Array<{ value: string, label: string, }>,
+  storage: string,
+  error?: string,
 };
 
+//The import preview contract exported for module callers
 export type ImportPreview = {
-  columns: string[];
-  rows: string[][];
+  columns: string[],
+  rows: string[][],
 };
 
+//The import warning contract exported for module callers
 export type ImportWarning = {
-  id: string;
-  title: string;
-  detail: string;
-  count: number;
+  id: string,
+  title: string,
+  detail: string,
+  count: number,
 };
 
+//The import identity contract exported for module callers
 export type ImportIdentity = {
-  fileName: string;
-  tableName: string;
-  folderId: string;
-  errors?: Partial<Record<'fileName' | 'tableName' | 'folderId', string>>;
+  fileName: string,
+  tableName: string,
+  folderId: string,
+  errors?: Partial<Record<'fileName' | 'tableName' | 'folderId', string>>,
 };
 
+//The import folder option contract exported for module callers
 export type ImportFolderOption = {
-  id: string;
-  label: string;
+  id: string,
+  label: string,
 };
 
+//The import summary contract exported for module callers
 export type ImportSummary = {
-  records: string;
-  columns: string;
-  warnings: string;
+  records: string,
+  columns: string,
+  warnings: string,
 };
 
+//The google source picker contract exported for module callers
 export type GoogleSourcePicker = {
-  connected: boolean;
-  spreadsheets: Array<{ id: string; name: string }>;
-  selectedSpreadsheetId?: string;
-  worksheets: string[];
-  selectedWorksheet?: string;
+  connected: boolean,
+  spreadsheets: Array<{ id: string, name: string, }>,
+  selectedSpreadsheetId?: string,
+  worksheets: string[],
+  selectedWorksheet?: string,
 };
 
+//The import wizard status contract exported for module callers
 export type ImportWizardStatus =
-  | { kind: 'ready' }
-  | { kind: 'working'; message: string }
-  | { kind: 'error'; title: string; message: string }
+  | { kind: 'ready', }
+  | { kind: 'working', message: string, }
+  | { kind: 'error', title: string, message: string, }
   | {
-    kind: 'progress';
-    message: string;
-    completedRows: number;
-    totalRows: number;
-    cancelable: boolean;
+    kind: 'progress',
+    message: string,
+    completedRows: number,
+    totalRows: number,
+    cancelable: boolean,
   }
-  | { kind: 'success'; title: string; message: string }
-  | { kind: 'canceled'; title: string; message: string };
+  | { kind: 'success', title: string, message: string, }
+  | { kind: 'canceled', title: string, message: string, };
 
+//The import wizard props contract exported for module callers
 export type ImportWizardProps = {
-  step: ImportWizardStep;
-  folderLabel: string;
-  selectedSource?: ImportSourceKind;
-  source?: ImportSourceSummary;
-  sheetOptions?: string[];
-  selectedSheet?: string;
-  googlePicker?: GoogleSourcePicker;
+  step: ImportWizardStep,
+  folderLabel: string,
+  selectedSource?: ImportSourceKind,
+  source?: ImportSourceSummary,
+  sheetOptions?: string[],
+  selectedSheet?: string,
+  googlePicker?: GoogleSourcePicker,
   sourceAvailability?: Partial<Record<ImportSourceKind, {
-    disabled: boolean;
-    reason?: string;
-  }>>;
-  mappings?: ImportMapping[];
-  preview?: ImportPreview;
-  warnings?: ImportWarning[];
-  identity?: ImportIdentity;
-  folderOptions?: ImportFolderOption[];
-  summary?: ImportSummary;
-  targetQualifiedName?: string;
-  status?: ImportWizardStatus;
-  canPreview?: boolean;
-  canContinue?: boolean;
-  canImport?: boolean;
-  onSelectSource: (source: ImportSourceKind) => void;
-  onChooseFile: (source: Extract<ImportSourceKind, 'csv' | 'xlsx'>, files: FileList | null) => void;
-  onConnectGoogle: () => void;
-  onGoogleSpreadsheetChange?: (spreadsheetId: string) => void;
-  onGoogleWorksheetChange?: (sheetName: string) => void;
-  onStageGoogle?: () => void;
-  onSheetChange?: (sheetName: string) => void;
-  onMappingChange: (mappingId: string, field: string) => void;
-  onIdentityChange: (field: 'fileName' | 'tableName', value: string) => void;
-  onFolderChange: (folderId: string) => void;
-  onBack: () => void;
-  onCancel: () => void;
-  onNext: () => void;
-  onImport: () => void;
-  onRetry: () => void;
-  onCancelImport: () => void;
-  onOpenImportedTable: () => void;
-  onBackToFiles: () => void;
+    disabled: boolean,
+    reason?: string,
+  }>>,
+  mappings?: ImportMapping[],
+  preview?: ImportPreview,
+  warnings?: ImportWarning[],
+  identity?: ImportIdentity,
+  folderOptions?: ImportFolderOption[],
+  summary?: ImportSummary,
+  targetQualifiedName?: string,
+  status?: ImportWizardStatus,
+  canPreview?: boolean,
+  canContinue?: boolean,
+  canImport?: boolean,
+  onSelectSource: (source: ImportSourceKind) => void,
+  onChooseFile: (source: Extract<ImportSourceKind, 'csv' | 'xlsx'>, files: FileList | null) => void,
+  onConnectGoogle: () => void,
+  onGoogleSpreadsheetChange?: (spreadsheetId: string) => void,
+  onGoogleWorksheetChange?: (sheetName: string) => void,
+  onStageGoogle?: () => void,
+  onSheetChange?: (sheetName: string) => void,
+  onMappingChange: (mappingId: string, field: string) => void,
+  onIdentityChange: (field: 'fileName' | 'tableName', value: string) => void,
+  onFolderChange: (folderId: string) => void,
+  onBack: () => void,
+  onCancel: () => void,
+  onNext: () => void,
+  onImport: () => void,
+  onRetry: () => void,
+  onCancelImport: () => void,
+  onOpenImportedTable: () => void,
+  onBackToFiles: () => void,
 };
 
 const SOURCE_OPTIONS: Array<{
-  kind: ImportSourceKind;
-  label: string;
-  description: string;
+  kind: ImportSourceKind,
+  label: string,
+  description: string,
 }> = [
   {
     kind: 'csv',
@@ -141,7 +156,7 @@ const SOURCE_OPTIONS: Array<{
   }
 ];
 
-const STEP_OPTIONS: Array<{ id: ImportWizardStep; label: string }> = [
+const STEP_OPTIONS: Array<{ id: ImportWizardStep, label: string, }> = [
   { id: 'choose-source', label: 'Choose source' },
   { id: 'preview-values', label: 'Preview values' },
   { id: 'import', label: 'Import' }
@@ -149,7 +164,9 @@ const STEP_OPTIONS: Array<{ id: ImportWizardStep; label: string }> = [
 
 const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
 
-/** Renders the controlled, values-only import flow without owning transport state. */
+/**
+ * Renders the controlled, values-only import flow without owning transport state.
+ */
 export function ImportWizard(props: ImportWizardProps) {
   const titleId = useId();
   const status = props.status || { kind: 'ready' };
@@ -208,10 +225,12 @@ export function ImportWizard(props: ImportWizardProps) {
   );
 }
 
-/** Renders source selection, file handoff, and the values-only contract. */
+/**
+ * Renders source selection, file handoff, and the values-only contract.
+ */
 function ChooseSourceStep(props: {
-  props: ImportWizardProps;
-  status: ImportWizardStatus;
+  props: ImportWizardProps,
+  status: ImportWizardStatus,
 }) {
   const { props: wizard, status } = props;
   const isWorking = status.kind === 'working';
@@ -306,13 +325,15 @@ function ChooseSourceStep(props: {
   );
 }
 
-/** Renders mapping controls, exact-value samples, and attributable warnings. */
+/**
+ * Renders mapping controls, exact-value samples, and attributable warnings.
+ */
 function PreviewValuesStep(props: {
-  props: ImportWizardProps;
-  status: ImportWizardStatus;
-  mappings: ImportMapping[];
-  preview: ImportPreview;
-  warnings: ImportWarning[];
+  props: ImportWizardProps,
+  status: ImportWizardStatus,
+  mappings: ImportMapping[],
+  preview: ImportPreview,
+  warnings: ImportWarning[],
 }) {
   const { props: wizard, status, mappings, preview, warnings } = props;
   const isWorking = status.kind === 'working';
@@ -457,10 +478,12 @@ function PreviewValuesStep(props: {
   );
 }
 
-/** Renders identity review, transactional progress, and terminal results. */
+/**
+ * Renders identity review, transactional progress, and terminal results.
+ */
 function ImportStep(props: {
-  props: ImportWizardProps;
-  status: ImportWizardStatus;
+  props: ImportWizardProps,
+  status: ImportWizardStatus,
 }) {
   const { props: wizard, status } = props;
 
@@ -590,8 +613,10 @@ function ImportStep(props: {
   );
 }
 
-/** Renders the selected source and its parsed dimensions. */
-function SourceSummary(props: { source: ImportSourceSummary; ready?: boolean }) {
+/**
+ * Renders the selected source and its parsed dimensions.
+ */
+function SourceSummary(props: { source: ImportSourceSummary, ready?: boolean, }) {
   const { source } = props;
   const sourceLabel = SOURCE_OPTIONS.find((option) => option.kind === source.kind)?.label || 'File';
   const dimensions = `${NUMBER_FORMAT.format(source.rowCount)} rows · ${NUMBER_FORMAT.format(source.columnCount)} columns`;
@@ -611,17 +636,19 @@ function SourceSummary(props: { source: ImportSourceSummary; ready?: boolean }) 
   );
 }
 
-/** Exposes a native file picker or the one-time Google connection action. */
+/**
+ * Exposes a native file picker or the one-time Google connection action.
+ */
 function SourceAction(props: {
-  selectedSource: ImportSourceKind;
-  disabled: boolean;
-  hasSource: boolean;
-  onChooseFile: ImportWizardProps['onChooseFile'];
-  onConnectGoogle: () => void;
-  googlePicker?: GoogleSourcePicker;
-  onGoogleSpreadsheetChange?: ImportWizardProps['onGoogleSpreadsheetChange'];
-  onGoogleWorksheetChange?: ImportWizardProps['onGoogleWorksheetChange'];
-  onStageGoogle?: ImportWizardProps['onStageGoogle'];
+  selectedSource: ImportSourceKind,
+  disabled: boolean,
+  hasSource: boolean,
+  onChooseFile: ImportWizardProps['onChooseFile'],
+  onConnectGoogle: () => void,
+  googlePicker?: GoogleSourcePicker,
+  onGoogleSpreadsheetChange?: ImportWizardProps['onGoogleSpreadsheetChange'],
+  onGoogleWorksheetChange?: ImportWizardProps['onGoogleWorksheetChange'],
+  onStageGoogle?: ImportWizardProps['onStageGoogle'],
 }) {
   if (props.selectedSource === 'google-sheets') {
     const picker = props.googlePicker;
@@ -713,15 +740,17 @@ function SourceAction(props: {
   );
 }
 
-/** Associates a controlled identity input with its recoverable validation error. */
+/**
+ * Associates a controlled identity input with its recoverable validation error.
+ */
 function IdentityField(props: {
-  label: string;
-  name: string;
-  value: string;
-  error?: string;
-  disabled: boolean;
-  technical?: boolean;
-  onChange: (value: string) => void;
+  label: string,
+  name: string,
+  value: string,
+  error?: string,
+  disabled: boolean,
+  technical?: boolean,
+  onChange: (value: string) => void,
 }) {
   const errorId = `${props.name}-error`;
   return (
@@ -744,8 +773,10 @@ function IdentityField(props: {
   );
 }
 
-/** Announces asynchronous and recoverable errors without replacing retained input. */
-function StatusNotice(props: { status: ImportWizardStatus }) {
+/**
+ * Announces asynchronous and recoverable errors without replacing retained input.
+ */
+function StatusNotice(props: { status: ImportWizardStatus, }) {
   if (props.status.kind === 'error') {
     return (
       <div className="import-status import-status-error" role="alert">
@@ -767,11 +798,13 @@ function StatusNotice(props: { status: ImportWizardStatus }) {
   return null;
 }
 
-/** Announces transactional progress and preserves the safe cancellation boundary. */
+/**
+ * Announces transactional progress and preserves the safe cancellation boundary.
+ */
 function ProgressState(props: {
-  source?: ImportSourceSummary;
-  status: Extract<ImportWizardStatus, { kind: 'progress' }>;
-  onCancel: () => void;
+  source?: ImportSourceSummary,
+  status: Extract<ImportWizardStatus, { kind: 'progress', }>,
+  onCancel: () => void,
 }) {
   const maximum = Math.max(1, props.status.totalRows);
   const current = Math.min(maximum, Math.max(0, props.status.completedRows));
@@ -802,12 +835,14 @@ function ProgressState(props: {
   );
 }
 
-/** Renders stable success or canceled outcomes and their explicit next actions. */
+/**
+ * Renders stable success or canceled outcomes and their explicit next actions.
+ */
 function ResultState(props: {
-  status: Extract<ImportWizardStatus, { kind: 'success' | 'canceled' }>;
-  onRetry: () => void;
-  onOpenImportedTable: () => void;
-  onBackToFiles: () => void;
+  status: Extract<ImportWizardStatus, { kind: 'success' | 'canceled', }>,
+  onRetry: () => void,
+  onOpenImportedTable: () => void,
+  onBackToFiles: () => void,
 }) {
   const isSuccess = props.status.kind === 'success';
   return (

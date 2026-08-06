@@ -1,15 +1,21 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HttpServer } from '@stackpress/ingest/types';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import type { IdentityPluginService } from '../../identity/helpers/service.js';
+
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
+import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationActivity, OperationActivityList } from '../helpers/contracts.js';
-import {
-  operationAction,
-  registerOperationsRoutes,
-  type OperationsRouteService
-} from '../pages/routes.js';
+import type { OperationsRouteService } from '../pages/routes.js';
+import { operationAction, registerOperationsRoutes } from '../pages/routes.js';
+
+//The structural route test double supplies dynamic config and service maps,
+// so it cannot name the complete Stackpress server generics
+type DynamicServerDouble = ApplicationServer;
 
 test('operation route accepts only opaque job-ID mutations', () => {
   assert.deepEqual(operationAction({
@@ -62,7 +68,7 @@ test('activity page route hydrates only the service-authorized snapshot and capa
   assert.equal(harness.rendered?.connectionDisplayName, 'Primary');
   assert.deepEqual(harness.rendered?.identity, { displayName: 'Test Operator' });
   assert.equal(harness.rendered?.csrfToken, 'c'.repeat(64));
-  const snapshot = harness.rendered?.snapshot as { items: Array<{ title: string }>; canManageRetention: boolean };
+  const snapshot = harness.rendered?.snapshot as { items: Array<{ title: string, }>, canManageRetention: boolean, };
   assert.equal(snapshot.items[0]?.title, 'Import values');
   assert.equal(snapshot.canManageRetention, false);
   assert.equal(JSON.stringify(harness.rendered).includes(harness.principal.identityId), false);
@@ -80,7 +86,7 @@ test('activity event routes pass only the authenticated principal and opaque job
   assert.deepEqual(harness.calls.at(-1), {
     method: 'get', identityId: harness.principal.identityId, jobId: id
   });
-  assert.equal((harness.response.jsonBody as { status: string }).status, 'ok');
+  assert.equal((harness.response.jsonBody as { status: string, }).status, 'ok');
 
   await harness.post['/events/operations']!({
     req: request('/events/operations', {
@@ -94,18 +100,27 @@ test('activity event routes pass only the authenticated principal and opaque job
   });
 });
 
+/**
+ * Return the route harness result.
+ */
 function routeHarness() {
   response.headers = new Headers();
   response.code = 0;
   response.body = '';
   response.jsonBody = undefined;
-  type Handler = (context: { req: ReturnType<typeof request>; res: typeof response }) => Promise<void>;
+  type Handler = (context: { req: ReturnType<typeof request>, res: typeof response, }) => Promise<void>;
   const get: Record<string, Handler> = {};
   const post: Record<string, Handler> = {};
   const server = {
+    /**
+     * Capture one registered GET route handler by pathname.
+     */
     get(path: string, handler: Handler) { get[path] = handler; },
+    /**
+     * Handle the post operation.
+     */
     post(path: string, handler: Handler) { post[path] = handler; }
-  } as unknown as HttpServer<any, any>;
+  } as unknown as DynamicServerDouble;
   const principal: BrowserPrincipal = {
     transport: 'browser',
     sessionId: `sess_${'s'.repeat(32)}`,
@@ -137,20 +152,41 @@ function routeHarness() {
   const calls: Array<Record<string, string>> = [];
   const item = operationActivity();
   const operations = {
+    /**
+     * Return the deterministic activity page collection.
+     */
     async list(): Promise<OperationActivityList> {
       return { items: [item], cursor: 4, canManageRetention: false, retentionDays: 90 };
     },
+    /**
+     * Record the authorized detail lookup and return its fixture item.
+     */
     async get(caller: BrowserPrincipal, jobId: string) {
       calls.push({ method: 'get', identityId: caller.identityId, jobId });
       return item;
     },
+    /**
+     * Mark read.
+     */
     async markRead() { return item; },
+    /**
+     * Cancel the current value.
+     */
     async cancel(caller: BrowserPrincipal, jobId: string) {
       calls.push({ method: 'cancel', identityId: caller.identityId, jobId });
       return { ...item, state: 'cancelled' as const };
     },
+    /**
+     * Handle the retry operation.
+     */
     async retry() { return item; },
+    /**
+     * Handle the acknowledge operation.
+     */
     async acknowledge() { return item; },
+    /**
+     * Handle the retention operation.
+     */
     async retention() { return {}; }
   } as unknown as OperationsRouteService;
   registerOperationsRoutes(server, runtime, identity, operations);
@@ -160,10 +196,16 @@ function routeHarness() {
     principal,
     calls,
     response,
+    /**
+     * Return the rendered value.
+     */
     get rendered() { return rendered; }
   };
 }
 
+/**
+ * Return the operation activity result.
+ */
 function operationActivity(): OperationActivity {
   return {
     id: `job_${'r'.repeat(32)}`,
@@ -188,17 +230,26 @@ const response = {
   code: 0,
   body: '',
   jsonBody: undefined as unknown,
+  /**
+   * Handle the JSON operation.
+   */
   json(value: unknown, code = 200) {
     this.jsonBody = value;
     this.code = code;
   },
+  /**
+   * Handle the html operation.
+   */
   html(value: string, code = 200) {
     this.body = value;
     this.code = code;
   }
 };
 
-function request(path: string, input?: { method?: 'POST'; action?: unknown }) {
+/**
+ * Return the request with the bounded body loader attached.
+ */
+function request(path: string, input?: { method?: 'POST', action?: unknown, }) {
   return {
     url: new URL(path, 'http://tabular.test'),
     headers: new Headers(input?.method ? {

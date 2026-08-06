@@ -1,13 +1,22 @@
+//modules
 import { PGlite } from '@electric-sql/pglite';
 import PGLiteConnection from '@stackpress/inquire-pglite/Connection';
-import { DatabaseExecutor } from '../../helpers/executor.js';
-import type { MigrationTransaction } from '../../helpers/migrator.js';
 
+//client
+import type { MigrationTransaction } from '../../helpers/migrator.js';
+import { DatabaseExecutor } from '../../helpers/executor.js';
+
+/**
+ * Create the p glite test database.
+ */
 export async function createPGliteTestDatabase() {
   const resource = new PGlite();
   await resource.waitReady;
   const database = new DatabaseExecutor(new PGLiteConnection(resource));
   let closed = false;
+  /**
+   * Return the transaction result.
+   */
   const transaction: MigrationTransaction = async (callback) => {
     await database.execute('BEGIN');
     try {
@@ -24,6 +33,9 @@ export async function createPGliteTestDatabase() {
     resource,
     database,
     transaction,
+    /**
+     * Close the current value.
+     */
     async close() {
       if (closed) return;
       closed = true;

@@ -1,23 +1,24 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import {
-  IDENTITY_SERVICE,
-  type IdentityPluginService
-} from '../identity/helpers/service.js';
-import {
-  CAPABILITY_SERVICE,
-  type CapabilityPluginService
-} from '../capability/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { CapabilityPluginService } from '../capability/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
+import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
 import {
   SAVED_VIEWS_SERVICE,
   SavedViewsPluginService
 } from './helpers/service.js';
 import { registerSavedViewRoutes } from './pages/routes.js';
 
-export default function savedViewsPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the saved views plugin with the application server.
+ */
+export default function savedViewsPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(SAVED_VIEWS_SERVICE)) {
     throw new Error(`Service already registered: ${SAVED_VIEWS_SERVICE}`);
   }

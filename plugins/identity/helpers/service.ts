@@ -1,12 +1,13 @@
+//node
 import { createHash } from 'node:crypto';
+
+//modules
 import type { Response } from '@stackpress/ingest/http';
+
+//client
 import type { TabularConfig } from '../../../config/index.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import {
-  DATABASE_SERVICE,
-  type DatabasePluginService
-} from '../../database/helpers/service.js';
+import type { DatabasePluginService } from '../../database/helpers/service.js';
 import type {
   AuthorizedCallback,
   AuthorizedFinalizeCallback,
@@ -16,6 +17,8 @@ import type {
   IdentityCapability,
   VerifiedProviderSubject
 } from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { DATABASE_SERVICE } from '../../database/helpers/service.js';
 import { assertVerifiedProviderSubject, issueBrowserMutationPrincipal } from './contracts.js';
 import { requireCapability } from './policy.js';
 import { PostgreSqlIdentityProvider } from './postgresql-login.js';
@@ -34,6 +37,7 @@ import {
   tokenHash
 } from './security.js';
 
+//The identity service value exported for module callers
 export const IDENTITY_SERVICE = 'tabular.identity';
 
 const LOGIN_ATTEMPT_LIMIT = 5;
@@ -42,15 +46,25 @@ const LOGIN_BLOCK_SECONDS = 900;
 
 type SessionResponse = Pick<Response, 'session' | 'headers'>;
 
+/**
+ * Provide identity plugin operations through one service boundary.
+ */
 export class IdentityPluginService {
-  readonly name = IDENTITY_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = IDENTITY_SERVICE;
 
-  constructor(
+  /**
+   * Create a IdentityPluginService instance.
+   */
+  public constructor(
     private readonly database: DatabasePluginService,
     private readonly config: TabularConfig
   ) {}
 
-  async provisionIdentityRole(
+  /**
+   * Handle the provision identity role operation.
+   */
+  public async provisionIdentityRole(
     subject: VerifiedProviderSubject,
     roleName: string
   ) {
@@ -77,7 +91,10 @@ export class IdentityPluginService {
     });
   }
 
-  async remapIdentityRole(identityId: string, roleName: string) {
+  /**
+   * Handle the remap identity role operation.
+   */
+  public async remapIdentityRole(identityId: string, roleName: string) {
     return this.database.transaction('web', {}, async (database) => {
       const repository = new IdentityRepository(database);
       await repository.lockIdentity(identityId, 'update');
@@ -91,7 +108,10 @@ export class IdentityPluginService {
     });
   }
 
-  async setIdentityStatus(identityId: string, status: 'active' | 'disabled' | 'revoked') {
+  /**
+   * Set the identity status.
+   */
+  public async setIdentityStatus(identityId: string, status: 'active' | 'disabled' | 'revoked') {
     return this.database.transaction('web', {}, async (database) => {
       const repository = new IdentityRepository(database);
       await repository.lockIdentity(identityId, 'update');
@@ -99,7 +119,10 @@ export class IdentityPluginService {
     });
   }
 
-  async establishBrowserSession(
+  /**
+   * Handle the establish browser session operation.
+   */
+  public async establishBrowserSession(
     subject: VerifiedProviderSubject,
     response?: SessionResponse
   ): Promise<EstablishedBrowserSession> {
@@ -147,10 +170,13 @@ export class IdentityPluginService {
     return established;
   }
 
-  async loginWithPostgreSqlCredentials(input: {
-    roleName: string;
-    password: string;
-    origin: string | string[] | undefined;
+  /**
+   * Handle the login with postgre SQL credentials operation.
+   */
+  public async loginWithPostgreSqlCredentials(input: {
+    roleName: string,
+    password: string,
+    origin: string | string[] | undefined,
   }, response?: SessionResponse): Promise<EstablishedBrowserSession> {
     requireExactOrigin(input.origin, this.config.environment.publicOrigin);
     const attemptKeyHash = createHash('sha256')
@@ -251,11 +277,17 @@ export class IdentityPluginService {
     }
   }
 
-  requireLoginOrigin(origin: string | string[] | undefined) {
+  /**
+   * Handle the require login origin operation.
+   */
+  public requireLoginOrigin(origin: string | string[] | undefined) {
     requireExactOrigin(origin, this.config.environment.publicOrigin);
   }
 
-  async authenticateBrowserSession(cookieToken: string | string[] | undefined) {
+  /**
+   * Authenticate the browser session.
+   */
+  public async authenticateBrowserSession(cookieToken: string | string[] | undefined) {
     if (typeof cookieToken !== 'string') return undefined;
     let hash: string;
     try {
@@ -281,7 +313,10 @@ export class IdentityPluginService {
     }
   }
 
-  async resumeBrowserSession(cookieToken: string | string[] | undefined) {
+  /**
+   * Handle the resume browser session operation.
+   */
+  public async resumeBrowserSession(cookieToken: string | string[] | undefined) {
     if (typeof cookieToken !== 'string') return undefined;
     let hash: string;
     try {
@@ -313,10 +348,13 @@ export class IdentityPluginService {
     }
   }
 
-  async requireBrowserMutation(input: {
-    cookieToken: string | string[] | undefined;
-    csrfToken: string | string[] | undefined;
-    origin: string | string[] | undefined;
+  /**
+   * Handle the require browser mutation operation.
+   */
+  public async requireBrowserMutation(input: {
+    cookieToken: string | string[] | undefined,
+    csrfToken: string | string[] | undefined,
+    origin: string | string[] | undefined,
   }): Promise<BrowserMutationPrincipal> {
     requireExactOrigin(input.origin, this.config.environment.publicOrigin);
     if (typeof input.cookieToken !== 'string' || typeof input.csrfToken !== 'string') {
@@ -334,10 +372,13 @@ export class IdentityPluginService {
     });
   }
 
-  async rotateBrowserSession(input: {
-    cookieToken: string | string[] | undefined;
-    csrfToken: string | string[] | undefined;
-    origin: string | string[] | undefined;
+  /**
+   * Handle the rotate browser session operation.
+   */
+  public async rotateBrowserSession(input: {
+    cookieToken: string | string[] | undefined,
+    csrfToken: string | string[] | undefined,
+    origin: string | string[] | undefined,
   }, response?: SessionResponse) {
     requireExactOrigin(input.origin, this.config.environment.publicOrigin);
     if (typeof input.cookieToken !== 'string' || typeof input.csrfToken !== 'string') {
@@ -389,10 +430,13 @@ export class IdentityPluginService {
     return rotated;
   }
 
-  async logoutBrowserSession(input: {
-    cookieToken: string | string[] | undefined;
-    csrfToken: string | string[] | undefined;
-    origin: string | string[] | undefined;
+  /**
+   * Handle the logout browser session operation.
+   */
+  public async logoutBrowserSession(input: {
+    cookieToken: string | string[] | undefined,
+    csrfToken: string | string[] | undefined,
+    origin: string | string[] | undefined,
   }) {
     requireExactOrigin(input.origin, this.config.environment.publicOrigin);
     if (typeof input.cookieToken !== 'string') return false;
@@ -423,7 +467,10 @@ export class IdentityPluginService {
     });
   }
 
-  authorizedTransaction<Result, FinalResult = Result>(
+  /**
+   * Report the authorized transaction condition.
+   */
+  public authorizedTransaction<Result, FinalResult = Result>(
     principal: BrowserPrincipal,
     capability: IdentityCapability | string,
     callback: AuthorizedCallback<Result>,
@@ -471,11 +518,17 @@ export class IdentityPluginService {
     }, (database) => callback(database, principal));
   }
 
-  sessionCookie(response: SessionResponse) {
+  /**
+   * Handle the session cookie operation.
+   */
+  public sessionCookie(response: SessionResponse) {
     return response.session;
   }
 
-  writeSessionCookie(response: SessionResponse, cookieToken: string) {
+  /**
+   * Write the session cookie.
+   */
+  public writeSessionCookie(response: SessionResponse, cookieToken: string) {
     response.session.set(
       this.config.sessions.cookieName,
       cookieToken,
@@ -484,7 +537,10 @@ export class IdentityPluginService {
     response.headers.set('Cache-Control', 'no-store, private');
   }
 
-  clearSessionCookie(response: SessionResponse) {
+  /**
+   * Clear the session cookie.
+   */
+  public clearSessionCookie(response: SessionResponse) {
     response.session.set(
       this.config.sessions.cookieName,
       '',
@@ -493,11 +549,17 @@ export class IdentityPluginService {
     response.headers.set('Cache-Control', 'no-store, private');
   }
 
-  cookieName() {
+  /**
+   * Handle the cookie name operation.
+   */
+  public cookieName() {
     return this.config.sessions.cookieName;
   }
 }
 
+/**
+ * Return the locked session by token hash result.
+ */
 async function lockedSessionByTokenHash(repository: IdentityRepository, hash: string) {
   const coordinates = await repository.sessionCoordinatesByTokenHash(hash);
   if (!coordinates) return undefined;
@@ -510,9 +572,12 @@ async function lockedSessionByTokenHash(repository: IdentityRepository, hash: st
   return repository.sessionByTokenHash(hash);
 }
 
+/**
+ * Report the matches session CSRF condition.
+ */
 async function matchesSessionCsrf(
   repository: IdentityRepository,
-  row: { session_id: string; csrf_token_hash: string },
+  row: { session_id: string, csrf_token_hash: string, },
   token: string
 ) {
   if (matchesTokenHash(token, row.csrf_token_hash)) return true;
@@ -520,14 +585,17 @@ async function matchesSessionCsrf(
   return hashes.some((hash) => matchesTokenHash(token, hash));
 }
 
+/**
+ * Return the principal from result.
+ */
 function principalFrom(row: {
-  session_id: string;
-  history_scope_id: string;
-  identity_id: string;
-  connection_id: string;
-  display_name: string | null;
-  idle_expires_at: Date | string;
-  absolute_expires_at: Date | string;
+  session_id: string,
+  history_scope_id: string,
+  identity_id: string,
+  connection_id: string,
+  display_name: string | null,
+  idle_expires_at: Date | string,
+  absolute_expires_at: Date | string,
 }): BrowserPrincipal {
   return {
     transport: 'browser',
@@ -541,6 +609,9 @@ function principalFrom(row: {
   };
 }
 
+/**
+ * Return the require identity service result.
+ */
 export function requireIdentityService(value: unknown): asserts value is IdentityPluginService {
   if (!(value instanceof IdentityPluginService)) {
     throw new Error(`${DATABASE_SERVICE} and ${IDENTITY_SERVICE} must be registered in order`);

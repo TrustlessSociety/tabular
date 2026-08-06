@@ -1,48 +1,60 @@
+//modules
 import type { ClientConfig, QueryResultRow } from 'pg';
 import pg from 'pg';
+
+//client
 import type { VerifiedProviderSubject } from './contracts.js';
 import { IdentityProviderAdapter } from './contracts.js';
 
 const { Client } = pg;
 
+//The postgre sql login credentials contract exported for module callers
 export type PostgreSqlLoginCredentials = {
-  roleName: string;
-  password: string;
+  roleName: string,
+  password: string,
 };
 
+//The verified postgre sql subject contract exported for module callers
 export type VerifiedPostgreSqlSubject = VerifiedProviderSubject & {
-  readonly databaseOid: string;
-  readonly roleOid: string;
-  readonly roleName: string;
+  readonly databaseOid: string,
+  readonly roleOid: string,
+  readonly roleName: string,
 };
 
+//The postgre sql login client contract exported for module callers
 export type PostgreSqlLoginClient = {
-  connect(): Promise<unknown>;
-  query<Row extends QueryResultRow>(query: string): Promise<{ rows: Row[] }>;
-  end(): Promise<void>;
+  connect(): Promise<unknown>,
+  query<Row extends QueryResultRow>(query: string): Promise<{ rows: Row[], }>,
+  end(): Promise<void>,
 };
 
+//The postgre sql login client factory contract exported for module callers
 export type PostgreSqlLoginClientFactory = (
   config: ClientConfig
 ) => PostgreSqlLoginClient;
 
 type PostgreSqlLoginIdentityRow = {
-  database_oid: string | number;
-  role_oid: string | number;
-  role_name: string;
-  rolsuper: boolean;
-  rolcreaterole: boolean;
-  rolcreatedb: boolean;
-  rolcanlogin: boolean;
-  rolreplication: boolean;
-  rolbypassrls: boolean;
-  direct_session: boolean;
+  database_oid: string | number,
+  role_oid: string | number,
+  role_name: string,
+  rolsuper: boolean,
+  rolcreaterole: boolean,
+  rolcreatedb: boolean,
+  rolcanlogin: boolean,
+  rolreplication: boolean,
+  rolbypassrls: boolean,
+  direct_session: boolean,
 };
 
-/** Verifies one PostgreSQL LOGIN role through an isolated ordinary connection. */
+/**
+ * Verifies one PostgreSQL LOGIN role through an isolated ordinary connection.
+ */
 export class PostgreSqlIdentityProvider extends IdentityProviderAdapter<
   PostgreSqlLoginCredentials
 > {
+  /**
+   * Create a PostgreSqlIdentityProvider instance.
+   */
   public constructor(
     private readonly connectionId: string,
     private readonly connectionString: string,
@@ -52,7 +64,9 @@ export class PostgreSqlIdentityProvider extends IdentityProviderAdapter<
     super('postgresql', `urn:tabular:postgresql:${connectionId}`);
   }
 
-  /** Authenticates the submitted role without returning or retaining its password. */
+  /**
+   * Authenticates the submitted role without returning or retaining its password.
+   */
   public async verify(
     input: PostgreSqlLoginCredentials
   ): Promise<VerifiedPostgreSqlSubject> {
@@ -107,12 +121,16 @@ export class PostgreSqlIdentityProvider extends IdentityProviderAdapter<
   }
 }
 
-/** Creates the production short-lived PostgreSQL client. */
+/**
+ * Creates the production short-lived PostgreSQL client.
+ */
 function defaultClientFactory(config: ClientConfig): PostgreSqlLoginClient {
   return new Client(config);
 }
 
-/** Rejects dangerous or indirect PostgreSQL login roles. */
+/**
+ * Rejects dangerous or indirect PostgreSQL login roles.
+ */
 function assertSafeLoginRole(role: PostgreSqlLoginIdentityRow) {
   if (
     role.rolsuper !== false
@@ -127,7 +145,9 @@ function assertSafeLoginRole(role: PostgreSqlLoginIdentityRow) {
   }
 }
 
-/** Validates a bounded PostgreSQL role name without normalizing its identity. */
+/**
+ * Validates a bounded PostgreSQL role name without normalizing its identity.
+ */
 function loginRoleName(value: string) {
   if (
     typeof value !== 'string'
@@ -141,7 +161,9 @@ function loginRoleName(value: string) {
   return value;
 }
 
-/** Accepts a password only for the lifetime of one authentication call. */
+/**
+ * Accepts a password only for the lifetime of one authentication call.
+ */
 function loginPassword(value: string) {
   if (
     typeof value !== 'string'

@@ -1,11 +1,18 @@
+//client
 import type { GridCellPresentation } from '../../grid/helpers/contracts.js';
 import type { CommandId, PresentationPatch } from '../helpers/contracts.js';
 
+/**
+ * Return the size result.
+ */
 const size = (id: CommandId) => Number(id.split('.').at(-1)) as GridCellPresentation['fontSize'];
 
+/**
+ * Return the presentation patch for command result.
+ */
 export function presentationPatchForCommand(
   id: CommandId,
-  current: GridCellPresentation | { [key: string]: unknown }
+  current: GridCellPresentation | { [key: string]: unknown, }
 ): PresentationPatch | undefined {
   if (id === 'format.bold') return { bold: current.bold === true ? false : true };
   if (id === 'format.italic') return { italic: current.italic === true ? false : true };

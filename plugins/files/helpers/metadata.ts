@@ -1,16 +1,20 @@
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import { opaqueId } from '../../identity/helpers/security.js';
 import type {
   AppliedFileDdl,
   NativeFileDdlEffect,
   StoredFileDdlRequest
 } from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import { opaqueId } from '../../identity/helpers/security.js';
 import { readRelationFingerprint } from './fingerprint.js';
 import { MANAGED_ROW_ID_PHYSICAL_NAME } from './executor.js';
 import { normalizedPhysicalName } from './validation.js';
 
+/**
+ * Return the finalize file ddl result.
+ */
 export async function finalizeFileDdl(
   database: DatabaseExecutor,
   request: StoredFileDdlRequest,
@@ -192,7 +196,7 @@ export async function finalizeFileDdl(
   if (effect.createdConstraintName) {
     await recordConstraint(database, request, object.stableId, targetColumnId, effect.createdConstraintName);
   }
-  const metadata = await database.execute<{ metadata_version: string | number }>(`
+  const metadata = await database.execute<{ metadata_version: string | number, }>(`
     SELECT metadata_version FROM tabular.file_metadata WHERE object_id = ?
   `, [object.stableId]);
   const afterFingerprint = await readRelationFingerprint(database, object.relationOid);
@@ -211,11 +215,14 @@ export async function finalizeFileDdl(
   };
 }
 
+/**
+ * Return the finalize relation metadata result.
+ */
 async function finalizeRelationMetadata(
   database: DatabaseExecutor,
   stable: Awaited<ReturnType<typeof reconcileCatalog>>,
   objectId: string,
-  action: Extract<StoredFileDdlRequest['action_payload'], { type: 'relation.create' }>
+  action: Extract<StoredFileDdlRequest['action_payload'], { type: 'relation.create', }>
 ) {
   for (const sourceId of action.columnIds) {
     const catalogColumn = [...stable.columns.values()].find((column) =>
@@ -244,13 +251,16 @@ async function finalizeRelationMetadata(
   }
 }
 
+/**
+ * Assert the expected metadata.
+ */
 async function assertExpectedMetadata(
   database: DatabaseExecutor,
   request: StoredFileDdlRequest
 ) {
   const expected = request.expected_context;
   if (expected.fileId && expected.fileMetadataVersion !== undefined) {
-    const file = await database.execute<{ metadata_version: string | number }>(`
+    const file = await database.execute<{ metadata_version: string | number, }>(`
       SELECT metadata_version FROM tabular.file_metadata
        WHERE object_id = ? FOR UPDATE
     `, [expected.fileId]);
@@ -258,7 +268,7 @@ async function assertExpectedMetadata(
     if (current !== expected.fileMetadataVersion) metadataStale();
   }
   for (const [columnId, version] of Object.entries(expected.columnMetadataVersions || {})) {
-    const column = await database.execute<{ metadata_version: string | number }>(`
+    const column = await database.execute<{ metadata_version: string | number, }>(`
       SELECT metadata_version FROM tabular.column_metadata
        WHERE object_id = ? AND column_id = ? FOR UPDATE
     `, [expected.fileId!, columnId]);
@@ -267,6 +277,9 @@ async function assertExpectedMetadata(
   }
 }
 
+/**
+ * Return the metadata stale result.
+ */
 function metadataStale(): never {
   throw new ApplicationError(
     'file_ddl_stale',
@@ -275,6 +288,9 @@ function metadataStale(): never {
   );
 }
 
+/**
+ * Ensure the file metadata.
+ */
 async function ensureFileMetadata(database: DatabaseExecutor, objectId: string, fallback: string) {
   await database.execute(`
     INSERT INTO tabular.file_metadata (object_id, display_name)
@@ -282,6 +298,9 @@ async function ensureFileMetadata(database: DatabaseExecutor, objectId: string, 
   `, [objectId, fallback]);
 }
 
+/**
+ * Return the accept object result.
+ */
 async function acceptObject(database: DatabaseExecutor, objectId: string) {
   await database.execute(`
     UPDATE tabular.catalog_objects
@@ -291,6 +310,9 @@ async function acceptObject(database: DatabaseExecutor, objectId: string) {
   `, [objectId]);
 }
 
+/**
+ * Return the accept column result.
+ */
 async function acceptColumn(database: DatabaseExecutor, columnId: string) {
   await database.execute(`
     UPDATE tabular.catalog_columns
@@ -300,6 +322,9 @@ async function acceptColumn(database: DatabaseExecutor, columnId: string) {
   `, [columnId]);
 }
 
+/**
+ * Return the column axes result.
+ */
 function columnAxes(
   action: StoredFileDdlRequest['action_payload'],
   fallback: string
@@ -355,6 +380,9 @@ function columnAxes(
   throw new Error('The action does not create or configure a PostgreSQL column');
 }
 
+/**
+ * Return the record constraint result.
+ */
 async function recordConstraint(
   database: DatabaseExecutor,
   request: StoredFileDdlRequest,
@@ -362,7 +390,7 @@ async function recordConstraint(
   createdColumnId: string | undefined,
   name: string
 ) {
-  const native = await database.execute<{ oid: string | number }>(`
+  const native = await database.execute<{ oid: string | number, }>(`
     SELECT oid FROM pg_constraint WHERE conrelid = ?::oid AND conname = ?
   `, [request.expected_context.relationOid || null, name]);
   const oid = native.rows[0]?.oid;

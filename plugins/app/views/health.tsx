@@ -1,12 +1,17 @@
+//client
 import './health.css';
 
+//The health page props contract exported for module callers
 export type HealthPageProps = {
-  application: 'Tabular';
-  status: 'starting' | 'ready';
-  version: string;
+  application: 'Tabular',
+  status: 'starting' | 'ready',
+  version: string,
 };
 
-export function Head({ styles = [] }: { styles?: string[] }) {
+/**
+ * Render the head component.
+ */
+export function Head({ styles = [] }: { styles?: string[], }) {
   return (
     <>
       <title>Tabular runtime</title>
@@ -18,6 +23,9 @@ export function Head({ styles = [] }: { styles?: string[] }) {
   );
 }
 
+/**
+ * Render the health page component.
+ */
 export default function HealthPage(props: HealthPageProps) {
   return (
     <main>

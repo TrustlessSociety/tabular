@@ -1,20 +1,15 @@
+//node
 import { createHash } from 'node:crypto';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
-import { isBrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import {
-  IdentityRepository,
-  assertUsableSession,
-  verifyEffectiveRole
-} from '../../identity/helpers/repository.js';
-import { opaqueId, opaqueToken, tokenHash } from '../../identity/helpers/security.js';
 import type {
   EnqueueOperation,
   OperationActivity,
@@ -26,56 +21,82 @@ import type {
   OperationPayload,
   OperationState
 } from './contracts.js';
+import type {
+  OperationFileAuthorityTarget,
+  StoredOperationEventRow,
+  StoredOperationRow
+} from './repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { isBrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import {
+  IdentityRepository,
+  assertUsableSession,
+  verifyEffectiveRole
+} from '../../identity/helpers/repository.js';
+import { opaqueId, opaqueToken, tokenHash } from '../../identity/helpers/security.js';
 import {
   OPERATION_SCHEMA_VERSION,
   operationAuthority
 } from './contracts.js';
 import { OperationHandlerRegistry } from './handlers.js';
-import {
-  OperationsRepository,
-  type OperationFileAuthorityTarget,
-  type StoredOperationEventRow,
-  type StoredOperationRow
-} from './repository.js';
+import { OperationsRepository } from './repository.js';
 
+//The operations service value exported for module callers
 export const OPERATIONS_SERVICE = 'tabular.operations';
+//The default operation retention days value exported for module callers
 export const DEFAULT_OPERATION_RETENTION_DAYS = 90;
+//The minimum operation retention days value exported for module callers
 export const MINIMUM_OPERATION_RETENTION_DAYS = 30;
 
 const terminalStates = new Set<OperationState>([
   'succeeded', 'failed', 'cancelled', 'dead-letter'
 ]);
 
+//The operation completion contract exported for module callers
 export type OperationCompletion = {
-  state: Extract<OperationState, 'succeeded' | 'failed' | 'retrying' | 'cancelled' | 'dead-letter'>;
-  progress: number;
-  availableAt?: Date;
-  availableAfterMs?: number;
-  result?: Record<string, unknown>;
-  error?: Record<string, unknown>;
-  diagnostics?: Record<string, unknown>;
+  state: Extract<OperationState, 'succeeded' | 'failed' | 'retrying' | 'cancelled' | 'dead-letter'>,
+  progress: number,
+  availableAt?: Date,
+  availableAfterMs?: number,
+  result?: Record<string, unknown>,
+  error?: Record<string, unknown>,
+  diagnostics?: Record<string, unknown>,
 };
 
+//The operation lifecycle event contract exported for module callers
 export type OperationLifecycleEvent = 'cancelled' | 'retried' | 'terminal-failure';
 
+//The operation lifecycle handler contract exported for module callers
 export type OperationLifecycleHandler<Kind extends OperationKind = OperationKind> = (
   database: DatabaseExecutor,
   job: OperationJob<Kind>,
   event: OperationLifecycleEvent
 ) => Promise<void>;
 
+/**
+ * Provide operations plugin operations through one service boundary.
+ */
 export class OperationsPluginService {
-  readonly name = OPERATIONS_SERVICE;
-  readonly handlers = new OperationHandlerRegistry();
+  //The name state retained by this class instance
+  public readonly name = OPERATIONS_SERVICE;
+  //The handlers state retained by this class instance
+  public readonly handlers = new OperationHandlerRegistry();
+  //The lifecycles state retained by this class instance
   readonly #lifecycles = new Map<OperationKind, OperationLifecycleHandler>();
 
-  constructor(
-    readonly runtime: ApplicationRuntimeService,
+  /**
+   * Create a OperationsPluginService instance.
+   */
+  public constructor(
+    public readonly runtime: ApplicationRuntimeService,
     private readonly database: DatabasePluginService,
     private readonly identity: IdentityPluginService
   ) {}
 
-  registerLifecycle<Kind extends OperationKind>(
+  /**
+   * Register the lifecycle.
+   */
+  public registerLifecycle<Kind extends OperationKind>(
     kind: Kind,
     handler: OperationLifecycleHandler<Kind>
   ) {
@@ -86,10 +107,13 @@ export class OperationsPluginService {
     return this;
   }
 
-  async enqueue<Kind extends OperationKind>(
+  /**
+   * Handle the enqueue operation.
+   */
+  public async enqueue<Kind extends OperationKind>(
     principal: BrowserMutationPrincipal,
     request: EnqueueOperation<Kind>
-  ): Promise<{ job: OperationJob<Kind>; replayed: boolean }> {
+  ): Promise<{ job: OperationJob<Kind>, replayed: boolean, }> {
     requireMutation(principal);
     validateEnqueue(request);
     let fileAuthorized = !request.fileId;
@@ -116,11 +140,11 @@ export class OperationsPluginService {
    * The caller must enqueue only after the protected domain state is committed in
    * the same PostgreSQL transaction.
    */
-  async enqueueInTransaction<Kind extends OperationKind>(
+  public async enqueueInTransaction<Kind extends OperationKind>(
     database: DatabaseExecutor,
     principal: BrowserPrincipal,
     request: EnqueueOperation<Kind>
-  ): Promise<{ job: OperationJob<Kind>; replayed: boolean }> {
+  ): Promise<{ job: OperationJob<Kind>, replayed: boolean, }> {
     validatePrincipalScope(principal, request.fileId);
     validateEnqueue(request);
     const repository = new OperationsRepository(database);
@@ -178,9 +202,12 @@ export class OperationsPluginService {
     };
   }
 
-  async list(
+  /**
+   * List authorized operation activity under the caller's current scope.
+   */
+  public async list(
     principal: BrowserPrincipal,
-    input: { status?: OperationState[]; limit?: number } = {}
+    input: { status?: OperationState[], limit?: number, } = {}
   ): Promise<OperationActivityList> {
     const states = validateStates(input.status);
     const limit = boundedInteger(input.limit ?? 100, 1, 200, 'activity limit');
@@ -221,7 +248,10 @@ export class OperationsPluginService {
     );
   }
 
-  async get(
+  /**
+   * Return one authorized operation activity record by job identity.
+   */
+  public async get(
     principal: BrowserPrincipal,
     jobId: string
   ): Promise<OperationActivity | undefined> {
@@ -251,12 +281,18 @@ export class OperationsPluginService {
     );
   }
 
-  markRead(principal: BrowserMutationPrincipal, jobId: string) {
+  /**
+   * Mark read.
+   */
+  public markRead(principal: BrowserMutationPrincipal, jobId: string) {
     return this.mutateOwned(principal, jobId, (repository) =>
       repository.markRead(jobId, principal.identityId));
   }
 
-  cancel(principal: BrowserMutationPrincipal, jobId: string) {
+  /**
+   * Cancel the current value.
+   */
+  public cancel(principal: BrowserMutationPrincipal, jobId: string) {
     return this.mutateOwned(principal, jobId, async (repository, row, database) => {
       if (!['queued', 'retrying', 'running'].includes(row.state) || row.irreversible_at) {
         conflict('The operation can no longer be cancelled');
@@ -272,7 +308,10 @@ export class OperationsPluginService {
     }, true);
   }
 
-  retry(principal: BrowserMutationPrincipal, jobId: string) {
+  /**
+   * Handle the retry operation.
+   */
+  public retry(principal: BrowserMutationPrincipal, jobId: string) {
     return this.mutateOwned(principal, jobId, async (repository, row, database) => {
       if (!['failed', 'dead-letter'].includes(row.state)) {
         conflict('Only a failed operation can be retried');
@@ -286,7 +325,10 @@ export class OperationsPluginService {
     }, true);
   }
 
-  acknowledge(principal: BrowserMutationPrincipal, jobId: string) {
+  /**
+   * Handle the acknowledge operation.
+   */
+  public acknowledge(principal: BrowserMutationPrincipal, jobId: string) {
     return this.mutateOwned(principal, jobId, async (repository, row) => {
       if (!['failed', 'dead-letter'].includes(row.state)) {
         conflict('Only a failed operation can be acknowledged');
@@ -297,9 +339,12 @@ export class OperationsPluginService {
     });
   }
 
-  async retention(
+  /**
+   * Handle the retention operation.
+   */
+  public async retention(
     principal: BrowserMutationPrincipal,
-    input: { retentionDays: number; limit: number }
+    input: { retentionDays: number, limit: number, }
   ) {
     requireMutation(principal);
     const retentionDays = boundedRetentionDays(input.retentionDays);
@@ -339,7 +384,10 @@ export class OperationsPluginService {
     );
   }
 
-  async readEvents(
+  /**
+   * Read the events.
+   */
+  public async readEvents(
     principal: BrowserPrincipal,
     after: number,
     limit = 200
@@ -379,10 +427,13 @@ export class OperationsPluginService {
     );
   }
 
-  async claim(
+  /**
+   * Handle the claim operation.
+   */
+  public async claim(
     authority: OperationAuthority,
     leaseOwner: string,
-    input: { jobId?: string } = {}
+    input: { jobId?: string, } = {}
   ): Promise<OperationJob | undefined> {
     this.assertAuthority(authority);
     validateLeaseOwner(leaseOwner);
@@ -401,7 +452,10 @@ export class OperationsPluginService {
     });
   }
 
-  async recoverExpired(authority: OperationAuthority) {
+  /**
+   * Handle the recover expired operation.
+   */
+  public async recoverExpired(authority: OperationAuthority) {
     this.assertAuthority(authority);
     return this.database.transaction(authority, {}, async (database) => {
       const rows = await new OperationsRepository(database).recoverExpired(
@@ -419,7 +473,10 @@ export class OperationsPluginService {
     });
   }
 
-  async heartbeat(
+  /**
+   * Handle the heartbeat operation.
+   */
+  public async heartbeat(
     authority: OperationAuthority,
     jobId: string,
     leaseOwner: string,
@@ -441,7 +498,10 @@ export class OperationsPluginService {
       }));
   }
 
-  async leaseStatus(
+  /**
+   * Handle the lease status operation.
+   */
+  public async leaseStatus(
     authority: OperationAuthority,
     jobId: string,
     leaseOwner: string,
@@ -464,7 +524,10 @@ export class OperationsPluginService {
     });
   }
 
-  async markIrreversible(
+  /**
+   * Mark irreversible.
+   */
+  public async markIrreversible(
     authority: OperationAuthority,
     jobId: string,
     leaseOwner: string,
@@ -476,7 +539,10 @@ export class OperationsPluginService {
       new OperationsRepository(database).markIrreversible(jobId, leaseOwner, leaseToken));
   }
 
-  async finish(
+  /**
+   * Finish the current value.
+   */
+  public async finish(
     authority: OperationAuthority,
     jobId: string,
     leaseOwner: string,
@@ -533,7 +599,10 @@ export class OperationsPluginService {
     });
   }
 
-  async applyRetentionJob(
+  /**
+   * Apply the retention job.
+   */
+  public async applyRetentionJob(
     authority: OperationAuthority,
     job: OperationJob<'operations.retention'>
   ) {
@@ -596,6 +665,9 @@ export class OperationsPluginService {
     }, async () => permitted);
   }
 
+  /**
+   * Handle the mutate owned operation.
+   */
   private async mutateOwned(
     principal: BrowserMutationPrincipal,
     jobId: string,
@@ -637,6 +709,9 @@ export class OperationsPluginService {
     );
   }
 
+  /**
+   * Assert the authority.
+   */
   private assertAuthority(authority: OperationAuthority) {
     if (this.runtime.processKind !== authority) {
       throw new ApplicationError(
@@ -647,11 +722,17 @@ export class OperationsPluginService {
     }
   }
 
-  prepareAuthority(authority: OperationAuthority) {
+  /**
+   * Prepare the authority.
+   */
+  public prepareAuthority(authority: OperationAuthority) {
     this.assertAuthority(authority);
     this.database.openPool(authority);
   }
 
+  /**
+   * Handle the invoke lifecycle operation.
+   */
   private async invokeLifecycle(
     database: DatabaseExecutor,
     row: StoredOperationRow,
@@ -663,6 +744,9 @@ export class OperationsPluginService {
   }
 }
 
+/**
+ * Return the operation job result.
+ */
 function operationJob(row: StoredOperationRow): OperationJob {
   validateStoredOperation(row);
   return {
@@ -693,6 +777,9 @@ function operationJob(row: StoredOperationRow): OperationJob {
   };
 }
 
+/**
+ * Return the activity result.
+ */
 function activity(row: StoredOperationRow, canLink: boolean): OperationActivity {
   const failed = row.state === 'failed' || row.state === 'dead-letter';
   const terminal = terminalStates.has(row.state);
@@ -733,6 +820,9 @@ function activity(row: StoredOperationRow, canLink: boolean): OperationActivity 
   };
 }
 
+/**
+ * Return the operation event result.
+ */
 function operationEvent(row: StoredOperationEventRow) {
   return {
     cursor: Number(row.sequence),
@@ -746,6 +836,9 @@ function operationEvent(row: StoredOperationEventRow) {
   };
 }
 
+/**
+ * Report the valid operation event condition.
+ */
 function validOperationEvent(row: StoredOperationEventRow) {
   const payload = row.payload;
   return Boolean(payload
@@ -763,6 +856,9 @@ function validOperationEvent(row: StoredOperationEventRow) {
     && Number(payload.version) > 0);
 }
 
+/**
+ * Return the readable file ids result.
+ */
 async function readableFileIds(
   database: DatabaseExecutor,
   rows: StoredOperationRow[],
@@ -775,6 +871,9 @@ async function readableFileIds(
   return readable;
 }
 
+/**
+ * Report whether the caller can read file.
+ */
 async function canReadFile(
   database: DatabaseExecutor,
   target: OperationFileAuthorityTarget | undefined
@@ -782,7 +881,7 @@ async function canReadFile(
   if (!target
     || !['current', 'renamed', 'changed'].includes(target.object_state)
     || !['r', 'p', 'v', 'm', 'f'].includes(target.relation_kind)) return false;
-  const result = await database.execute<{ allowed: boolean }>(`
+  const result = await database.execute<{ allowed: boolean, }>(`
     SELECT has_schema_privilege(current_user, CAST(? AS oid), 'USAGE') AND (
       has_table_privilege(current_user, CAST(? AS oid), 'SELECT') OR EXISTS (
         SELECT 1 FROM pg_attribute attribute
@@ -802,6 +901,9 @@ async function canReadFile(
   return Boolean(result.rows[0]?.allowed);
 }
 
+/**
+ * Validate the enqueue.
+ */
 function validateEnqueue(request: EnqueueOperation) {
   if (!request || typeof request !== 'object') invalid('The operation request is invalid');
   if (!(request.kind in operationAuthority) || request.authority !== operationAuthority[request.kind]) {
@@ -821,6 +923,9 @@ function validateEnqueue(request: EnqueueOperation) {
   }
 }
 
+/**
+ * Validate the payload.
+ */
 function validatePayload(kind: OperationKind, payload: OperationPayload, fileId?: string) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     invalid('The operation payload is invalid');
@@ -863,6 +968,9 @@ function validatePayload(kind: OperationKind, payload: OperationPayload, fileId?
   }
 }
 
+/**
+ * Validate the stored operation.
+ */
 function validateStoredOperation(row: StoredOperationRow) {
   const kind = row.kind;
   const schemaVersion = Number(row.schema_version);
@@ -878,6 +986,9 @@ function validateStoredOperation(row: StoredOperationRow) {
   }
 }
 
+/**
+ * Validate the principal scope.
+ */
 function validatePrincipalScope(principal: BrowserPrincipal, fileId?: string) {
   if (!principal || principal.transport !== 'browser'
     || !/^[a-z][a-z0-9_-]{0,62}$/.test(principal.connectionId)
@@ -889,12 +1000,18 @@ function validatePrincipalScope(principal: BrowserPrincipal, fileId?: string) {
   if (fileId && !/^obj_[A-Za-z0-9_-]{32,64}$/.test(fileId)) invalid('The file is invalid');
 }
 
+/**
+ * Return the owned result.
+ */
 function owned(row: StoredOperationRow | undefined, principal: BrowserPrincipal) {
   return Boolean(row
     && row.connection_id === principal.connectionId
     && row.actor_identity_id === principal.identityId);
 }
 
+/**
+ * Validate the states.
+ */
 function validateStates(input?: OperationState[]) {
   if (typeof input === 'undefined') return [];
   if (!Array.isArray(input) || input.length > 7) invalid('The operation state filter is invalid');
@@ -906,12 +1023,18 @@ function validateStates(input?: OperationState[]) {
   return states;
 }
 
+/**
+ * Validate the job id.
+ */
 function validateJobId(jobId: string) {
   if (typeof jobId !== 'string' || !/^job_[A-Za-z0-9_-]{32,64}$/.test(jobId)) {
     invalid('The operation ID is invalid');
   }
 }
 
+/**
+ * Validate the lease.
+ */
 function validateLease(jobId: string, leaseOwner: string, leaseToken: string) {
   validateJobId(jobId);
   validateLeaseOwner(leaseOwner);
@@ -920,18 +1043,27 @@ function validateLease(jobId: string, leaseOwner: string, leaseToken: string) {
   }
 }
 
+/**
+ * Validate the lease owner.
+ */
 function validateLeaseOwner(leaseOwner: string) {
   if (typeof leaseOwner !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(leaseOwner)) {
     throw new Error('Operation lease owner is invalid');
   }
 }
 
+/**
+ * Return the bounded retention days result.
+ */
 function boundedRetentionDays(value: unknown) {
   const days = boundedInteger(value, 30, 365, 'retention days');
   if (![30, 90, 180, 365].includes(days)) invalid('The retention period is invalid');
   return days;
 }
 
+/**
+ * Return the bounded integer result.
+ */
 function boundedInteger(value: unknown, minimum: number, maximum: number, label: string) {
   if (!Number.isSafeInteger(value) || Number(value) < minimum || Number(value) > maximum) {
     invalid(`The ${label} is invalid`);
@@ -939,6 +1071,9 @@ function boundedInteger(value: unknown, minimum: number, maximum: number, label:
   return Number(value);
 }
 
+/**
+ * Return the exact keys result.
+ */
 function exactKeys(value: Record<string, unknown>, keys: string[]) {
   if (Object.keys(value).length !== keys.length
     || Object.keys(value).some((key) => !keys.includes(key))) {
@@ -946,12 +1081,18 @@ function exactKeys(value: Record<string, unknown>, keys: string[]) {
   }
 }
 
+/**
+ * Return the opaque reference result.
+ */
 function opaqueReference(value: unknown, label: string) {
   if (typeof value !== 'string' || !/^[a-z][a-z0-9-]*_[A-Za-z0-9_-]{32,64}$/.test(value)) {
     invalid(`The ${label} reference is invalid`);
   }
 }
 
+/**
+ * Return the redacted summary result.
+ */
 function redactedSummary(value: Record<string, unknown>, label: string) {
   const result: Record<string, string | number | boolean | null> = {};
   const entries = Object.entries(value);
@@ -991,6 +1132,9 @@ const resultKeys: Record<OperationKind, ReadonlySet<string>> = {
   ])
 };
 
+/**
+ * Return the redacted result result.
+ */
 function redactedResult(kind: OperationKind, value: Record<string, unknown>) {
   const allowed = resultKeys[kind];
   if (Object.keys(value).some((key) => !allowed.has(key))) {
@@ -999,6 +1143,9 @@ function redactedResult(kind: OperationKind, value: Record<string, unknown>) {
   return redactedSummary(value, `${kind} result`);
 }
 
+/**
+ * Return the operation result file id result.
+ */
 function operationResultFileId(kind: OperationKind, result: Record<string, unknown>) {
   const value = kind === 'import.commit' ? result.fileId
     : kind === 'ddl.apply' ? result.targetObjectId
@@ -1010,6 +1157,9 @@ function operationResultFileId(kind: OperationKind, result: Record<string, unkno
   return value;
 }
 
+/**
+ * Return the redacted diagnostics result.
+ */
 function redactedDiagnostics(value: Record<string, unknown>) {
   const allowed = new Set([
     'reason', 'attempt', 'elapsedMs', 'retryDelayMs', 'workerAuthority'
@@ -1033,6 +1183,9 @@ function redactedDiagnostics(value: Record<string, unknown>) {
   return summary;
 }
 
+/**
+ * Return the redacted error result.
+ */
 function redactedError(value: Record<string, unknown>) {
   const messages: Record<string, string> = {
     operation_failed: 'The operation could not be completed.',
@@ -1048,10 +1201,16 @@ function redactedError(value: Record<string, unknown>) {
   return { code, message: messages[code] as string, retryable: value.retryable === true };
 }
 
+/**
+ * Report the safe error condition.
+ */
 function safeError(value: Record<string, unknown>) {
   return redactedError(value);
 }
 
+/**
+ * Return the canonical JSON result.
+ */
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -1060,28 +1219,46 @@ function canonicalJson(value: unknown): string {
     `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(',')}}`;
 }
 
+/**
+ * Return the digest result.
+ */
 function digest(value: string) {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
+/**
+ * Return the iso result.
+ */
 function iso(value: Date | string) {
   return new Date(value).toISOString();
 }
 
+/**
+ * Return the require mutation result.
+ */
 function requireMutation(principal: BrowserMutationPrincipal) {
   if (!isBrowserMutationPrincipal(principal)) {
     throw new ApplicationError('operation_mutation_denied', 403, 'A browser mutation is required');
   }
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('invalid_operation', 400, message);
 }
 
+/**
+ * Return the conflict result.
+ */
 function conflict(message: string): never {
   throw new ApplicationError('operation_conflict', 409, message);
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ApplicationError('operation_unavailable', 404, 'The requested operation is unavailable');
 }

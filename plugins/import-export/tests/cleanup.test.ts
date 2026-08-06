@@ -1,11 +1,16 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type { QueryObject } from '@stackpress/inquire/types';
+
+//client
 import { DatabaseExecutor } from '../../database/helpers/executor.js';
 import { ImportExportRepository } from '../helpers/repository.js';
 
 test('expired staging cleanup is bounded, terminal, lock-safe and payload-purging', async () => {
-  const requests: Array<{ query: string; values: unknown[] }> = [];
+  const requests: Array<{ query: string, values: unknown[], }> = [];
   const database = new DatabaseExecutor({
     raw: async <Row>(request: QueryObject) => {
       requests.push({ query: request.query, values: [...(request.values || [])] });

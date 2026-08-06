@@ -1,21 +1,29 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
+import type { CapabilityAction } from '../helpers/contracts.js';
 import { startWeb } from '../../../bootstrap/application.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
 import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
-import type { CapabilityAction } from '../helpers/contracts.js';
 import { WebCapabilityAdapter } from '../events/web-adapter.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
 
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -32,6 +40,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the migration transaction result.
+ */
 function migrationTransaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -211,6 +222,9 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       origin: 'https://tabular.test'
     });
     const web = new WebCapabilityAdapter(application.identity, application.capability);
+    /**
+     * Execute the current value.
+     */
     const execute = (action: CapabilityAction) => web.invoke(mutation, { action });
 
     const emptySheet = await application.grid.load(session.principal, blankFile);
@@ -222,7 +236,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       patch: [{ columnId: blankValue, value: { type: 'text', value: 'First value' } }]
     });
     assertOk(blankInserted);
-    const blankRow = responseData<{ rows: Array<{ rowId: string; version: string }> }>(blankInserted).rows[0]!;
+    const blankRow = responseData<{ rows: Array<{ rowId: string, version: string, }>, }>(blankInserted).rows[0]!;
     assert.match(blankRow.rowId, /^row_[A-Za-z0-9_-]+$/);
     assert.equal((await admin.query(`
       SELECT value FROM operations.blank_sheet
@@ -234,7 +248,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
     });
     assertOk(blankPatched);
     const blankPatchedRow = responseData<{
-      rows: Array<{ rowId: string; version: string }>;
+      rows: Array<{ rowId: string, version: string, }>,
     }>(blankPatched).rows[0]!;
     assert.equal(blankPatchedRow.rowId, blankRow.rowId);
     assert.equal((await admin.query(`
@@ -257,7 +271,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
     });
     assertOk(adjacentDraft);
     const retainedAdjacent = responseData<{
-      id: string; version: number; rowRank: string; validation: unknown[];
+      id: string, version: number, rowRank: string, validation: unknown[],
     }>(adjacentDraft);
     const sparseDraft = await execute({
       type: 'draft.create', commandId: commandId(), fileId: blankFile,
@@ -267,7 +281,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
     });
     assertOk(sparseDraft);
     const retainedSparse = responseData<{
-      id: string; version: number; rowRank: string; validation: unknown[];
+      id: string, version: number, rowRank: string, validation: unknown[],
     }>(sparseDraft);
     assert.equal(retainedSparse.rowRank, '000000000000000020000000');
     assert.deepEqual(retainedSparse.validation, []);
@@ -286,11 +300,11 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       patch: [{ columnId: blankLogical, value: { type: 'text', value: 'row nineteen revised' } }]
     });
     assertOk(correctedAdjacent);
-    const correctedAdjacentValue = responseData<{ version: number }>(correctedAdjacent);
+    const correctedAdjacentValue = responseData<{ version: number, }>(correctedAdjacent);
     const adjacentDrafts = await execute({ type: 'draft.list', fileId: blankFile });
     assertOk(adjacentDrafts);
     assert.deepEqual(responseData<Array<{
-      id: string; rowRank?: string; patch: unknown[];
+      id: string, rowRank?: string, patch: unknown[],
     }>>(adjacentDrafts).map((draft) => ({
       id: draft.id,
       rowRank: draft.rowRank,
@@ -488,7 +502,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     assertOk(invalidDraft);
-    const invalidValue = responseData<{ id: string; version: number; validation: Array<{ code: string }> }>(invalidDraft);
+    const invalidValue = responseData<{ id: string, version: number, validation: Array<{ code: string, }>, }>(invalidDraft);
     assert.equal(invalidValue.validation[0]?.code, 'type_mismatch');
     const persistedRaw = await admin.query(`
       SELECT patch FROM tabular.action_drafts WHERE id = $1
@@ -501,7 +515,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       action: { type: 'draft.list', fileId: ordersFile }
     });
     assertOk(resumedDrafts);
-    assert.deepEqual(responseData<Array<{ id: string; patch: unknown[] }>>(resumedDrafts).map((draft) => ({
+    assert.deepEqual(responseData<Array<{ id: string, patch: unknown[], }>>(resumedDrafts).map((draft) => ({
       id: draft.id,
       patch: draft.patch
     })), [{
@@ -514,7 +528,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       patch: [{ columnId: columns.quantity, value: { type: 'integer', value: '4' } }]
     });
     assertOk(corrected);
-    const correctedValue = responseData<{ version: number; validation: unknown[] }>(corrected);
+    const correctedValue = responseData<{ version: number, validation: unknown[], }>(corrected);
     assert.deepEqual(correctedValue.validation, []);
     const promoted = await execute({
       type: 'draft.promote', commandId: commandId(), draftId: invalidValue.id,
@@ -535,7 +549,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     assertOk(constraintDraft);
-    const constraintValue = responseData<{ id: string; version: number; validation: unknown[] }>(constraintDraft);
+    const constraintValue = responseData<{ id: string, version: number, validation: unknown[], }>(constraintDraft);
     assert.deepEqual(constraintValue.validation, []);
     assertFailure(await execute({
       type: 'draft.promote', commandId: commandId(), draftId: constraintValue.id,
@@ -547,7 +561,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
     });
     assertOk(retainedConstraintDraft);
     assert.equal(
-      responseData<{ validation: Array<{ code: string }> }>(retainedConstraintDraft).validation[0]?.code,
+      responseData<{ validation: Array<{ code: string, }>, }>(retainedConstraintDraft).validation[0]?.code,
       'database_rejected',
       'a failed promotion persists PostgreSQL validation for reload recovery'
     );
@@ -569,7 +583,7 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
       ]
     });
     assertOk(inserted);
-    const insertedData = responseData<{ rows: Array<{ rowId: string; version: string }> }>(inserted);
+    const insertedData = responseData<{ rows: Array<{ rowId: string, version: string, }>, }>(inserted);
     const insertedRow = insertedData.rows[0]!;
     assert.equal((await admin.query(`
       SELECT owner_role::text AS owner, total::text AS total
@@ -657,6 +671,9 @@ test('native PostgreSQL grid editing preserves typed values, authority, drafts, 
   }
 });
 
+/**
+ * Reset the fixture.
+ */
 async function resetFixture(admin: pg.Pool) {
   await admin.query('DROP SCHEMA IF EXISTS tabular CASCADE');
   await admin.query('DROP SCHEMA IF EXISTS operations CASCADE');
@@ -665,6 +682,9 @@ async function resetFixture(admin: pg.Pool) {
   await admin.query('DROP ROLE IF EXISTS tabular_grid_member');
 }
 
+/**
+ * Return the stable file result.
+ */
 function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableName: string) {
   const schema = [...snapshot.schemas.values()].find((item) => item.name === schemaName);
   const object = [...snapshot.objects.values()].find((item) =>
@@ -674,6 +694,9 @@ function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableNa
   return object.stableId;
 }
 
+/**
+ * Return the stable column result.
+ */
 function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnName: string) {
   const column = [...snapshot.columns.values()].find((item) =>
     item.objectId === fileId && item.name === columnName
@@ -682,6 +705,9 @@ function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnNam
   return column.stableId;
 }
 
+/**
+ * Return the row by value result.
+ */
 function rowByValue(
   resource: NonNullable<Awaited<ReturnType<Awaited<ReturnType<typeof startWeb>>['grid']['load']>>>,
   columnId: string,
@@ -692,30 +718,48 @@ function rowByValue(
   return row;
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId() {
   return `cmd_${randomBytes(12).toString('base64url')}`;
 }
 
-function assertOk(response: { status: string; error?: unknown }) {
+/**
+ * Assert the ok.
+ */
+function assertOk(response: { status: string, error?: unknown, }) {
   assert.equal(response.status, 'ok', JSON.stringify(response));
 }
 
-function assertFailure(response: { status: string; error?: { code: string } }, code: string) {
+/**
+ * Assert the failure.
+ */
+function assertFailure(response: { status: string, error?: { code: string, }, }, code: string) {
   assert.equal(response.status, 'error', JSON.stringify(response));
   assert.equal(response.error?.code, code);
 }
 
-function responseData<Value>(response: { status: string; data?: unknown }) {
+/**
+ * Return the response data result.
+ */
+function responseData<Value>(response: { status: string, data?: unknown, }) {
   assertOk(response);
   return response.data as Value;
 }
 
-function actionVersion(response: { status: string; data?: unknown }) {
-  const version = responseData<{ rows: Array<{ version: string }> }>(response).rows[0]?.version;
+/**
+ * Return the action version result.
+ */
+function actionVersion(response: { status: string, data?: unknown, }) {
+  const version = responseData<{ rows: Array<{ version: string, }>, }>(response).rows[0]?.version;
   assert.match(version || '', /^ver_[A-Za-z0-9_-]{16,128}$/);
   return version!;
 }
 
+/**
+ * Return the row count result.
+ */
 async function rowCount(admin: pg.Pool, orderId: string) {
   const result = await admin.query(`
     SELECT count(*)::integer AS count FROM operations.orders WHERE order_id = $1
@@ -723,6 +767,9 @@ async function rowCount(admin: pg.Pool, orderId: string) {
   return result.rows[0].count as number;
 }
 
+/**
+ * Return the as error result.
+ */
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error(String(error));
 }

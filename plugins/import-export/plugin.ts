@@ -1,20 +1,18 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import { DATABASE_SERVICE, type DatabasePluginService } from '../database/helpers/service.js';
-import { IDENTITY_SERVICE, type IdentityPluginService } from '../identity/helpers/service.js';
-import { CAPABILITY_SERVICE, type CapabilityPluginService } from '../capability/helpers/service.js';
-import { FILES_SERVICE, type FilesPluginService } from '../files/helpers/service.js';
-import {
-  SAVED_VIEWS_SERVICE,
-  type SavedViewsPluginService
-} from '../saved-views/helpers/service.js';
-import {
-  OPERATIONS_SERVICE,
-  type OperationsPluginService
-} from '../operations/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { CapabilityPluginService } from '../capability/helpers/service.js';
+import type { DatabasePluginService } from '../database/helpers/service.js';
+import type { FilesPluginService } from '../files/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import type { OperationsPluginService } from '../operations/helpers/service.js';
+import type { SavedViewsPluginService } from '../saved-views/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { DATABASE_SERVICE } from '../database/helpers/service.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
+import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
+import { FILES_SERVICE } from '../files/helpers/service.js';
+import { SAVED_VIEWS_SERVICE } from '../saved-views/helpers/service.js';
+import { OPERATIONS_SERVICE } from '../operations/helpers/service.js';
 import {
   IMPORT_EXPORT_SERVICE,
   ImportExportPluginService
@@ -26,7 +24,14 @@ import {
 import { registerRawImportSourceHandler } from './pages/raw-upload.js';
 import { ImportExportRepository } from './helpers/repository.js';
 
-export default function importExportPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the import export plugin with the application server.
+ */
+export default function importExportPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(IMPORT_EXPORT_SERVICE)) {
     throw new Error(`Service already registered: ${IMPORT_EXPORT_SERVICE}`);
   }

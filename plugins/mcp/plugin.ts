@@ -1,20 +1,21 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import {
-  CAPABILITY_SERVICE,
-  type CapabilityPluginService
-} from '../capability/helpers/service.js';
-import {
-  DATABASE_SERVICE,
-  type DatabasePluginService
-} from '../database/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { CapabilityPluginService } from '../capability/helpers/service.js';
+import type { DatabasePluginService } from '../database/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
+import { DATABASE_SERVICE } from '../database/helpers/service.js';
 import { MCP_SERVICE } from './helpers/contracts.js';
 import { McpPluginService } from './helpers/service.js';
 
-export default function mcpPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the MCP plugin with the application server.
+ */
+export default function mcpPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(MCP_SERVICE)) {
     throw new Error(`Service already registered: ${MCP_SERVICE}`);
   }

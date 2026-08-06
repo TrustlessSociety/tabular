@@ -1,7 +1,10 @@
+//client
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { ExplorerPluginService } from './service.js';
 
-/** Resolves the current browser session and its authorized Explorer snapshot. */
+/**
+ * Resolves the current browser session and its authorized Explorer snapshot.
+ */
 export async function authenticatedExplorerContext(
   cookieToken: string | string[] | undefined,
   identity: IdentityPluginService,

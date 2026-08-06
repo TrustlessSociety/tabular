@@ -1,29 +1,37 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
-import {
-  renderAuthenticationRequired,
-  renderProductPage
-} from '../../app/helpers/rendering.js';
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { ExplorerCapabilityAction } from '../events/actions.js';
 import type {
   ExplorerFile,
   ExplorerSnapshot
 } from '../helpers/contracts.js';
+import type { ExplorerPluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import {
+  renderAuthenticationRequired,
+  renderProductPage
+} from '../../app/helpers/rendering.js';
 import { authenticatedExplorerContext } from '../helpers/authenticated-context.js';
 import { normalizePhysicalName } from '../helpers/model.js';
-import type { ExplorerPluginService } from '../helpers/service.js';
 
+//The explorer routes value exported for module callers
 export const EXPLORER_ROUTES = [
   '/',
   '/pages/browse.html',
   '/events/explorer'
 ] as const;
 
-/** Registers Explorer-owned page and action routes. */
+/**
+ * Registers Explorer-owned page and action routes.
+ */
 export function registerExplorerRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   runtime: ApplicationRuntimeService,
   identity: IdentityPluginService,
   explorer: ExplorerPluginService
@@ -80,7 +88,9 @@ export function registerExplorerRoutes(
   });
 }
 
-/** Rebinds an Explorer action to the current authorized snapshot. */
+/**
+ * Rebinds an Explorer action to the current authorized snapshot.
+ */
 export function resolveExplorerAction(
   input: unknown,
   snapshot: ExplorerSnapshot
@@ -130,10 +140,13 @@ export function resolveExplorerAction(
   throw new Error('Explorer action type is unsupported');
 }
 
+/**
+ * Return the explorer props result.
+ */
 function explorerProps(
   url: URL,
   snapshot: ExplorerSnapshot,
-  identity: { displayName: string },
+  identity: { displayName: string, },
   csrfToken: string
 ) {
   const allowed = new Set(['folder', 'tab']);
@@ -179,6 +192,9 @@ function explorerProps(
   };
 }
 
+/**
+ * Resolve the file.
+ */
 function resolveFile(
   input: Record<string, unknown>,
   snapshot: ExplorerSnapshot
@@ -207,6 +223,9 @@ function resolveFile(
   };
 }
 
+/**
+ * Return the object result.
+ */
 function object(value: unknown, label: string) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} is invalid`);
@@ -214,6 +233,9 @@ function object(value: unknown, label: string) {
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the text result.
+ */
 function text(value: unknown, label: string, maximum: number, allowWhitespace = false) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum) {
     throw new Error(`${label} is invalid`);
@@ -225,6 +247,9 @@ function text(value: unknown, label: string, maximum: number, allowWhitespace = 
   return value;
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (
     typeof contentType !== 'string'

@@ -1,16 +1,19 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
 import type { CapabilityAction } from '../../capability/helpers/contracts.js';
 import type { CapabilityPluginService } from '../../capability/helpers/service.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
+import type { McpToolName } from '../helpers/contracts.js';
 import { GovernedMcpTransportAdapter } from '../events/adapter.js';
 import {
   MCP_CONTRACT_VERSION,
   MCP_TOOL_DEFINITIONS,
-  McpCredentialVerifier,
-  type McpToolName
+  McpCredentialVerifier
 } from '../helpers/contracts.js';
 import { McpPluginService } from '../helpers/service.js';
 import {
@@ -25,12 +28,18 @@ const rowId = `row_${suffix}`;
 const columnId = `col_${suffix}`;
 
 class TestVerifier extends McpCredentialVerifier<string> {
-  constructor(
+  /**
+   * Create a TestVerifier instance.
+   */
+  public constructor(
     private readonly tools: McpToolName[],
     private readonly resources: 'tabular_frontend_contract'[] = []
   ) { super(); }
 
-  async verify(credential: string) {
+  /**
+   * Verify the current value.
+   */
+  public async verify(credential: string) {
     if (credential !== 'verified-token') throw new Error('credential denied');
     return this.verifiedPrincipal({
       identityId: `id_${suffix}`,
@@ -173,8 +182,8 @@ test('frontend contract and collection reads use the governed web transaction an
   const firstDiscovery = firstPage.isError
     ? undefined
     : firstPage.structuredContent.result as {
-      items: Array<{ file: { fileId: string } }>;
-      nextCursor?: string;
+      items: Array<{ file: { fileId: string, }, }>,
+      nextCursor?: string,
     };
   assert.equal(firstDiscovery?.items.length, 1);
   assert.ok(firstDiscovery?.nextCursor);
@@ -325,12 +334,18 @@ test('complete failure envelopes cap worst-case validation issues below one MiB'
   assert.ok(Buffer.byteLength(JSON.stringify(response), 'utf8') <= 1_048_576);
 });
 
+/**
+ * Return the schema result.
+ */
 function schema(toolName: McpToolName, property: string) {
   const tool = MCP_TOOL_DEFINITIONS.find((entry) => entry.name === toolName);
   assert.ok(tool?.inputSchema.properties?.[property]);
   return tool.inputSchema.properties[property];
 }
 
+/**
+ * Return the tool arguments result.
+ */
 function toolArguments(tool: McpToolName): Record<string, unknown> {
   const commandId = 'cmd_abcdefgh';
   const version = `ver_${'v'.repeat(16)}`;
@@ -369,6 +384,9 @@ function toolArguments(tool: McpToolName): Record<string, unknown> {
   }
 }
 
+/**
+ * Return the service with result.
+ */
 function serviceWith(capability: CapabilityPluginService) {
   const runtime = {
     processKind: 'web',
@@ -410,14 +428,17 @@ function serviceWith(capability: CapabilityPluginService) {
   });
 }
 
+/**
+ * Return the capability double result.
+ */
 function capabilityDouble(input: {
-  captured?: CapabilityAction[];
-  result?: { ok: false; error: {
-    code: string;
-    message: string;
-    retryable: boolean;
-    issues?: Array<{ columnId?: string; code: string; message: string }>;
-  } };
+  captured?: CapabilityAction[],
+  result?: { ok: false, error: {
+    code: string,
+    message: string,
+    retryable: boolean,
+    issues?: Array<{ columnId?: string, code: string, message: string, }>,
+  }, },
 } = {}) {
   return {
     execute: async (_authority: unknown, action: CapabilityAction) => {
@@ -470,6 +491,9 @@ function capabilityDouble(input: {
   } as unknown as CapabilityPluginService;
 }
 
+/**
+ * Return the database double result.
+ */
 function databaseDouble() {
   const database = {
     execute: async (query: string) => {
@@ -525,10 +549,10 @@ function databaseDouble() {
       scope: string,
       options: {
         resolveRole?: (database: DatabaseExecutor) => Promise<{
-          role: string;
-          verifyAfterSet: (database: DatabaseExecutor) => Promise<void>;
-        }>;
-        finalizeBase?: (database: DatabaseExecutor, result: unknown) => Promise<unknown>;
+          role: string,
+          verifyAfterSet: (database: DatabaseExecutor) => Promise<void>,
+        }>,
+        finalizeBase?: (database: DatabaseExecutor, result: unknown) => Promise<unknown>,
       },
       callback: (database: DatabaseExecutor) => Promise<unknown>
     ) => {

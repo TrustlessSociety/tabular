@@ -1,23 +1,24 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import {
-  DATABASE_SERVICE,
-  type DatabasePluginService
-} from '../database/helpers/service.js';
-import {
-  IDENTITY_SERVICE,
-  type IdentityPluginService
-} from '../identity/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { DatabasePluginService } from '../database/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { DATABASE_SERVICE } from '../database/helpers/service.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
 import {
   OPERATIONS_SERVICE,
   OperationsPluginService
 } from './helpers/service.js';
 import { registerOperationsRoutes } from './pages/routes.js';
 
-export default function operationsPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the operations plugin with the application server.
+ */
+export default function operationsPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(OPERATIONS_SERVICE)) {
     throw new Error(`Service already registered: ${OPERATIONS_SERVICE}`);
   }

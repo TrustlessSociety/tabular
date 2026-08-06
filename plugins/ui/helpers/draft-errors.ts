@@ -1,3 +1,4 @@
+//client
 import type { GridCellIssue, GridRow } from '../../grid/helpers/contracts.js';
 import type { GridEditDraft } from '../../grid/helpers/editing.js';
 
@@ -15,6 +16,9 @@ export function draftForSchemaRevalidation(draft: GridEditDraft): GridEditDraft 
   };
 }
 
+/**
+ * Return the project draft cell issues result.
+ */
 export function projectDraftCellIssues(
   draft: GridEditDraft,
   state: 'none' | 'pending' | 'invalid' | 'failed' | 'stale'
@@ -25,7 +29,7 @@ export function projectDraftCellIssues(
     ? draft.changes
     : explicitIssues;
   return projected.map((change) => {
-    // A retained insert can carry validation for untouched required siblings.
+    //A retained insert can carry validation for untouched required siblings.
     // Keep those blank cells ordinary, but let a non-empty rejected value use
     // the familiar spreadsheet token while its raw input stays in the draft.
     const showInsertToken = Boolean(change.issue && change.raw.trim());
@@ -41,14 +45,16 @@ export function projectDraftCellIssues(
   });
 }
 
-/** Attaches server validation to the exact changed cells when possible. */
+/**
+ * Attaches server validation to the exact changed cells when possible.
+ */
 export function applyServerDraftIssues(
   draft: GridEditDraft,
   issues: readonly unknown[] | undefined
 ): GridEditDraft {
   const typedIssues = issues?.flatMap((candidate) => {
     if (!candidate || typeof candidate !== 'object') return [];
-    const issue = candidate as { columnId?: unknown; code?: unknown; message?: unknown };
+    const issue = candidate as { columnId?: unknown, code?: unknown, message?: unknown, };
     if (typeof issue.code !== 'string' || typeof issue.message !== 'string') return [];
     return [{
       ...(typeof issue.columnId === 'string' ? { columnId: issue.columnId } : {}),

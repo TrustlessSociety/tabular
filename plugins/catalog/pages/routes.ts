@@ -1,11 +1,18 @@
-import type { HttpServer } from '@stackpress/ingest/types';
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { CatalogPluginService } from '../helpers/service.js';
 
+//The catalog routes value exported for module callers
 export const CATALOG_ROUTES = ['/api/catalog'] as const;
 
+/**
+ * Register the catalog routes.
+ */
 export function registerCatalogRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   identity: IdentityPluginService,
   catalog: CatalogPluginService
 ) {

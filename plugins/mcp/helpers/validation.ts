@@ -1,9 +1,7 @@
-import {
-  MCP_TOOL_DEFINITIONS,
-  type McpToolCall,
-  type McpToolName
-} from './contracts.js';
+//client
 import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
+import type { McpToolCall, McpToolName } from './contracts.js';
+import { MCP_TOOL_DEFINITIONS } from './contracts.js';
 
 const MAX_MCP_ARGUMENT_BYTES = 1_048_576;
 const fileIdPattern = /^obj_[A-Za-z0-9_-]{32,64}$/;
@@ -32,6 +30,9 @@ const forbiddenArgumentKeys = new Set([
   'migrator'
 ]);
 
+/**
+ * Validate the tool call.
+ */
 export function validateToolCall(input: unknown): McpToolCall {
   const record = strictRecord(input, ['name', 'arguments']);
   if (typeof record.name !== 'string' || !toolNames.has(record.name)) invalid();
@@ -55,6 +56,9 @@ export function validateToolCall(input: unknown): McpToolCall {
   };
 }
 
+/**
+ * Validate the resource request.
+ */
 export function validateResourceRequest(input: unknown) {
   const record = strictRecord(input, ['uri']);
   if (typeof record.uri !== 'string') invalid();
@@ -63,6 +67,9 @@ export function validateResourceRequest(input: unknown) {
   return { uri: record.uri, fileId: match[1] as string };
 }
 
+/**
+ * Validate the list files arguments.
+ */
 export function validateListFilesArguments(input: Record<string, unknown>) {
   closedRecord(input, ['cursor', 'limit'], ['limit']);
   if (!Number.isSafeInteger(input.limit) || Number(input.limit) < 1 || Number(input.limit) > 100) {
@@ -79,6 +86,9 @@ export function validateListFilesArguments(input: Record<string, unknown>) {
   };
 }
 
+/**
+ * Validate the query rows arguments.
+ */
 export function validateQueryRowsArguments(input: Record<string, unknown>) {
   closedRecord(input, ['fileId', 'columnIds', 'filters', 'sorts', 'limit'], [
     'fileId', 'columnIds', 'filters', 'sorts', 'limit'
@@ -124,6 +134,9 @@ export function validateQueryRowsArguments(input: Record<string, unknown>) {
 
 const toolNames = new Set<string>(MCP_TOOL_DEFINITIONS.map((definition) => definition.name));
 
+/**
+ * Return the strict record result.
+ */
 function strictRecord(input: unknown, keys?: string[]) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) invalid();
   const record = input as Record<string, unknown>;
@@ -137,6 +150,9 @@ function strictRecord(input: unknown, keys?: string[]) {
   return record;
 }
 
+/**
+ * Report the closed record condition.
+ */
 function closedRecord(input: unknown, allowedKeys: string[], requiredKeys: string[]) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) invalid();
   const record = input as Record<string, unknown>;
@@ -148,6 +164,9 @@ function closedRecord(input: unknown, allowedKeys: string[], requiredKeys: strin
   return record;
 }
 
+/**
+ * Return the grid value result.
+ */
 function gridValue(value: unknown) {
   return value === null
     || typeof value === 'string'
@@ -155,6 +174,9 @@ function gridValue(value: unknown) {
     || (typeof value === 'number' && Number.isFinite(value));
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(): never {
   throw new Error('The MCP request is invalid');
 }

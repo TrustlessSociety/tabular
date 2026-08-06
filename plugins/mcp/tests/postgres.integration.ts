@@ -1,21 +1,26 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
+import type { McpToolName } from '../helpers/contracts.js';
 import { startWeb } from '../../../bootstrap/application.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
 import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
-import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
 import { GovernedMcpTransportAdapter } from '../events/adapter.js';
 import {
   MCP_CONTRACT_VERSION,
   MCP_TOOL_DEFINITIONS,
-  McpCredentialVerifier,
-  type McpToolName
+  McpCredentialVerifier
 } from '../helpers/contracts.js';
 
 const { Pool } = pg;
@@ -24,6 +29,9 @@ const connectionId = 'task00013';
 const publicOrigin = 'https://tabular.test';
 const allTools = MCP_TOOL_DEFINITIONS.map((definition) => definition.name);
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -40,6 +48,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the migration transaction result.
+ */
 function migrationTransaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -256,7 +267,7 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
     });
     assert.equal(resource.isError, false, JSON.stringify(resource));
     assert.equal(resource.isError ? '' : resource.structuredContent.resource.fileId, fileId);
-    const discovery = toolResult<{ items: Array<{ file: { fileId: string } }> }>(
+    const discovery = toolResult<{ items: Array<{ file: { fileId: string, }, }>, }>(
       await primaryTransport.callTool('primary-token', {
         name: 'tabular_list_files', arguments: { limit: 100 }
       })
@@ -269,7 +280,7 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
     ]);
     assert.doesNotMatch(JSON.stringify(query), /Other tenant row|secret|owner_role/);
     const rows = new Map(query.rows.map((row) => [cellText(row, labelId), row]));
-    const otherQuery = toolResult<{ rows: McpRow[] }>(await otherTransport.callTool(
+    const otherQuery = toolResult<{ rows: McpRow[], }>(await otherTransport.callTool(
       'other-token',
       {
         name: 'tabular_records_query',
@@ -305,7 +316,7 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
       }
     });
     assertToolError(oversizedRecord, 'result_too_large');
-    const oversizedDraft = toolResult<{ id: string }>(await primaryTransport.callTool(
+    const oversizedDraft = toolResult<{ id: string, }>(await primaryTransport.callTool(
       'primary-token',
       {
         name: 'tabular_draft_create',
@@ -600,7 +611,7 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
     assertToolError(deadline, 'deadline_exceeded');
     assert.deepEqual(await auditCounts(admin, [deadlineCommand]), { journal: 0, outbox: 0 });
     await assertPoolBaseline(application, 'tabular_task13_web');
-    const slowAfter = toolResult<{ cells: Array<{ columnId: string; value: unknown }> }>(
+    const slowAfter = toolResult<{ cells: Array<{ columnId: string, value: unknown, }>, }>(
       await primaryTransport.callTool('primary-token', {
         name: 'tabular_record_read',
         arguments: { fileId, rowId: slowRow.rowId, columnIds: [statusId] }
@@ -674,14 +685,20 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
 });
 
 class TestMcpVerifier extends McpCredentialVerifier<string> {
-  constructor(
+  /**
+   * Create a TestMcpVerifier instance.
+   */
+  public constructor(
     private readonly identityId: string,
     private readonly scopeSeed: 'A' | 'B' | 'C',
     private readonly token: string,
     private readonly tools: McpToolName[]
   ) { super(); }
 
-  async verify(credential: string) {
+  /**
+   * Verify the current value.
+   */
+  public async verify(credential: string) {
     if (credential !== this.token) throw new Error('Credential denied');
     return this.verifiedPrincipal({
       identityId: this.identityId,
@@ -695,30 +712,36 @@ class TestMcpVerifier extends McpCredentialVerifier<string> {
 }
 
 type McpRow = {
-  rowId: string;
-  version: string;
-  cells: Array<{ columnId: string; value: unknown }>;
+  rowId: string,
+  version: string,
+  cells: Array<{ columnId: string, value: unknown, }>,
 };
 
+/**
+ * Query the rows.
+ */
 async function queryRows(
   transport: GovernedMcpTransportAdapter<string>,
   fileId: string,
   columnIds: string[],
   filters: Array<{
-    columnId: string;
-    operation: '=' | '!=' | 'like' | '<' | '<=' | '>' | '>=';
-    value: string | number | boolean | null;
+    columnId: string,
+    operation: '=' | '!=' | 'like' | '<' | '<=' | '>' | '>=',
+    value: string | number | boolean | null,
   }> = []
 ) {
-  return toolResult<{ rows: McpRow[] }>(await transport.callTool('primary-token', {
+  return toolResult<{ rows: McpRow[], }>(await transport.callTool('primary-token', {
     name: 'tabular_records_query',
     arguments: { fileId, columnIds, filters, sorts: [], limit: 100 }
   }));
 }
 
+/**
+ * Return the browser action result.
+ */
 async function browserAction(
   application: Awaited<ReturnType<typeof startWeb>>,
-  session: { cookieToken: string; csrfToken: string },
+  session: { cookieToken: string, csrfToken: string, },
   action: Record<string, unknown>
 ) {
   const response = await fetch(`${application.origin}/events/grid`, {
@@ -735,12 +758,15 @@ async function browserAction(
   const body = await response.text();
   assert.equal(response.status, 200, body);
   return JSON.parse(body) as {
-    status: 'ok' | 'error';
-    data?: unknown;
-    error?: { code: string; message: string; retryable: boolean };
+    status: 'ok' | 'error',
+    data?: unknown,
+    error?: { code: string, message: string, retryable: boolean, },
   };
 }
 
+/**
+ * Return the tool result result.
+ */
 function toolResult<Result>(response: Awaited<ReturnType<
   GovernedMcpTransportAdapter<string>['callTool']
 >>) {
@@ -748,6 +774,9 @@ function toolResult<Result>(response: Awaited<ReturnType<
   return (response.isError ? undefined : response.structuredContent.result) as Result;
 }
 
+/**
+ * Assert the tool error.
+ */
 function assertToolError(
   response: Awaited<ReturnType<GovernedMcpTransportAdapter<string>['callTool']>>,
   category: string
@@ -756,13 +785,19 @@ function assertToolError(
   assert.equal(response.isError ? response.structuredContent.error.category : '', category);
 }
 
+/**
+ * Return the cell text result.
+ */
 function cellText(row: McpRow, columnId: string) {
   const cell = required(row.cells.find((candidate) => candidate.columnId === columnId));
-  const value = cell.value as { type: string; value?: string };
+  const value = cell.value as { type: string, value?: string, };
   assert.equal(value.type, 'text');
   return String(value.value);
 }
 
+/**
+ * Return the action effects result.
+ */
 async function actionEffects(admin: pg.Pool, commandIds: string[]) {
   const result = await admin.query(`
     SELECT j.command_id, j.actor_identity_id, j.surface, j.action_type,
@@ -779,26 +814,29 @@ async function actionEffects(admin: pg.Pool, commandIds: string[]) {
      ORDER BY j.surface, j.command_id
   `, [commandIds]);
   return result.rows as Array<{
-    command_id: string;
-    actor_identity_id: string;
-    surface: string;
-    action_type: string;
-    outcome: string;
-    result_summary: Record<string, unknown>;
-    affected_row_count: number;
-    affected_cell_count: number;
-    outbox_count: number;
-    outbox_event_type: string;
-    outbox_payload: Record<string, unknown>;
+    command_id: string,
+    actor_identity_id: string,
+    surface: string,
+    action_type: string,
+    outcome: string,
+    result_summary: Record<string, unknown>,
+    affected_row_count: number,
+    affected_cell_count: number,
+    outbox_count: number,
+    outbox_event_type: string,
+    outbox_payload: Record<string, unknown>,
   }>;
 }
 
+/**
+ * Normalize the mutation.
+ */
 function normalizeMutation(value: unknown) {
   const result = value as {
-    rows?: unknown[];
-    affectedRowCount?: number;
-    affectedCellCount?: number;
-    replayed?: boolean;
+    rows?: unknown[],
+    affectedRowCount?: number,
+    affectedCellCount?: number,
+    replayed?: boolean,
   };
   return {
     affectedRowCount: result.affectedRowCount,
@@ -808,6 +846,9 @@ function normalizeMutation(value: unknown) {
   };
 }
 
+/**
+ * Normalize the effect.
+ */
 function normalizeEffect(effect: Awaited<ReturnType<typeof actionEffects>>[number]) {
   return {
     actionType: effect.action_type,
@@ -821,6 +862,9 @@ function normalizeEffect(effect: Awaited<ReturnType<typeof actionEffects>>[numbe
   };
 }
 
+/**
+ * Normalize the browser error.
+ */
 function normalizeBrowserError(response: Awaited<ReturnType<typeof browserAction>>) {
   assert.equal(response.status, 'error', JSON.stringify(response));
   return {
@@ -829,6 +873,9 @@ function normalizeBrowserError(response: Awaited<ReturnType<typeof browserAction
   };
 }
 
+/**
+ * Normalize the tool error.
+ */
 function normalizeToolError(
   response: Awaited<ReturnType<GovernedMcpTransportAdapter<string>['callTool']>>
 ) {
@@ -839,6 +886,9 @@ function normalizeToolError(
   } : { category: '', canRetry: false };
 }
 
+/**
+ * Return the audit counts result.
+ */
 async function auditCounts(admin: pg.Pool, commandIds: string[]) {
   const result = await admin.query(`
     SELECT
@@ -848,9 +898,12 @@ async function auditCounts(admin: pg.Pool, commandIds: string[]) {
         JOIN tabular.action_journal j ON e.idempotency_key = 'action:' || j.id
        WHERE j.command_id = ANY($1::text[])) AS outbox
   `, [commandIds]);
-  return result.rows[0] as { journal: number; outbox: number };
+  return result.rows[0] as { journal: number, outbox: number, };
 }
 
+/**
+ * Return the current cursor result.
+ */
 async function currentCursor(admin: pg.Pool) {
   const result = await admin.query(`
     SELECT next_cursor - 1 AS cursor
@@ -859,17 +912,20 @@ async function currentCursor(admin: pg.Pool) {
   return Number(result.rows[0]?.cursor || 0);
 }
 
+/**
+ * Assert the pool baseline.
+ */
 async function assertPoolBaseline(
   application: Awaited<ReturnType<typeof startWeb>>,
   expectedLogin: string
 ) {
   const state = await application.database.transaction('web', {}, (database) =>
     database.execute<{
-      current_user: string;
-      session_user: string;
-      statement_timeout: string;
-      lock_timeout: string;
-      idle_timeout: string;
+      current_user: string,
+      session_user: string,
+      statement_timeout: string,
+      lock_timeout: string,
+      idle_timeout: string,
     }>(`
       SELECT current_user, session_user,
              current_setting('statement_timeout') AS statement_timeout,
@@ -887,6 +943,9 @@ async function assertPoolBaseline(
   assert.equal(application.database.openPool('web').checkedOutCount, 0);
 }
 
+/**
+ * Return the role URL result.
+ */
 function roleUrl(base: string, role: string, password: string) {
   const url = new URL(base);
   url.username = role;
@@ -894,6 +953,9 @@ function roleUrl(base: string, role: string, password: string) {
   return url.toString();
 }
 
+/**
+ * Return the postgres code result.
+ */
 function postgresCode(error: unknown): string {
   if (error && typeof error === 'object' && 'code' in error) return String(error.code);
   if (error instanceof AggregateError) {
@@ -902,6 +964,9 @@ function postgresCode(error: unknown): string {
   return '';
 }
 
+/**
+ * Return the stable file result.
+ */
 function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableName: string) {
   const schema = [...snapshot.schemas.values()].find((item) => item.name === schemaName);
   const object = [...snapshot.objects.values()].find((item) =>
@@ -911,6 +976,9 @@ function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableNa
   return object.stableId;
 }
 
+/**
+ * Return the stable column result.
+ */
 function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnName: string) {
   const column = [...snapshot.columns.values()].find((item) =>
     item.objectId === fileId && item.name === columnName
@@ -919,11 +987,17 @@ function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnNam
   return column.stableId;
 }
 
+/**
+ * Return the required result.
+ */
 function required<Value>(value: Value | undefined | null): Value {
   assert.ok(value);
   return value;
 }
 
+/**
+ * Return the as error result.
+ */
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error(String(error));
 }

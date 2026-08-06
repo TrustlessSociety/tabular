@@ -1,3 +1,4 @@
+//client
 import type {
   ConfirmedFileDdl,
   FileDdlAction,
@@ -11,45 +12,50 @@ import {
   rememberBrowserCsrfToken
 } from '../../identity/events/browser-csrf.js';
 
+//The explorer capability action contract exported for module callers
 export type ExplorerCapabilityAction =
   | {
-    type: 'file.create.blank';
-    commandId: string;
-    folder: ExplorerFolder;
-    displayName: string;
+    type: 'file.create.blank',
+    commandId: string,
+    folder: ExplorerFolder,
+    displayName: string,
   }
   | {
-    type: 'file.rename.display';
-    commandId: string;
-    folder: ExplorerFolder;
-    sourceFolder: ExplorerFolder;
-    file: ExplorerFile;
-    displayName: string;
+    type: 'file.rename.display',
+    commandId: string,
+    folder: ExplorerFolder,
+    sourceFolder: ExplorerFolder,
+    file: ExplorerFile,
+    displayName: string,
   }
   | {
-    type: 'file.settings.apply';
-    commandId: string;
-    folder: ExplorerFolder;
-    sourceFolder: ExplorerFolder;
-    file: ExplorerFile;
-    displayName: string;
-    physicalName: string;
-    physicalNameOverridden: boolean;
+    type: 'file.settings.apply',
+    commandId: string,
+    folder: ExplorerFolder,
+    sourceFolder: ExplorerFolder,
+    file: ExplorerFile,
+    displayName: string,
+    physicalName: string,
+    physicalNameOverridden: boolean,
   };
 
+//The explorer action result contract exported for module callers
 export type ExplorerActionResult =
   | {
-    ok: true;
-    file: ExplorerFile;
-    ddl: FileDdlAction;
-    physicalChange: 'none' | 'confirmation-required';
-    plan?: PlannedFileDdl;
+    ok: true,
+    file: ExplorerFile,
+    ddl: FileDdlAction,
+    physicalChange: 'none' | 'confirmation-required',
+    plan?: PlannedFileDdl,
   }
-  | { ok: false; code: 'duplicate_name' | 'permission_denied' | 'invalid_name' | 'backend_failure'; message: string };
+  | { ok: false, code: 'duplicate_name' | 'permission_denied' | 'invalid_name' | 'backend_failure', message: string, };
 
+/**
+ * Dispatch the explorer action.
+ */
 export async function dispatchExplorerAction(
   action: ExplorerCapabilityAction,
-  options: { fail?: boolean; csrfToken?: string } = {}
+  options: { fail?: boolean, csrfToken?: string, } = {}
 ): Promise<ExplorerActionResult> {
   await Promise.resolve();
   if (options.fail) {
@@ -130,6 +136,9 @@ export async function dispatchExplorerAction(
   };
 }
 
+/**
+ * Return the post explorer action result.
+ */
 async function postExplorerAction(
   action: ExplorerCapabilityAction,
   csrfToken: string
@@ -145,7 +154,7 @@ async function postExplorerAction(
       body: JSON.stringify({ action })
     });
     const result = await response.json() as ExplorerActionResult | {
-      error?: { message?: string };
+      error?: { message?: string, },
     };
     if (!response.ok || !('ok' in result)) {
       return {
@@ -168,10 +177,16 @@ async function postExplorerAction(
   }
 }
 
+/**
+ * Derive the physical name.
+ */
 export function derivePhysicalName(displayName: string, overridden: boolean, current: string) {
   return overridden ? current : normalizePhysicalName(displayName);
 }
 
+/**
+ * Apply the explorer ddl plan.
+ */
 export async function applyExplorerDdlPlan(
   plan: PlannedFileDdl,
   csrfToken: string
@@ -185,10 +200,14 @@ export async function applyExplorerDdlPlan(
   return waitForExplorerDdl(plan.requestId);
 }
 
+//The explorer ddl response contract exported for module callers
 export type ExplorerDdlResponse<Result> =
-  | { status: 'ok'; data: Result }
-  | { status: 'error'; error: { code: string; message: string; retryable?: boolean } };
+  | { status: 'ok', data: Result, }
+  | { status: 'error', error: { code: string, message: string, retryable?: boolean, }, };
 
+/**
+ * Return the confirm explorer ddl result.
+ */
 export async function confirmExplorerDdl(
   requestId: string,
   confirmationToken: string,
@@ -199,6 +218,9 @@ export async function confirmExplorerDdl(
   >;
 }
 
+/**
+ * Load the explorer ddl status.
+ */
 export async function loadExplorerDdlStatus(
   requestId: string
 ): Promise<ExplorerDdlResponse<FileDdlStatus>> {
@@ -209,7 +231,7 @@ export async function loadExplorerDdlStatus(
     });
     rememberBrowserCsrfToken(response.headers.get('x-tabular-csrf'));
     const result = await response.json() as ExplorerDdlResponse<FileDdlStatus> | {
-      error?: { code?: string; message?: string };
+      error?: { code?: string, message?: string, },
     };
     if (response.ok && 'status' in result && result.status === 'ok') return result;
     const exposed = 'error' in result ? result.error : undefined;
@@ -232,18 +254,22 @@ export async function loadExplorerDdlStatus(
   }
 }
 
+//The explorer ddl wait result contract exported for module callers
 export type ExplorerDdlWaitResult =
-  | { status: 'applied'; data: FileDdlStatus & { state: 'applied'; result: NonNullable<FileDdlStatus['result']> } }
-  | { status: 'pending'; data: FileDdlStatus }
-  | { status: 'error'; error: { code: string; message: string; retryable?: boolean } };
+  | { status: 'applied', data: FileDdlStatus & { state: 'applied', result: NonNullable<FileDdlStatus['result']>, }, }
+  | { status: 'pending', data: FileDdlStatus, }
+  | { status: 'error', error: { code: string, message: string, retryable?: boolean, }, };
 
+/**
+ * Wait for the explorer ddl.
+ */
 export async function waitForExplorerDdl(
   requestId: string,
   options: {
-    attempts?: number;
-    intervalMs?: number;
-    load?: typeof loadExplorerDdlStatus;
-    pause?: (milliseconds: number) => Promise<void>;
+    attempts?: number,
+    intervalMs?: number,
+    load?: typeof loadExplorerDdlStatus,
+    pause?: (milliseconds: number) => Promise<void>,
   } = {}
 ): Promise<ExplorerDdlWaitResult> {
   const attempts = options.attempts ?? 120;
@@ -261,8 +287,8 @@ export async function waitForExplorerDdl(
       return {
         status: 'applied',
         data: latest as FileDdlStatus & {
-          state: 'applied';
-          result: NonNullable<FileDdlStatus['result']>;
+          state: 'applied',
+          result: NonNullable<FileDdlStatus['result']>,
         }
       };
     }
@@ -280,6 +306,9 @@ export async function waitForExplorerDdl(
   return { status: 'pending', data: latest };
 }
 
+/**
+ * Return the post ddl event result.
+ */
 async function postDdlEvent(event: Record<string, unknown>, csrfToken: string) {
   try {
     const response = await fetch('/events/grid', {
@@ -293,7 +322,7 @@ async function postDdlEvent(event: Record<string, unknown>, csrfToken: string) {
       body: JSON.stringify({ event })
     });
     const result = await response.json() as ExplorerDdlResponse<unknown> | {
-      error?: { code?: string; message?: string };
+      error?: { code?: string, message?: string, },
     };
     if (response.ok && 'status' in result && result.status === 'ok') return result;
     const exposed = 'error' in result ? result.error : undefined;
@@ -316,6 +345,9 @@ async function postDdlEvent(event: Record<string, unknown>, csrfToken: string) {
   }
 }
 
+/**
+ * Report the unique physical name condition.
+ */
 function uniquePhysicalName(files: ExplorerFile[], base: string) {
   const names = new Set(files.map((item) => item.physicalName));
   if (!names.has(base)) return base;

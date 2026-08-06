@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { createApplication } from '../../../bootstrap/application.js';
 import filesPlugin from '../plugin.js';
 import { FILES_ROUTES } from '../pages/routes.js';

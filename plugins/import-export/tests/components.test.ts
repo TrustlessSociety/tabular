@@ -1,16 +1,24 @@
-import assert from 'node:assert/strict';
+//node
 import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import {
-  ImportWizard,
-  type ImportMapping,
-  type ImportPreview,
-  type ImportWarning,
-  type ImportWizardProps
-} from '../components/import-wizard.js';
 
+//client
+import type {
+  ImportMapping,
+  ImportPreview,
+  ImportWarning,
+  ImportWizardProps
+} from '../components/import-wizard.js';
+import { ImportWizard } from '../components/import-wizard.js';
+
+/**
+ * Return the no operation result.
+ */
 const noOperation = () => undefined;
 
 const mappings: ImportMapping[] = [
@@ -101,7 +109,9 @@ const baseProps: ImportWizardProps = {
   onBackToFiles: noOperation
 };
 
-/** Renders a controlled wizard state without adding a browser runtime. */
+/**
+ * Renders a controlled wizard state without adding a browser runtime.
+ */
 function renderWizard(overrides: Partial<ImportWizardProps>) {
   return renderToStaticMarkup(createElement(ImportWizard, { ...baseProps, ...overrides }));
 }

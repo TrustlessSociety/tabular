@@ -1,5 +1,6 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
 import type { BrowserPrincipal, IdentityCapability } from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 
 const browserCapabilities = new Set<IdentityCapability>([
   'catalog.discover',
@@ -11,6 +12,9 @@ const browserCapabilities = new Set<IdentityCapability>([
   'tabular.import-export'
 ]);
 
+/**
+ * Return the require capability result.
+ */
 export function requireCapability(
   principal: BrowserPrincipal,
   capability: IdentityCapability | string

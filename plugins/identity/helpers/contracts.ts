@@ -1,21 +1,31 @@
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 
 const verifiedProviderSubjectBrand: unique symbol = Symbol('verified-provider-subject');
 const browserMutationPrincipalBrand: unique symbol = Symbol('browser-mutation-principal');
 
+//The verified provider subject contract exported for module callers
 export type VerifiedProviderSubject = {
-  readonly provider: string;
-  readonly issuer: string;
-  readonly subject: string;
-  readonly displayName?: string;
-  readonly authenticatedAt: Date;
-  readonly [verifiedProviderSubjectBrand]: true;
+  readonly provider: string,
+  readonly issuer: string,
+  readonly subject: string,
+  readonly displayName?: string,
+  readonly authenticatedAt: Date,
+  readonly [verifiedProviderSubjectBrand]: true,
 };
 
+/**
+ * Adapt identity provider behavior to its external boundary.
+ */
 export abstract class IdentityProviderAdapter<Input> {
-  readonly provider: string;
-  readonly issuer: string;
+  //The provider state retained by this class instance
+  public readonly provider: string;
+  //The issuer state retained by this class instance
+  public readonly issuer: string;
 
+  /**
+   * Create a IdentityProviderAdapter instance.
+   */
   protected constructor(provider: string, issuer: string) {
     this.provider = bounded(provider, 'provider', 1, 63);
     if (!/^[a-z][a-z0-9._-]*$/.test(this.provider)) {
@@ -24,12 +34,18 @@ export abstract class IdentityProviderAdapter<Input> {
     this.issuer = bounded(issuer, 'issuer', 1, 512);
   }
 
-  abstract verify(input: Input): Promise<VerifiedProviderSubject>;
+  /**
+   * Verify the current value.
+   */
+  public abstract verify(input: Input): Promise<VerifiedProviderSubject>;
 
+  /**
+   * Report the verified subject condition.
+   */
   protected verifiedSubject(input: {
-    subject: string;
-    displayName?: string;
-    authenticatedAt?: Date;
+    subject: string,
+    displayName?: string,
+    authenticatedAt?: Date,
   }): VerifiedProviderSubject {
     const subject = bounded(input.subject, 'subject', 1, 512);
     const displayName = typeof input.displayName === 'undefined'
@@ -50,27 +66,31 @@ export abstract class IdentityProviderAdapter<Input> {
   }
 }
 
+//The browser principal contract exported for module callers
 export type BrowserPrincipal = {
-  readonly transport: 'browser';
-  readonly sessionId: string;
-  readonly identityId: string;
-  readonly connectionId: string;
-  readonly historyScopeId: string;
-  readonly displayName?: string;
-  readonly idleExpiresAt: Date;
-  readonly absoluteExpiresAt: Date;
+  readonly transport: 'browser',
+  readonly sessionId: string,
+  readonly identityId: string,
+  readonly connectionId: string,
+  readonly historyScopeId: string,
+  readonly displayName?: string,
+  readonly idleExpiresAt: Date,
+  readonly absoluteExpiresAt: Date,
 };
 
+//The browser mutation principal contract exported for module callers
 export type BrowserMutationPrincipal = BrowserPrincipal & {
-  readonly [browserMutationPrincipalBrand]: true;
+  readonly [browserMutationPrincipalBrand]: true,
 };
 
+//The established browser session contract exported for module callers
 export type EstablishedBrowserSession = {
-  readonly principal: BrowserPrincipal;
-  readonly cookieToken: string;
-  readonly csrfToken: string;
+  readonly principal: BrowserPrincipal,
+  readonly cookieToken: string,
+  readonly csrfToken: string,
 };
 
+//The identity capability contract exported for module callers
 export type IdentityCapability =
   | 'catalog.discover'
   | 'tabular.capability'
@@ -80,17 +100,22 @@ export type IdentityCapability =
   | 'tabular.operations'
   | 'tabular.import-export';
 
+//The authorized callback contract exported for module callers
 export type AuthorizedCallback<Result> = (
   database: DatabaseExecutor,
   principal: BrowserPrincipal
 ) => Promise<Result>;
 
+//The authorized finalize callback contract exported for module callers
 export type AuthorizedFinalizeCallback<Result, FinalResult = Result> = (
   database: DatabaseExecutor,
   result: Result,
   principal: BrowserPrincipal
 ) => Promise<FinalResult>;
 
+/**
+ * Assert the verified provider subject.
+ */
 export function assertVerifiedProviderSubject(
   value: VerifiedProviderSubject
 ): asserts value is VerifiedProviderSubject {
@@ -99,6 +124,9 @@ export function assertVerifiedProviderSubject(
   }
 }
 
+/**
+ * Return the issue browser mutation principal result.
+ */
 export function issueBrowserMutationPrincipal(
   principal: BrowserPrincipal
 ): BrowserMutationPrincipal {
@@ -108,6 +136,9 @@ export function issueBrowserMutationPrincipal(
   });
 }
 
+/**
+ * Report whether the browser mutation principal condition holds.
+ */
 export function isBrowserMutationPrincipal(
   principal: BrowserPrincipal | BrowserMutationPrincipal
 ): principal is BrowserMutationPrincipal {
@@ -115,6 +146,9 @@ export function isBrowserMutationPrincipal(
     && principal[browserMutationPrincipalBrand] === true;
 }
 
+/**
+ * Return the bounded result.
+ */
 function bounded(value: string, label: string, minimum: number, maximum: number) {
   if (typeof value !== 'string' || value !== value.trim()) {
     throw new Error(`Verified ${label} must be trimmed text`);

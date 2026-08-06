@@ -1,11 +1,12 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
+import type { VerifiedProviderSubject } from '../helpers/contracts.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { loadSessionConfig } from '../../../config/sessions.js';
-import {
-  assertVerifiedProviderSubject,
-  type VerifiedProviderSubject
-} from '../helpers/contracts.js';
+import { assertVerifiedProviderSubject } from '../helpers/contracts.js';
 import { requireCapability } from '../helpers/policy.js';
 import {
   expiredSessionCookieOptions,

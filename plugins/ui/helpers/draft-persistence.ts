@@ -1,21 +1,36 @@
+//The sequenced draft write contract exported for module callers
 export type SequencedDraftWrite<Handle, Result> = {
-  result: Result;
-  handle?: Handle;
+  result: Result,
+  handle?: Handle,
 };
 
+/**
+ * Provide the draft persistence sequencer behavior used by this module.
+ */
 export class DraftPersistenceSequencer<Handle> {
+  //The tail state retained by this class instance
   #tail: Promise<unknown> = Promise.resolve();
+  //The handle state retained by this class instance
   #handle: Handle | undefined;
 
-  current() {
+  /**
+   * Handle the current operation.
+   */
+  public current() {
     return this.#handle;
   }
 
-  replace(handle: Handle | undefined) {
+  /**
+   * Replace the current value.
+   */
+  public replace(handle: Handle | undefined) {
     this.#handle = handle;
   }
 
-  enqueue<Result>(
+  /**
+   * Handle the enqueue operation.
+   */
+  public enqueue<Result>(
     write: (handle: Handle | undefined) => Promise<SequencedDraftWrite<Handle, Result>>
   ): Promise<Result> {
     const operation = this.#tail.then(async () => {
@@ -27,49 +42,69 @@ export class DraftPersistenceSequencer<Handle> {
     return operation;
   }
 
-  async settle() {
+  /**
+   * Handle the settle operation.
+   */
+  public async settle() {
     await this.#tail;
   }
 }
 
-/** Keeps independent persistence queues and remote handles for each draft. */
+/**
+ * Keeps independent persistence queues and remote handles for each draft.
+ */
 export class DraftPersistenceRegistry<Key, Handle> {
+  //The drafts state retained by this class instance
   #drafts = new Map<Key, DraftPersistenceSequencer<Handle>>();
 
-  /** Removes every draft queue when the active file changes. */
-  clear() {
+  /**
+   * Removes every draft queue when the active file changes.
+   */
+  public clear() {
     this.#drafts.clear();
   }
 
-  /** Returns the current remote handle for one logical draft. */
-  current(key: Key) {
+  /**
+   * Returns the current remote handle for one logical draft.
+   */
+  public current(key: Key) {
     return this.#drafts.get(key)?.current();
   }
 
-  /** Queues a write behind earlier writes for the same draft only. */
-  enqueue<Result>(
+  /**
+   * Queues a write behind earlier writes for the same draft only.
+   */
+  public enqueue<Result>(
     key: Key,
     write: (handle: Handle | undefined) => Promise<SequencedDraftWrite<Handle, Result>>
   ) {
     return this.#sequencer(key).enqueue(write);
   }
 
-  /** Removes a completed or abandoned draft without disturbing adjacent rows. */
-  remove(key: Key) {
+  /**
+   * Removes a completed or abandoned draft without disturbing adjacent rows.
+   */
+  public remove(key: Key) {
     this.#drafts.delete(key);
   }
 
-  /** Seeds or replaces the remote handle for a recovered draft. */
-  replace(key: Key, handle: Handle | undefined) {
+  /**
+   * Seeds or replaces the remote handle for a recovered draft.
+   */
+  public replace(key: Key, handle: Handle | undefined) {
     this.#sequencer(key).replace(handle);
   }
 
-  /** Waits only for writes belonging to the requested draft. */
-  async settle(key: Key) {
+  /**
+   * Waits only for writes belonging to the requested draft.
+   */
+  public async settle(key: Key) {
     await this.#drafts.get(key)?.settle();
   }
 
-  /** Creates a draft-local sequencer on first use. */
+  /**
+   * Creates a draft-local sequencer on first use.
+   */
   #sequencer(key: Key) {
     const current = this.#drafts.get(key);
     if (current) return current;

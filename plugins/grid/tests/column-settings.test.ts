@@ -1,13 +1,16 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type { ExplorerFile } from '../../explorer/helpers/contracts.js';
 import type { FileDescription } from '../../files/helpers/contracts.js';
+import type { ColumnForm } from '../components/column-settings-panel.js';
+import type { GridColumn } from '../helpers/contracts.js';
 import {
   buildColumnSettingsAction,
-  matchingRelationConstraintName,
-  type ColumnForm
+  matchingRelationConstraintName
 } from '../components/column-settings-panel.js';
-import type { GridColumn } from '../helpers/contracts.js';
 
 test('relation settings preserve explicit non-adjacent composite source mapping order', () => {
   const file = { id: `obj_${'f'.repeat(43)}` } as ExplorerFile;

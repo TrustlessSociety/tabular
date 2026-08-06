@@ -1,15 +1,24 @@
+//node
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { HttpServer } from '@stackpress/ingest/types';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { TabularConfig } from '../../../config/index.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationEventReader } from '../../operations/events/stream.js';
 import type { RealtimePluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 
+//The realtime routes value exported for module callers
 export const REALTIME_ROUTES = ['/events'] as const;
 
+/**
+ * Register the realtime routes.
+ */
 export function registerRealtimeRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   config: TabularConfig,
   identity: IdentityPluginService,
   realtime: RealtimePluginService,
@@ -43,6 +52,9 @@ export function registerRealtimeRoutes(
         : invalidSubscription();
     const response = res.resource as ServerResponse;
     const request = req.resource as IncomingMessage;
+    /**
+     * Close the current value.
+     */
     const close = () => stream.destroy();
     response.once('close', close);
     request.once('aborted', close);
@@ -57,6 +69,9 @@ export function registerRealtimeRoutes(
   });
 }
 
+/**
+ * Return the exact query result.
+ */
 function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   if ([...parameters.keys()].some((key) => !allowed.includes(key))
     || allowed.some((key) => parameters.getAll(key).length > 1)) {
@@ -64,6 +79,9 @@ function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   }
 }
 
+/**
+ * Return the require same origin result.
+ */
 function requireSameOrigin(
   origin: string | string[] | undefined,
   fetchSite: string | string[] | undefined,
@@ -79,6 +97,9 @@ function requireSameOrigin(
   }
 }
 
+/**
+ * Return the identifier result.
+ */
 function identifier(value: string | null, label: string, expression: RegExp) {
   if (!value || !expression.test(value)) {
     throw new ApplicationError('invalid_query', 400, `The event ${label} is invalid`);
@@ -86,6 +107,9 @@ function identifier(value: string | null, label: string, expression: RegExp) {
   return value;
 }
 
+/**
+ * Return the cursor result.
+ */
 function cursor(value: string | string[] | null | undefined) {
   if (value === null || value === undefined || value === '') return undefined;
   if (typeof value !== 'string' || !/^[0-9]{1,19}$/.test(value)) {
@@ -98,10 +122,16 @@ function cursor(value: string | string[] | null | undefined) {
   return parsed;
 }
 
+/**
+ * Report the invalid session condition.
+ */
 function invalidSession(): never {
   throw new ApplicationError('invalid_session', 401, 'The browser session is invalid');
 }
 
+/**
+ * Report the invalid subscription condition.
+ */
 function invalidSubscription(): never {
   throw new ApplicationError('invalid_query', 400, 'The event subscription scope is invalid');
 }

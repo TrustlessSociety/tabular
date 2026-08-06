@@ -1,11 +1,13 @@
-import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
-import type { IdentityPluginService } from '../../identity/helpers/service.js';
+//client
+import type { TypedCellValue } from '../../capability/helpers/contracts.js';
 import type { CapabilityPluginService } from '../../capability/helpers/service.js';
 import type { GridTargetPlan } from '../../capability/helpers/service.js';
-import type { TypedCellValue } from '../../capability/helpers/contracts.js';
+import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
+import type { IdentityPluginService } from '../../identity/helpers/service.js';
+import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
 import type { GridCellValue, GridColumnKind, GridResource } from './contracts.js';
 import type { GridFilter, GridSort } from './contracts.js';
-import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
+import type { GridRelationLookupInput, GridRelationLookupResult } from './contracts.js';
 import {
   catalogAuthorizedTransactions,
   withCatalogReconciliationRetry
@@ -14,25 +16,27 @@ import {
   executeRelationLookup,
   prepareRelationLookup
 } from './relation-lookup.js';
-import type { GridRelationLookupInput, GridRelationLookupResult } from './contracts.js';
 
+//The grid service value exported for module callers
 export const GRID_SERVICE = 'tabular.grid';
 
+//The grid read query contract exported for module callers
 export type GridReadQuery = {
-  columnIds: string[];
-  sorts: GridSort[];
-  filters: GridFilter[];
+  columnIds: string[],
+  sorts: GridSort[],
+  filters: GridFilter[],
   view?: {
-    id: string;
-    version: number;
-    definition: SavedViewDefinition;
-  };
+    id: string,
+    version: number,
+    definition: SavedViewDefinition,
+  },
 };
 
+//The grid plugin service contract exported for module callers
 export type GridPluginService = {
-  name: typeof GRID_SERVICE;
-  adapter: 'tabulator';
-  adapterVersion: '6.5.0';
+  name: typeof GRID_SERVICE,
+  adapter: 'tabulator',
+  adapterVersion: '6.5.0',
   capabilities: readonly [
     'rows',
     'columns',
@@ -43,23 +47,27 @@ export type GridPluginService = {
     'sizing',
     'formatting',
     'teardown'
-  ];
+  ],
   load(
     principal: BrowserPrincipal,
     fileId: string,
     query?: GridReadQuery
-  ): Promise<GridResource | undefined>;
+  ): Promise<GridResource | undefined>,
   lookupRelation(
     principal: BrowserPrincipal,
     input: GridRelationLookupInput
-  ): Promise<GridRelationLookupResult | undefined>;
+  ): Promise<GridRelationLookupResult | undefined>,
 };
 
 class DirectGridPluginService implements GridPluginService {
-  readonly name = GRID_SERVICE;
-  readonly adapter = 'tabulator' as const;
-  readonly adapterVersion = '6.5.0' as const;
-  readonly capabilities = [
+  //The name state retained by this class instance
+  public readonly name = GRID_SERVICE;
+  //The adapter state retained by this class instance
+  public readonly adapter = 'tabulator' as const;
+  //The adapter version state retained by this class instance
+  public readonly adapterVersion = '6.5.0' as const;
+  //The capabilities state retained by this class instance
+  public readonly capabilities = [
       'rows',
       'columns',
       'editing',
@@ -71,17 +79,26 @@ class DirectGridPluginService implements GridPluginService {
       'teardown'
     ] as const;
 
-  constructor(
+  /**
+   * Create a DirectGridPluginService instance.
+   */
+  public constructor(
     private readonly identity: IdentityPluginService,
     private readonly capability: CapabilityPluginService
   ) {}
 
-  async load(principal: BrowserPrincipal, fileId: string, query?: GridReadQuery) {
+  /**
+   * Load the current value.
+   */
+  public async load(principal: BrowserPrincipal, fileId: string, query?: GridReadQuery) {
     return withCatalogReconciliationRetry(() => catalogAuthorizedTransactions.run(
       () => this.loadOnce(principal, fileId, query)
     ));
   }
 
+  /**
+   * Load the once.
+   */
   private async loadOnce(principal: BrowserPrincipal, fileId: string, query?: GridReadQuery) {
     let prepared: GridTargetPlan | undefined;
     let cursor = 0;
@@ -106,13 +123,13 @@ class DirectGridPluginService implements GridPluginService {
           fileId,
           principal.connectionId
         );
-        const stream = await database.execute<{ cursor: string | number }>(`
+        const stream = await database.execute<{ cursor: string | number, }>(`
           SELECT next_cursor - 1 AS cursor
             FROM tabular.change_streams
            WHERE connection_id = ?
         `, [principal.connectionId]);
         cursor = Number(stream.rows[0]?.cursor || 0);
-        const order = await database.execute<{ version: string | number }>(`
+        const order = await database.execute<{ version: string | number, }>(`
           SELECT version FROM tabular.row_order_state WHERE file_id = ?
         `, [fileId]);
         rowOrderVersion = order.rows[0] ? Number(order.rows[0].version) : undefined;
@@ -154,7 +171,10 @@ class DirectGridPluginService implements GridPluginService {
     } satisfies GridResource;
   }
 
-  async lookupRelation(principal: BrowserPrincipal, input: GridRelationLookupInput) {
+  /**
+   * Handle the lookup relation operation.
+   */
+  public async lookupRelation(principal: BrowserPrincipal, input: GridRelationLookupInput) {
     return withCatalogReconciliationRetry(() => catalogAuthorizedTransactions.run(async () => {
       let prepared: Awaited<ReturnType<typeof prepareRelationLookup>>;
       return this.identity.authorizedTransaction(
@@ -173,6 +193,9 @@ class DirectGridPluginService implements GridPluginService {
   }
 }
 
+/**
+ * Create the grid plugin service.
+ */
 export function createGridPluginService(
   identity: IdentityPluginService,
   capability: CapabilityPluginService
@@ -180,6 +203,9 @@ export function createGridPluginService(
   return new DirectGridPluginService(identity, capability);
 }
 
+/**
+ * Return the grid value result.
+ */
 function gridValue(value: TypedCellValue): GridCellValue {
   if (value.type === 'null') return null;
   if (value.type === 'boolean') return value.value;
@@ -187,6 +213,9 @@ function gridValue(value: TypedCellValue): GridCellValue {
   return value.value;
 }
 
+/**
+ * Return the grid kind result.
+ */
 function gridKind(codec: string): GridColumnKind {
   if (codec === 'integer' || codec === 'decimal') return 'number';
   if (codec === 'boolean') return 'boolean';
@@ -195,6 +224,9 @@ function gridKind(codec: string): GridColumnKind {
   return 'text';
 }
 
+/**
+ * Return the column coordinate result.
+ */
 function columnCoordinate(index: number) {
   let coordinate = '';
   for (let value = index + 1; value > 0; value = Math.floor((value - 1) / 26)) {

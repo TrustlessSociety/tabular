@@ -1,20 +1,25 @@
+//client
 import type { TypedCellValue } from '../../capability/helpers/contracts.js';
 import type { PostgreSqlBrowseResult } from '../../capability/helpers/postgresql-target.js';
 import type { GridCellPresentation } from '../../grid/helpers/contracts.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 
+//The csv export column contract exported for module callers
 export type CsvExportColumn = {
-  id: string;
-  label: string;
-  field?: string;
-  format?: string;
-  formatConfig?: Record<string, unknown>;
+  id: string,
+  label: string,
+  field?: string,
+  format?: string,
+  formatConfig?: Record<string, unknown>,
 };
 
+/**
+ * Serialize the authorized CSV.
+ */
 export function serializeAuthorizedCsv(input: {
-  resource: PostgreSqlBrowseResult;
-  columns: CsvExportColumn[];
-  presentation?: Record<string, GridCellPresentation>;
+  resource: PostgreSqlBrowseResult,
+  columns: CsvExportColumn[],
+  presentation?: Record<string, GridCellPresentation>,
 }) {
   if (input.resource.truncated) {
     throw new ApplicationError(
@@ -64,6 +69,9 @@ export function serializeAuthorizedCsv(input: {
   };
 }
 
+/**
+ * Report the safe CSV filename condition.
+ */
 export function safeCsvFilename(value: string) {
   const normalized = value.normalize('NFKC')
     .replace(/[\u0000-\u001f\u007f/\\:*?"<>|]/g, '-')
@@ -74,11 +82,17 @@ export function safeCsvFilename(value: string) {
   return `${normalized.toLowerCase()}.csv`;
 }
 
+/**
+ * Return the CSV content disposition result.
+ */
 export function csvContentDisposition(filename: string) {
   const ascii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
+/**
+ * Return the formatted value result.
+ */
 function formattedValue(
   value: TypedCellValue,
   presentation: GridCellPresentation | undefined,
@@ -104,6 +118,9 @@ function formattedValue(
   return source;
 }
 
+/**
+ * Return the configured format result.
+ */
 function configuredFormat(column: CsvExportColumn) {
   if (column.format) {
     if (['number', 'currency', 'percent', 'yes-no', 'date', 'time', 'date-time'].includes(column.format)) {
@@ -120,6 +137,9 @@ function configuredFormat(column: CsvExportColumn) {
   return 'automatic' as const;
 }
 
+/**
+ * Return the configured precision result.
+ */
 function configuredPrecision(value: Record<string, unknown> | undefined) {
   const precision = value?.precision;
   return Number.isSafeInteger(precision) && Number(precision) >= 0 && Number(precision) <= 20
@@ -127,6 +147,9 @@ function configuredPrecision(value: Record<string, unknown> | undefined) {
     : undefined;
 }
 
+/**
+ * Return the canonical scalar result.
+ */
 function canonicalScalar(value: TypedCellValue, formatted: string) {
   if (value.type === 'boolean') {
     const source = value.value ? 'true' : 'false';
@@ -138,25 +161,40 @@ function canonicalScalar(value: TypedCellValue, formatted: string) {
   return quoted(formatted);
 }
 
+/**
+ * Report whether the textual condition holds.
+ */
 function isTextual(value: TypedCellValue) {
   return value.type === 'text' || value.type === 'json';
 }
 
+/**
+ * Report the safe spreadsheet text condition.
+ */
 function safeSpreadsheetText(value: string) {
   const dangerous = /^[\t\r\n]/.test(value) || /^\s*[=+\-@]/.test(value);
   return { value: dangerous ? `'${value}` : value, sanitized: dangerous };
 }
 
+/**
+ * Return the quoted result.
+ */
 function quoted(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
+/**
+ * Return the grouped decimal result.
+ */
 function groupedDecimal(value: string) {
   const match = value.match(/^(-?)(\d+)(\.\d+)?$/);
   if (!match) return value;
   return `${match[1]}${match[2]!.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${match[3] || ''}`;
 }
 
+/**
+ * Return the decimal precision result.
+ */
 function decimalPrecision(value: string, precision: number | undefined) {
   if (typeof precision === 'undefined') return value;
   const match = value.match(/^(-?)(\d+)(?:\.(\d+))?$/);
@@ -174,6 +212,9 @@ function decimalPrecision(value: string, precision: number | undefined) {
   return `${negative}${integer}${precision ? `.${decimals}` : ''}`;
 }
 
+/**
+ * Return the shift decimal result.
+ */
 function shiftDecimal(value: string, places: number) {
   const match = value.match(/^(-?)(\d+)(?:\.(\d+))?$/);
   if (!match) return value;
@@ -193,6 +234,9 @@ function shiftDecimal(value: string, places: number) {
   return `${sign}${normalizedInteger}${normalizedDecimals ? `.${normalizedDecimals}` : ''}`;
 }
 
+/**
+ * Return the display date result.
+ */
 function displayDate(value: string) {
   const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!parts) return value;
@@ -201,6 +245,9 @@ function displayDate(value: string) {
   return `${monthName(Number(parts[2]))} ${Number(parts[3])}, ${parts[1]}`;
 }
 
+/**
+ * Return the display time result.
+ */
 function displayTime(value: string) {
   const parts = value.match(/^(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?$/);
   if (!parts) return value;
@@ -211,6 +258,9 @@ function displayTime(value: string) {
   return clockTime(hour, minute);
 }
 
+/**
+ * Return the display date time result.
+ */
 function displayDateTime(value: string) {
   const normalized = value.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(value)
     ? value
@@ -225,6 +275,9 @@ function displayDateTime(value: string) {
   )}`;
 }
 
+/**
+ * Return the month name result.
+ */
 function monthName(month: number) {
   return [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -232,6 +285,9 @@ function monthName(month: number) {
   ][month - 1] || '';
 }
 
+/**
+ * Return the clock time result.
+ */
 function clockTime(hour: number, minute: number) {
   const period = hour < 12 ? 'AM' : 'PM';
   const displayHour = hour % 12 || 12;

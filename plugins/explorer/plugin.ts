@@ -1,16 +1,25 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import { RUNTIME_SERVICE, type ApplicationRuntimeService } from '../../bootstrap/application.js';
-import { CATALOG_SERVICE, type CatalogPluginService } from '../catalog/helpers/service.js';
-import { FILES_SERVICE, type FilesPluginService } from '../files/helpers/service.js';
-import { IDENTITY_SERVICE, type IdentityPluginService } from '../identity/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { CatalogPluginService } from '../catalog/helpers/service.js';
+import type { FilesPluginService } from '../files/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import type { SavedViewsPluginService } from '../saved-views/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { CATALOG_SERVICE } from '../catalog/helpers/service.js';
+import { FILES_SERVICE } from '../files/helpers/service.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
 import { EXPLORER_SERVICE, ExplorerPluginService } from './helpers/service.js';
-import {
-  SAVED_VIEWS_SERVICE,
-  type SavedViewsPluginService
-} from '../saved-views/helpers/service.js';
+import { SAVED_VIEWS_SERVICE } from '../saved-views/helpers/service.js';
 import { registerExplorerRoutes } from './pages/routes.js';
 
-export default function explorerPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the explorer plugin with the application server.
+ */
+export default function explorerPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(EXPLORER_SERVICE)) {
     throw new Error(`Service already registered: ${EXPLORER_SERVICE}`);
   }

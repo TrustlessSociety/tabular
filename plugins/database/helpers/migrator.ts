@@ -1,18 +1,24 @@
+//client
 import type { Migration } from '../migrations/index.js';
 import type { DatabaseExecutor } from './executor.js';
 
-// First signed 64 bits of SHA-256("@trustless/tabular:migrations").
+//First signed 64 bits of SHA-256("@trustless/tabular:migrations").
 export const DEFAULT_MIGRATION_LOCK = '-6651648430625066027';
 
+//The migration transaction contract exported for module callers
 export type MigrationTransaction = <Result>(
   callback: (database: DatabaseExecutor) => Promise<Result>
 ) => Promise<Result>;
 
+//The migration run options contract exported for module callers
 export type MigrationRunOptions = {
-  advisoryLock?: boolean;
-  lockKey?: string;
+  advisoryLock?: boolean,
+  lockKey?: string,
 };
 
+/**
+ * Run the migrations.
+ */
 export async function runMigrations(
   transaction: MigrationTransaction,
   migrations: readonly Migration[],
@@ -32,9 +38,9 @@ export async function runMigrations(
         await verifyPostgreSqlFoundation(database, { requireCurrentOwner: true });
       }
       const applied = await database.execute<{
-        version: string;
-        name: string;
-        checksum: string;
+        version: string,
+        name: string,
+        checksum: string,
       }>('SELECT version, name, checksum FROM tabular.schema_migrations ORDER BY version');
       validateAppliedHistory(applied.rows, migrations);
       const existing = applied.rows.find((row) => row.version === migration.version);
@@ -51,6 +57,9 @@ export async function runMigrations(
   return { applied: newlyApplied, total: migrations.length };
 }
 
+/**
+ * Ensure the migration ledger.
+ */
 async function ensureMigrationLedger(database: DatabaseExecutor) {
   await database.execute('CREATE SCHEMA IF NOT EXISTS tabular');
   await database.execute(`
@@ -65,6 +74,9 @@ async function ensureMigrationLedger(database: DatabaseExecutor) {
   `);
 }
 
+/**
+ * Verify the postgre SQL migration state.
+ */
 export async function verifyPostgreSqlMigrationState(
   database: DatabaseExecutor,
   migrations: readonly Migration[]
@@ -72,9 +84,9 @@ export async function verifyPostgreSqlMigrationState(
   validateMigrationSet(migrations);
   await verifyPostgreSqlFoundation(database, { requireCurrentOwner: false });
   const applied = await database.execute<{
-    version: string;
-    name: string;
-    checksum: string;
+    version: string,
+    name: string,
+    checksum: string,
   }>('SELECT version, name, checksum FROM tabular.schema_migrations ORDER BY version');
   validateAppliedHistory(applied.rows, migrations);
   if (applied.rows.length !== migrations.length) {
@@ -82,13 +94,16 @@ export async function verifyPostgreSqlMigrationState(
   }
 }
 
+/**
+ * Verify the postgre SQL foundation.
+ */
 async function verifyPostgreSqlFoundation(
   database: DatabaseExecutor,
-  options: { requireCurrentOwner: boolean }
+  options: { requireCurrentOwner: boolean, }
 ) {
   const schema = await database.execute<{
-    owner: string;
-    current_user: string;
+    owner: string,
+    current_user: string,
   }>(`
     SELECT pg_get_userbyid(namespace.nspowner)::text AS owner,
            current_user::text AS current_user
@@ -100,9 +115,9 @@ async function verifyPostgreSqlFoundation(
     throw new Error('Refusing to adopt a tabular schema not owned by the migrator authority');
   }
   const ledger = await database.execute<{
-    kind: string;
-    owner: string;
-    current_user: string;
+    kind: string,
+    owner: string,
+    current_user: string,
   }>(`
     SELECT relation.relkind::text AS kind,
            pg_get_userbyid(relation.relowner)::text AS owner,
@@ -118,11 +133,11 @@ async function verifyPostgreSqlFoundation(
     throw new Error('Refusing to adopt an invalid or foreign-owned migration ledger');
   }
   const columns = await database.execute<{
-    column_name: string;
-    data_type: string;
-    udt_name: string;
-    is_nullable: 'YES' | 'NO';
-    column_default: string | null;
+    column_name: string,
+    data_type: string,
+    udt_name: string,
+    is_nullable: 'YES' | 'NO',
+    column_default: string | null,
   }>(`
     SELECT column_name, data_type, udt_name, is_nullable, column_default
     FROM information_schema.columns
@@ -162,12 +177,12 @@ async function verifyPostgreSqlFoundation(
     }
   }
   const constraints = await database.execute<{
-    name: string;
-    kind: string;
-    deferrable: boolean;
-    initially_deferred: boolean;
-    validated: boolean;
-    definition: string;
+    name: string,
+    kind: string,
+    deferrable: boolean,
+    initially_deferred: boolean,
+    validated: boolean,
+    definition: string,
   }>(`
     SELECT ledger_constraint.conname::text AS name,
            ledger_constraint.contype::text AS kind,
@@ -181,7 +196,7 @@ async function verifyPostgreSqlFoundation(
     WHERE namespace.nspname = 'tabular'
       AND relation.relname = 'schema_migrations'
   `);
-  const expectedConstraints = new Map<string, { kind: string; definition: string }>([
+  const expectedConstraints = new Map<string, { kind: string, definition: string, }>([
     ['schema_migrations_checksum_check', {
       kind: 'c',
       definition: "CHECK ((checksum ~ '^[a-f0-9]{64}$'::text))"
@@ -215,8 +230,11 @@ async function verifyPostgreSqlFoundation(
   }
 }
 
+/**
+ * Validate the applied history.
+ */
 function validateAppliedHistory(
-  applied: readonly { version: string; name: string; checksum: string }[],
+  applied: readonly { version: string, name: string, checksum: string, }[],
   migrations: readonly Migration[]
 ) {
   if (applied.length > migrations.length) {
@@ -234,6 +252,9 @@ function validateAppliedHistory(
   }
 }
 
+/**
+ * Validate the migration set.
+ */
 function validateMigrationSet(migrations: readonly Migration[]) {
   const versions = migrations.map((migration) => migration.version);
   if (new Set(versions).size !== versions.length) {

@@ -1,20 +1,27 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { CapabilityPluginService } from '../capability/helpers/service.js';
+import type { ExplorerPluginService } from '../explorer/helpers/service.js';
+import type { FilesPluginService } from '../files/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import type { SavedViewsPluginService } from '../saved-views/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
 import { GRID_SERVICE, createGridPluginService } from './helpers/service.js';
-import { IDENTITY_SERVICE, type IdentityPluginService } from '../identity/helpers/service.js';
-import { CAPABILITY_SERVICE, type CapabilityPluginService } from '../capability/helpers/service.js';
-import { EXPLORER_SERVICE, type ExplorerPluginService } from '../explorer/helpers/service.js';
-import { FILES_SERVICE, type FilesPluginService } from '../files/helpers/service.js';
-import {
-  SAVED_VIEWS_SERVICE,
-  type SavedViewsPluginService
-} from '../saved-views/helpers/service.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
+import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
+import { EXPLORER_SERVICE } from '../explorer/helpers/service.js';
+import { FILES_SERVICE } from '../files/helpers/service.js';
+import { SAVED_VIEWS_SERVICE } from '../saved-views/helpers/service.js';
 import { registerGridRoutes } from './pages/routes.js';
 
-export default function gridPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the grid plugin with the application server.
+ */
+export default function gridPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(GRID_SERVICE)) {
     throw new Error(`Service already registered: ${GRID_SERVICE}`);
   }

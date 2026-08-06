@@ -1,23 +1,16 @@
+//node
 import { createHash } from 'node:crypto';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
-import {
-  isBrowserMutationPrincipal
-} from '../../identity/helpers/contracts.js';
+import type { SessionAuthorityRow } from '../../identity/helpers/repository.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationsPluginService } from '../../operations/helpers/service.js';
-import { IdentityRepository, type SessionAuthorityRow } from '../../identity/helpers/repository.js';
-import {
-  matchesTokenHash,
-  opaqueToken,
-  tokenHash
-} from '../../identity/helpers/security.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 import type {
   AppliedFileDdl,
   ConfirmedFileDdl,
@@ -26,21 +19,42 @@ import type {
   NativeFileDdlEffect,
   StoredFileDdlRequest
 } from '../helpers/contracts.js';
-import { executeNativeFileDdl, type NativeDdlFailpoint } from '../helpers/executor.js';
+import type { NativeDdlFailpoint } from '../helpers/executor.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import {
+  isBrowserMutationPrincipal
+} from '../../identity/helpers/contracts.js';
+import { IdentityRepository } from '../../identity/helpers/repository.js';
+import {
+  matchesTokenHash,
+  opaqueToken,
+  tokenHash
+} from '../../identity/helpers/security.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import { executeNativeFileDdl } from '../helpers/executor.js';
 import { finalizeFileDdl } from '../helpers/metadata.js';
 import { authorizeFileDdlPlan, prepareFileDdlPlan } from '../helpers/planning.js';
 import { FileRepository, iso } from '../helpers/repository.js';
 import { validateFileDdlAction } from '../helpers/validation.js';
 
+/**
+ * Provide the file ddl workflow behavior used by this module.
+ */
 export class FileDdlWorkflow {
-  constructor(
+  /**
+   * Create a FileDdlWorkflow instance.
+   */
+  public constructor(
     private readonly processKind: 'web' | 'migrator' | 'worker',
     private readonly database: DatabasePluginService,
     private readonly identity: IdentityPluginService,
     private readonly operations: OperationsPluginService
   ) {}
 
-  plan(
+  /**
+   * Handle the plan operation.
+   */
+  public plan(
     principal: BrowserMutationPrincipal,
     input: FileDdlAction
   ): Promise<PlannedFileDdl> {
@@ -54,7 +68,7 @@ export class FileDdlWorkflow {
       Date.now() + 5 * 60_000
     ));
     let planned: Awaited<ReturnType<typeof prepareFileDdlPlan>> | undefined;
-    let role: { roleOid: string; roleName: string } | undefined;
+    let role: { roleOid: string, roleName: string, } | undefined;
     let replay: StoredFileDdlRequest | undefined;
     return this.identity.authorizedTransaction(
       principal,
@@ -139,7 +153,10 @@ export class FileDdlWorkflow {
     );
   }
 
-  confirm(
+  /**
+   * Handle the confirm operation.
+   */
+  public confirm(
     principal: BrowserMutationPrincipal,
     requestId: string,
     confirmationToken: string
@@ -194,9 +211,12 @@ export class FileDdlWorkflow {
     );
   }
 
-  apply(
+  /**
+   * Apply the current value.
+   */
+  public apply(
     requestId: string,
-    options: { failpoint?: NativeDdlFailpoint } = {}
+    options: { failpoint?: NativeDdlFailpoint, } = {}
   ): Promise<AppliedFileDdl> {
     if (this.processKind !== 'migrator') {
       throw new ApplicationError(
@@ -208,9 +228,12 @@ export class FileDdlWorkflow {
     return this.applyMigrator(requestId, options);
   }
 
+  /**
+   * Apply the migrator.
+   */
   private async applyMigrator(
     requestId: string,
-    options: { failpoint?: NativeDdlFailpoint }
+    options: { failpoint?: NativeDdlFailpoint, }
   ) {
     const existing = await this.database.transaction('migrator', {}, (database) =>
       new FileRepository(database).requestById(requestId)
@@ -246,7 +269,7 @@ export class FileDdlWorkflow {
         return {
           role: request.expected_context.ownerRoleName!,
           verifyAfterSet: async (effectiveDatabase: DatabaseExecutor) => {
-            const effective = await effectiveDatabase.execute<{ oid: string; name: string }>(`
+            const effective = await effectiveDatabase.execute<{ oid: string, name: string, }>(`
               SELECT current_user::regrole::oid::text AS oid, current_user::text AS name
             `);
             if (effective.rows[0]?.oid !== request!.expected_context.ownerRoleOid
@@ -272,15 +295,18 @@ export class FileDdlWorkflow {
   }
 }
 
+/**
+ * Return the current authority generations result.
+ */
 async function currentAuthorityGenerations(
   database: DatabaseExecutor,
   principal: BrowserPrincipal
 ) {
   const result = await database.execute<{
-    identity_generation: string | number;
-    mapping_generation: string | number;
-    allowed_role_id: string;
-    role_generation: string | number;
+    identity_generation: string | number,
+    mapping_generation: string | number,
+    allowed_role_id: string,
+    role_generation: string | number,
   }>(`
     SELECT i.identity_generation, m.mapping_generation,
            r.id AS allowed_role_id, r.role_generation
@@ -302,11 +328,14 @@ async function currentAuthorityGenerations(
   };
 }
 
+/**
+ * Assert the same authority generations.
+ */
 async function assertSameAuthorityGenerations(
   database: DatabaseExecutor,
   request: StoredFileDdlRequest
 ) {
-  const result = await database.execute<{ valid: boolean }>(`
+  const result = await database.execute<{ valid: boolean, }>(`
     SELECT i.status = 'active'
        AND i.identity_generation = ?
        AND m.enabled AND m.mapping_generation = ?
@@ -336,6 +365,9 @@ async function assertSameAuthorityGenerations(
   if (!result.rows[0]?.valid) confirmationDenied();
 }
 
+/**
+ * Assert the migrator authority.
+ */
 async function assertMigratorAuthority(
   database: DatabaseExecutor,
   request: StoredFileDdlRequest,
@@ -344,25 +376,25 @@ async function assertMigratorAuthority(
   if (checkAuthorityRows) await assertSameAuthorityGenerations(database, request);
   const owner = request.expected_context;
   const result = await database.execute<{
-    database_oid: string | number;
-    owner_oid: string | number;
-    owner_name: string;
-    caller_usable: boolean;
-    migrator_can_set: boolean;
-    rolcanlogin: boolean;
-    rolsuper: boolean;
-    rolcreaterole: boolean;
-    rolcreatedb: boolean;
-    rolreplication: boolean;
-    rolbypassrls: boolean;
-    caller_oid: string | number;
-    caller_name: string;
-    caller_rolcanlogin: boolean;
-    caller_rolsuper: boolean;
-    caller_rolcreaterole: boolean;
-    caller_rolcreatedb: boolean;
-    caller_rolreplication: boolean;
-    caller_rolbypassrls: boolean;
+    database_oid: string | number,
+    owner_oid: string | number,
+    owner_name: string,
+    caller_usable: boolean,
+    migrator_can_set: boolean,
+    rolcanlogin: boolean,
+    rolsuper: boolean,
+    rolcreaterole: boolean,
+    rolcreatedb: boolean,
+    rolreplication: boolean,
+    rolbypassrls: boolean,
+    caller_oid: string | number,
+    caller_name: string,
+    caller_rolcanlogin: boolean,
+    caller_rolsuper: boolean,
+    caller_rolcreaterole: boolean,
+    caller_rolcreatedb: boolean,
+    caller_rolreplication: boolean,
+    caller_rolbypassrls: boolean,
   }>(`
     SELECT d.oid AS database_oid, owner.oid AS owner_oid,
            owner.rolname::text AS owner_name,
@@ -411,6 +443,9 @@ async function assertMigratorAuthority(
     || row.caller_rolbypassrls) confirmationDenied();
 }
 
+/**
+ * Assert the locked authority.
+ */
 function assertLockedAuthority(
   row: SessionAuthorityRow | undefined,
   request: StoredFileDdlRequest
@@ -447,11 +482,17 @@ function assertLockedAuthority(
 }
 
 class AppliedReplay extends Error {
-  constructor(readonly result: AppliedFileDdl) {
+  /**
+   * Create a AppliedReplay instance.
+   */
+  public constructor(public readonly result: AppliedFileDdl) {
     super('Applied file DDL replay');
   }
 }
 
+/**
+ * Return the planned result result.
+ */
 function plannedResult(
   requestId: string,
   confirmationToken: string,
@@ -470,10 +511,16 @@ function plannedResult(
   };
 }
 
+/**
+ * Return the digest result.
+ */
 function digest(value: unknown) {
   return createHash('sha256').update(stableJson(value)).digest('hex');
 }
 
+/**
+ * Return the stable JSON result.
+ */
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -486,6 +533,9 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Return the require mutation result.
+ */
 function requireMutation(
   principal: BrowserPrincipal | BrowserMutationPrincipal
 ): asserts principal is BrowserMutationPrincipal {
@@ -494,9 +544,15 @@ function requireMutation(
   }
 }
 
+/**
+ * Return the confirmation denied result.
+ */
 function confirmationDenied(): never {
   throw new ApplicationError('file_ddl_confirmation_denied', 403, 'The schema-change confirmation is invalid');
 }
+/**
+ * Return the idempotency conflict result.
+ */
 function idempotencyConflict(): never {
   throw new ApplicationError('file_ddl_idempotency_conflict', 409, 'The command identity is already bound to another schema change');
 }

@@ -1,11 +1,16 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
 import { DATABASE_SERVICE, DatabasePluginService } from './helpers/service.js';
 
-export default function databasePlugin(server: HttpServer<any, any>) {
+/**
+ * Register the database plugin with the application server.
+ */
+export default function databasePlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(DATABASE_SERVICE)) {
     throw new Error(`Service already registered: ${DATABASE_SERVICE}`);
   }

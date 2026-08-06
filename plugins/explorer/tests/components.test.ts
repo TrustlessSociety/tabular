@@ -1,7 +1,12 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement, createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+
+//client
 import ExplorerPage from '../views/explorer.js';
 import { TableSettingsPanel } from '../components/table-settings-panel.js';
 import { FileCreateDialog } from '../components/file-ddl-confirmation.js';

@@ -1,3 +1,4 @@
+//client
 import type {
   ColumnDefault,
   DdlLiteral,
@@ -24,6 +25,9 @@ const formatKinds = new Set<FileFormatKind>([
   'label'
 ]);
 
+/**
+ * Validate the file ddl action.
+ */
 export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
   if (!input || typeof input !== 'object') invalid('A structured file action is required');
   commandId(input.commandId);
@@ -151,13 +155,16 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
   return structuredClone(input);
 }
 
+/**
+ * Validate the unstructured column.
+ */
 export function validateUnstructuredColumn(input: {
-  fileId: string;
-  displayName: string;
-  field: FileFieldKind;
-  format: FileFormatKind;
-  fieldConfig?: Record<string, unknown>;
-  formatConfig?: Record<string, unknown>;
+  fileId: string,
+  displayName: string,
+  field: FileFieldKind,
+  format: FileFormatKind,
+  fieldConfig?: Record<string, unknown>,
+  formatConfig?: Record<string, unknown>,
 }) {
   exactKeys(input, ['fileId', 'displayName', 'field', 'format', 'fieldConfig', 'formatConfig']);
   stableFileId(input.fileId);
@@ -169,6 +176,9 @@ export function validateUnstructuredColumn(input: {
   return structuredClone(input);
 }
 
+/**
+ * Validate the column default for storage.
+ */
 export function validateColumnDefaultForStorage(
   storageType: FileStorageType,
   value: ColumnDefault
@@ -176,6 +186,9 @@ export function validateColumnDefaultForStorage(
   validateDefault(storageType, value);
 }
 
+/**
+ * Return the physical identifier result.
+ */
 export function physicalIdentifier(value: string) {
   if (!/^[a-z][a-z0-9_]{0,62}$/.test(value) || value === 'tabular' || value.startsWith('pg_')) {
     invalid('PostgreSQL names must be safe lower_case identifiers');
@@ -183,6 +196,9 @@ export function physicalIdentifier(value: string) {
   return value;
 }
 
+/**
+ * Return the normalized physical name result.
+ */
 export function normalizedPhysicalName(value: string) {
   const normalized = value.normalize('NFKD').toLowerCase()
     .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 63);
@@ -190,7 +206,10 @@ export function normalizedPhysicalName(value: string) {
   return physicalIdentifier(prefixed.slice(0, 63));
 }
 
-function validateDefault(storageType: FileStorageType | undefined, value: { mode: string; value?: DdlLiteral }) {
+/**
+ * Validate the default.
+ */
+function validateDefault(storageType: FileStorageType | undefined, value: { mode: string, value?: DdlLiteral, }) {
   exactKeys(value, ['mode', 'value']);
   if (!['drop', 'literal', 'current-timestamp', 'random-uuid'].includes(value.mode)) {
     invalid('Unsupported column default');
@@ -210,6 +229,9 @@ function validateDefault(storageType: FileStorageType | undefined, value: { mode
   }
 }
 
+/**
+ * Validate the literal.
+ */
 function validateLiteral(value: DdlLiteral) {
   exactKeys(value, ['type', 'value']);
   if (value.type === 'null') return;
@@ -237,12 +259,18 @@ function validateLiteral(value: DdlLiteral) {
   }
 }
 
+/**
+ * Return the canonical date result.
+ */
 function canonicalDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+/**
+ * Return the column axes result.
+ */
 function columnAxes(
   storage: FileStorageType,
   field: FileFieldKind,
@@ -255,22 +283,43 @@ function columnAxes(
   if (config) plainObject(config, 'Field configuration');
 }
 
+/**
+ * Return the display name result.
+ */
 function displayName(value: string) { boundedText(value, 'Display name', 1, 200); }
+/**
+ * Return the optional boolean result.
+ */
 function optionalBoolean(value: boolean | undefined, label: string) {
   if (typeof value !== 'undefined' && typeof value !== 'boolean') invalid(`${label} must be boolean`);
 }
+/**
+ * Return the command id result.
+ */
 function commandId(value: string) {
   if (!/^cmd_[A-Za-z0-9_-]{8,96}$/.test(value)) invalid('Invalid command identity');
 }
+/**
+ * Return the stable schema id result.
+ */
 function stableSchemaId(value: string) {
   if (!/^schema_[A-Za-z0-9_-]{32,64}$/.test(value)) invalid('Invalid schema identity');
 }
+/**
+ * Return the stable file id result.
+ */
 function stableFileId(value: string) {
   if (!/^obj_[A-Za-z0-9_-]{32,64}$/.test(value)) invalid('Invalid file identity');
 }
+/**
+ * Return the stable column id result.
+ */
 function stableColumnId(value: string) {
   if (!/^col_[A-Za-z0-9_-]{32,64}$/.test(value)) invalid('Invalid column identity');
 }
+/**
+ * Return the stable column ids result.
+ */
 function stableColumnIds(values: string[], minimum: number, maximum: number) {
   if (!Array.isArray(values) || values.length < minimum || values.length > maximum) {
     invalid('Invalid column identity list');
@@ -278,12 +327,18 @@ function stableColumnIds(values: string[], minimum: number, maximum: number) {
   values.forEach(stableColumnId);
   if (new Set(values).size !== values.length) invalid('Column identities must be unique');
 }
+/**
+ * Return the plain object result.
+ */
 function plainObject(value: Record<string, unknown>, label: string) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
     invalid(`${label} must be a plain object`);
   }
   if (JSON.stringify(value).length > 20_000) invalid(`${label} is too large`);
 }
+/**
+ * Return the exact keys result.
+ */
 function exactKeys(value: object, allowed: string[]) {
   if (!value || typeof value !== 'object' || Array.isArray(value)
     || Object.getPrototypeOf(value) !== Object.prototype) {
@@ -294,15 +349,24 @@ function exactKeys(value: object, allowed: string[]) {
     invalid('Structured file actions cannot contain unknown fields');
   }
 }
+/**
+ * Return the bounded text result.
+ */
 function boundedText(value: string, label: string, minimum: number, maximum: number) {
   if (typeof value !== 'string' || value !== value.trim() || value.length < minimum
     || value.length > maximum || /[\u0000-\u001f\u007f]/.test(value)) {
     invalid(`${label} is invalid`);
   }
 }
+/**
+ * Return the generated separator result.
+ */
 function generatedSeparator(value: string) {
   if (typeof value !== 'string' || value.length > 32 || /[\u0000-\u001f\u007f]/.test(value)) {
     invalid('Generated separator is invalid');
   }
 }
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never { throw new Error(message); }

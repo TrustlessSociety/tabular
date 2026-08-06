@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { serializeAuthorizedCsv, safeCsvFilename } from '../helpers/csv-export.js';
 

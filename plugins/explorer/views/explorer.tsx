@@ -1,22 +1,35 @@
+//modules
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CommandContextMenu, type ContextMenuState } from '../../commands/components/context-menu.js';
+
+//client
+import type { ContextMenuState } from '../../commands/components/context-menu.js';
 import type { CommandContext, CommandId } from '../../commands/helpers/contracts.js';
+import type { PlannedFileDdl } from '../../files/helpers/contracts.js';
+import type { TableSettingsDraft } from '../components/table-settings-panel.js';
+import type {
+  ExplorerFile,
+  ExplorerPageProps,
+  ExplorerSavedView,
+  ImportEntryPageProps
+} from '../helpers/contracts.js';
+import { CommandContextMenu } from '../../commands/components/context-menu.js';
 import { Icon } from '../../ui/components/icon.js';
-import { TableSettingsPanel, type TableSettingsDraft } from '../components/table-settings-panel.js';
+import { TableSettingsPanel } from '../components/table-settings-panel.js';
 import {
   applyExplorerDdlPlan,
-  dispatchExplorerAction,
+  dispatchExplorerAction
 } from '../events/actions.js';
 import { FileCreateDialog } from '../components/file-ddl-confirmation.js';
 import { ExplorerHeader } from '../components/explorer-header.js';
-import type { ExplorerFile, ExplorerPageProps, ExplorerSavedView, ImportEntryPageProps } from '../helpers/contracts.js';
 import { filterExplorerItems } from '../helpers/model.js';
-import type { PlannedFileDdl } from '../../files/helpers/contracts.js';
 
 type ViewMode = 'list' | 'grid';
 type Tab = 'files' | 'views';
-type ExplorerContextMenu = { file: ExplorerFile; menu: ContextMenuState };
+type ExplorerContextMenu = { file: ExplorerFile, menu: ContextMenuState, };
 
+/**
+ * Render the explorer page component.
+ */
 export default function ExplorerPage(props: ExplorerPageProps) {
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -49,6 +62,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     if (saved === 'grid' || saved === 'list') setViewMode(saved);
   }, []);
 
+  /**
+   * Return the choose view mode result.
+   */
   const chooseViewMode = (mode: ViewMode) => {
     setViewMode(mode);
     window.sessionStorage.setItem('tabular.explorer.view', mode);
@@ -83,6 +99,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     relationSelection: false
   }), [contextMenu, denied, folder]);
 
+  /**
+   * Open the context menu.
+   */
   const openContextMenu = (
     file: ExplorerFile,
     trigger: HTMLAnchorElement,
@@ -93,6 +112,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     setContextMenu({ file, menu: { target: 'explorer', x, y, trigger } });
   };
 
+  /**
+   * Close the context menu.
+   */
   const closeContextMenu = () => {
     const trigger = contextMenu?.menu.trigger;
     setContextMenu(undefined);
@@ -100,6 +122,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     restoreContextFocus.current = true;
   };
 
+  /**
+   * Handle the context command.
+   */
   const handleContextCommand = (id: CommandId) => {
     if (!contextMenu || !folder) return;
     if (id === 'file.open') {
@@ -117,6 +142,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     }
   };
 
+  /**
+   * Apply the settings.
+   */
   const applySettings = async (draft: TableSettingsDraft) => {
     if (!settingsFile) return;
     const sourceFolder = folders.find((item) => item.id === settingsFile.folderId);
@@ -151,6 +179,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     if (message) setFeedback(message);
   };
 
+  /**
+   * Create the blank.
+   */
   const createBlank = async (displayName: string) => {
     if (!folder) return;
     setCreating(true);
@@ -183,6 +214,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
     }
   };
 
+  /**
+   * Apply the planned change.
+   */
   const applyPlannedChange = async (plan: PlannedFileDdl, folderSlug: string) => {
     const applied = await applyExplorerDdlPlan(plan, props.csrfToken);
     if (applied.status !== 'applied') {
@@ -357,6 +391,9 @@ export default function ExplorerPage(props: ExplorerPageProps) {
   );
 }
 
+/**
+ * Render the import entry page component.
+ */
 export function ImportEntryPage(props: ImportEntryPageProps) {
   const folder = props.snapshot.folders.find((item) => item.slug === props.route.folder) || props.snapshot.folders[0]!;
   return (
@@ -393,7 +430,10 @@ export function ImportEntryPage(props: ImportEntryPageProps) {
   );
 }
 
-function FolderItem({ item }: { item: ExplorerPageProps['snapshot']['folders'][number] }) {
+/**
+ * Render the folder item component.
+ */
+function FolderItem({ item }: { item: ExplorerPageProps['snapshot']['folders'][number], }) {
   return (
     <a className="explorer-item" href={`/pages/browse.html?folder=${item.slug}`}>
       <span className="explorer-item-identity"><span className="explorer-item-icon"><Icon name="folder" /></span><span><strong>{item.displayName}</strong></span></span>
@@ -406,19 +446,22 @@ function FolderItem({ item }: { item: ExplorerPageProps['snapshot']['folders'][n
   );
 }
 
+/**
+ * Render the file item component.
+ */
 function FileItem({
   item,
   folder,
   onRequestContextMenu
 }: {
-  item: ExplorerFile;
-  folder: string;
+  item: ExplorerFile,
+  folder: string,
   onRequestContextMenu: (
     item: ExplorerFile,
     trigger: HTMLAnchorElement,
     x: number,
     y: number
-  ) => void;
+  ) => void,
 }) {
   return (
     <a
@@ -464,7 +507,10 @@ function FileItem({
   );
 }
 
-function ViewItem({ item, folder }: { item: ExplorerSavedView; folder: string }) {
+/**
+ * Render the view item component.
+ */
+function ViewItem({ item, folder }: { item: ExplorerSavedView, folder: string, }) {
   return (
     <a className="explorer-item" href={`/pages/table.html?folder=${folder}&table=${item.fileSlug}&view=${item.slug}`} target="_blank" rel="noreferrer" data-stable-id={item.id}>
       <span className="explorer-item-identity">
@@ -478,11 +524,17 @@ function ViewItem({ item, folder }: { item: ExplorerSavedView; folder: string })
   );
 }
 
+/**
+ * Return the searchable text result.
+ */
 function searchableText(item: unknown) {
   if (!item || typeof item !== 'object') return '';
   return Object.values(item).filter((value) => typeof value === 'string').join(' ');
 }
 
+/**
+ * Return the navigate tab result.
+ */
 function navigateTab(
   event: React.KeyboardEvent<HTMLAnchorElement>,
   folder: string,

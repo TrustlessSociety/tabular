@@ -1,24 +1,14 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
+import type { StableCatalogSnapshot, StableObject } from '../../catalog/helpers/contracts.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
-import {
-  isBrowserMutationPrincipal
-} from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationsPluginService } from '../../operations/helpers/service.js';
-import type { StableCatalogSnapshot, StableObject } from '../../catalog/helpers/contracts.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import {
-  catalogAuthorizedTransactions,
-  withCatalogReconciliationRetry
-} from '../../catalog/helpers/service.js';
-import { opaqueId } from '../../identity/helpers/security.js';
-import { FileDdlWorkflow } from '../events/ddl-workflow.js';
 import type {
   FileDescription,
   FileDdlAction,
@@ -26,70 +16,91 @@ import type {
   FileFieldKind,
   FileFormatKind
 } from './contracts.js';
-import { FileRepository, iso } from './repository.js';
 import type { NativeDdlFailpoint } from './executor.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import {
+  isBrowserMutationPrincipal
+} from '../../identity/helpers/contracts.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import {
+  catalogAuthorizedTransactions,
+  withCatalogReconciliationRetry
+} from '../../catalog/helpers/service.js';
+import { opaqueId } from '../../identity/helpers/security.js';
+import { FileDdlWorkflow } from '../events/ddl-workflow.js';
+import { FileRepository, iso } from './repository.js';
 import { validateUnstructuredColumn } from './validation.js';
 
+//The files service value exported for module callers
 export const FILES_SERVICE = 'tabular.files';
 
+//The file folder permissions contract exported for module callers
 export type FileFolderPermissions = {
-  createFile: boolean;
-  importFile: boolean;
-  renameFile: boolean;
-  configureFile: boolean;
+  createFile: boolean,
+  importFile: boolean,
+  renameFile: boolean,
+  configureFile: boolean,
 };
 
 type NativeFile = {
-  relation_oid: string | number;
-  schema_name: string;
-  relation_name: string;
-  relkind: string;
-  can_read: boolean;
-  has_row_identity: boolean;
+  relation_oid: string | number,
+  schema_name: string,
+  relation_name: string,
+  relkind: string,
+  can_read: boolean,
+  has_row_identity: boolean,
 };
 
 type NativeColumn = {
-  attribute_number: number;
-  physical_name: string;
-  storage_type: string;
-  nullable: boolean;
-  default_expression: string | null;
-  generated_expression: string | null;
-  identity_kind: string;
-  generated_kind: string;
-  can_read: boolean;
-  can_update: boolean;
+  attribute_number: number,
+  physical_name: string,
+  storage_type: string,
+  nullable: boolean,
+  default_expression: string | null,
+  generated_expression: string | null,
+  identity_kind: string,
+  generated_kind: string,
+  can_read: boolean,
+  can_update: boolean,
 };
 
 type NativeConstraint = {
-  oid: string | number;
-  physical_name: string;
-  kind: string;
-  source_numbers: string | null;
-  target_relation_oid: string | number;
-  target_numbers: string | null;
-  definition: string;
-  target_visible: boolean;
+  oid: string | number,
+  physical_name: string,
+  kind: string,
+  source_numbers: string | null,
+  target_relation_oid: string | number,
+  target_numbers: string | null,
+  definition: string,
+  target_visible: boolean,
 };
 
 type ColumnMetadata = {
-  column_id: string;
-  catalog_column_id: string | null;
-  storage_kind: 'postgresql' | 'unstructured-json';
-  display_name: string;
-  field_kind: string;
-  format_kind: string;
-  field_config: Record<string, unknown>;
-  format_config: Record<string, unknown>;
-  hidden: boolean;
-  hidden_purpose: string | null;
+  column_id: string,
+  catalog_column_id: string | null,
+  storage_kind: 'postgresql' | 'unstructured-json',
+  display_name: string,
+  field_kind: string,
+  format_kind: string,
+  field_config: Record<string, unknown>,
+  format_config: Record<string, unknown>,
+  hidden: boolean,
+  hidden_purpose: string | null,
 };
 
+/**
+ * Provide files plugin operations through one service boundary.
+ */
 export class FilesPluginService {
-  readonly name = FILES_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = FILES_SERVICE;
+  //The workflow state retained by this class instance
   readonly #workflow: FileDdlWorkflow;
 
-  constructor(
+  /**
+   * Create a FilesPluginService instance.
+   */
+  public constructor(
     runtime: ApplicationRuntimeService,
     database: DatabasePluginService,
     private readonly identity: IdentityPluginService,
@@ -98,13 +109,19 @@ export class FilesPluginService {
     this.#workflow = new FileDdlWorkflow(runtime.processKind, database, identity, operations);
   }
 
-  plan(principal: BrowserMutationPrincipal, action: FileDdlAction) {
+  /**
+   * Handle the plan operation.
+   */
+  public plan(principal: BrowserMutationPrincipal, action: FileDdlAction) {
     return catalogAuthorizedTransactions.run(() => withCatalogReconciliationRetry(
       () => this.#workflow.plan(principal, action)
     ));
   }
 
-  confirm(
+  /**
+   * Handle the confirm operation.
+   */
+  public confirm(
     principal: BrowserMutationPrincipal,
     requestId: string,
     confirmationToken: string
@@ -112,14 +129,20 @@ export class FilesPluginService {
     return this.#workflow.confirm(principal, requestId, confirmationToken);
   }
 
-  applyConfirmed(
+  /**
+   * Apply the confirmed.
+   */
+  public applyConfirmed(
     requestId: string,
-    options: { failpoint?: NativeDdlFailpoint } = {}
+    options: { failpoint?: NativeDdlFailpoint, } = {}
   ) {
     return this.#workflow.apply(requestId, options);
   }
 
-  status(principal: BrowserPrincipal, requestId: string): Promise<FileDdlStatus> {
+  /**
+   * Handle the status operation.
+   */
+  public status(principal: BrowserPrincipal, requestId: string): Promise<FileDdlStatus> {
     let request: Awaited<ReturnType<FileRepository['ownedRequest']>>;
     let operation: Awaited<ReturnType<FileRepository['ownedApplyOperation']>>;
     return this.identity.authorizedTransaction(
@@ -168,16 +191,19 @@ export class FilesPluginService {
     );
   }
 
-  displayNames(principal: BrowserPrincipal, fileIds: string[]) {
+  /**
+   * Handle the display names operation.
+   */
+  public displayNames(principal: BrowserPrincipal, fileIds: string[]) {
     const ids = [...new Set(fileIds)];
     if (!ids.length) return Promise.resolve(new Map<string, string>());
-    let rows: Array<{ object_id: string; display_name: string; relation_oid: string }> = [];
+    let rows: Array<{ object_id: string, display_name: string, relation_oid: string, }> = [];
     return this.identity.authorizedTransaction(
       principal,
       'tabular.files',
       async (database) => {
         if (!rows.length) return new Map<string, string>();
-        const visibility = await database.execute<{ relation_oid: string }>(`
+        const visibility = await database.execute<{ relation_oid: string, }>(`
           SELECT c.oid::text AS relation_oid
             FROM pg_class c
             JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -195,9 +221,9 @@ export class FilesPluginService {
       },
       async (database) => {
         const result = await database.execute<{
-          object_id: string;
-          display_name: string;
-          relation_oid: string | number;
+          object_id: string,
+          display_name: string,
+          relation_oid: string | number,
         }>(`
           SELECT metadata.object_id, metadata.display_name, object.relation_oid
             FROM tabular.file_metadata metadata
@@ -211,15 +237,18 @@ export class FilesPluginService {
     );
   }
 
-  async createUnstructuredColumn(
+  /**
+   * Create the unstructured column.
+   */
+  public async createUnstructuredColumn(
     principal: BrowserMutationPrincipal,
     input: {
-      fileId: string;
-      displayName: string;
-      field: FileFieldKind;
-      format: FileFormatKind;
-      fieldConfig?: Record<string, unknown>;
-      formatConfig?: Record<string, unknown>;
+      fileId: string,
+      displayName: string,
+      field: FileFieldKind,
+      format: FileFormatKind,
+      fieldConfig?: Record<string, unknown>,
+      formatConfig?: Record<string, unknown>,
     }
   ) {
     requireMutation(principal);
@@ -235,7 +264,7 @@ export class FilesPluginService {
       async (database) => {
         if (!object) unavailable();
         if (!hiddenAttributeNumber) unavailable();
-        const allowed = await database.execute<{ allowed: boolean }>(`
+        const allowed = await database.execute<{ allowed: boolean, }>(`
           SELECT has_column_privilege(
             current_user, ?::oid, ?::smallint, 'UPDATE'
           ) AS allowed
@@ -248,8 +277,8 @@ export class FilesPluginService {
         object = findObject(stable, input.fileId);
         if (!object || !['table', 'partitioned-table'].includes(object.kind)) unavailable();
         const hidden = await database.execute<{
-          attribute_number: string | number;
-          valid: boolean;
+          attribute_number: string | number,
+          valid: boolean,
         }>(`
           SELECT a.attnum AS attribute_number,
                  o.relation_oid = ?::oid
@@ -317,7 +346,10 @@ export class FilesPluginService {
     }));
   }
 
-  async describe(principal: BrowserPrincipal, fileId: string): Promise<FileDescription> {
+  /**
+   * Describe the current value.
+   */
+  public async describe(principal: BrowserPrincipal, fileId: string): Promise<FileDescription> {
     return catalogAuthorizedTransactions.run(() => withCatalogReconciliationRetry(async () => {
       let stable: StableCatalogSnapshot | undefined;
       let object: StableObject | undefined;
@@ -348,7 +380,7 @@ export class FilesPluginService {
         stable = await reconcileCatalog(database, principal.connectionId);
         object = findObject(stable, fileId);
         if (!object) unavailable();
-        const file = await database.execute<{ display_name: string }>(`
+        const file = await database.execute<{ display_name: string, }>(`
           SELECT display_name FROM tabular.file_metadata WHERE object_id = ?
         `, [object.stableId]);
         displayName = file.rows[0]?.display_name;
@@ -362,8 +394,8 @@ export class FilesPluginService {
         `, [object.stableId]);
         metadata = fields.rows;
         const aliases = await database.execute<{
-          catalog_column_id: string;
-          column_id: string;
+          catalog_column_id: string,
+          column_id: string,
         }>(`
           SELECT catalog_column_id, column_id
             FROM tabular.column_metadata
@@ -379,7 +411,10 @@ export class FilesPluginService {
     }));
   }
 
-  async folderPermissions(
+  /**
+   * Handle the folder permissions operation.
+   */
+  public async folderPermissions(
     principal: BrowserPrincipal
   ): Promise<Map<string, FileFolderPermissions>> {
     return catalogAuthorizedTransactions.run(() => withCatalogReconciliationRetry(async () => {
@@ -392,8 +427,8 @@ export class FilesPluginService {
         const permissions = new Map<string, FileFolderPermissions>();
         for (const schema of stable.schemas.values()) {
           const result = await database.execute<{
-            create_allowed: boolean;
-            manage_allowed: boolean;
+            create_allowed: boolean,
+            manage_allowed: boolean,
           }>(`
             SELECT has_schema_privilege(current_user, ?::oid, 'CREATE') AS create_allowed,
                    EXISTS (
@@ -423,6 +458,9 @@ export class FilesPluginService {
   }
 }
 
+/**
+ * Read the native file.
+ */
 async function readNativeFile(database: DatabaseExecutor, object: StableObject) {
   const result = await database.execute<NativeFile>(`
     SELECT c.oid AS relation_oid, n.nspname AS schema_name,
@@ -472,6 +510,9 @@ async function readNativeFile(database: DatabaseExecutor, object: StableObject) 
   return row;
 }
 
+/**
+ * Read the native columns.
+ */
 async function readNativeColumns(database: DatabaseExecutor, relationOid: string) {
   return (await database.execute<NativeColumn>(`
     SELECT a.attnum AS attribute_number, a.attname AS physical_name,
@@ -489,6 +530,9 @@ async function readNativeColumns(database: DatabaseExecutor, relationOid: string
   `, [relationOid])).rows;
 }
 
+/**
+ * Read the native constraints.
+ */
 async function readNativeConstraints(database: DatabaseExecutor, relationOid: string) {
   return (await database.execute<NativeConstraint>(`
     SELECT c.oid, c.conname AS physical_name, c.contype AS kind,
@@ -517,6 +561,9 @@ async function readNativeConstraints(database: DatabaseExecutor, relationOid: st
   `, [relationOid])).rows;
 }
 
+/**
+ * Merge the description.
+ */
 function mergeDescription(
   stable: StableCatalogSnapshot,
   object: StableObject,
@@ -643,22 +690,37 @@ function mergeDescription(
   };
 }
 
+/**
+ * Parse the numbers.
+ */
 function parseNumbers(value: string | null) {
   return value?.replace(/[{}]/g, '').split(/[ ,]+/).filter(Boolean).map(Number) || [];
 }
 
+/**
+ * Find the object.
+ */
 function findObject(stable: StableCatalogSnapshot, fileId: string) {
   return [...stable.objects.values()].find((item) => item.stableId === fileId);
 }
 
+/**
+ * Return the require mutation result.
+ */
 function requireMutation(
   principal: BrowserPrincipal | BrowserMutationPrincipal
 ): asserts principal is BrowserMutationPrincipal {
   if (!isBrowserMutationPrincipal(principal)) denied();
 }
+/**
+ * Return the denied result.
+ */
 function denied(): never {
   throw new ApplicationError('capability_denied', 403, 'The requested file capability is denied');
 }
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ApplicationError('file_unavailable', 404, 'The file is unavailable');
 }

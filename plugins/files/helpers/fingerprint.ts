@@ -1,30 +1,36 @@
+//node
 import { createHash } from 'node:crypto';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { ExpectedDdlContext } from './contracts.js';
 
 type RelationIdentity = {
-  relation_oid: string | number;
-  namespace_oid: string | number;
-  schema_name: string;
-  relation_name: string;
-  owner_oid: string | number;
-  owner_name: string;
-  relkind: string;
-  relrowsecurity: boolean;
-  relforcerowsecurity: boolean;
+  relation_oid: string | number,
+  namespace_oid: string | number,
+  schema_name: string,
+  relation_name: string,
+  owner_oid: string | number,
+  owner_name: string,
+  relkind: string,
+  relrowsecurity: boolean,
+  relforcerowsecurity: boolean,
 };
 
+/**
+ * Read the expected fingerprint.
+ */
 export async function readExpectedFingerprint(
   database: DatabaseExecutor,
   expected: ExpectedDdlContext
 ) {
   if (!expected.relationOid) {
     const schema = await database.execute<{
-      database_oid: string | number;
-      namespace_oid: string | number;
-      schema_name: string;
-      owner_oid: string | number;
-      owner_name: string;
+      database_oid: string | number,
+      namespace_oid: string | number,
+      schema_name: string,
+      owner_oid: string | number,
+      owner_name: string,
     }>(`
       SELECT d.oid AS database_oid, n.oid AS namespace_oid, n.nspname AS schema_name,
              r.oid AS owner_oid, r.rolname::text AS owner_name
@@ -38,6 +44,9 @@ export async function readExpectedFingerprint(
   return readRelationFingerprint(database, expected.relationOid);
 }
 
+/**
+ * Read the relation fingerprint.
+ */
 export async function readRelationFingerprint(
   database: DatabaseExecutor,
   relationOid: string
@@ -98,21 +107,24 @@ export async function readRelationFingerprint(
   });
 }
 
+/**
+ * Derive the safe owner.
+ */
 export async function deriveSafeOwner(
   database: DatabaseExecutor,
   expected: ExpectedDdlContext
 ) {
   const result = await database.execute<{
-    owner_oid: string | number;
-    owner_name: string;
-    usable: boolean;
-    create_allowed: boolean;
-    rolcanlogin: boolean;
-    rolsuper: boolean;
-    rolcreaterole: boolean;
-    rolcreatedb: boolean;
-    rolreplication: boolean;
-    rolbypassrls: boolean;
+    owner_oid: string | number,
+    owner_name: string,
+    usable: boolean,
+    create_allowed: boolean,
+    rolcanlogin: boolean,
+    rolsuper: boolean,
+    rolcreaterole: boolean,
+    rolcreatedb: boolean,
+    rolreplication: boolean,
+    rolbypassrls: boolean,
   }>(expected.relationOid ? `
     SELECT r.oid AS owner_oid, r.rolname::text AS owner_name,
            pg_has_role(current_user, r.oid, 'USAGE') AS usable,
@@ -142,6 +154,9 @@ export async function deriveSafeOwner(
   return { oid: String(owner.owner_oid), name: owner.owner_name };
 }
 
+/**
+ * Return the digest result.
+ */
 function digest(value: unknown) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }

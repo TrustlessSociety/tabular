@@ -1,10 +1,17 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HttpServer } from '@stackpress/ingest/types';
+
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { FilesPluginService } from '../helpers/service.js';
 import { registerFilesRoutes } from '../pages/routes.js';
+
+//The structural route test double supplies dynamic config and service maps,
+// so it cannot name the complete Stackpress server generics
+type DynamicServerDouble = ApplicationServer;
 
 test('file route describes files and reports owner-scoped DDL status through distinct queries', async () => {
   const harness = routeHarness();
@@ -27,7 +34,7 @@ test('file route describes files and reports owner-scoped DDL status through dis
     identityId: harness.principal.identityId,
     id: `ddl_${'d'.repeat(43)}`
   });
-  assert.equal((harness.response.jsonBody as { status: string }).status, 'ok');
+  assert.equal((harness.response.jsonBody as { status: string, }).status, 'ok');
   assert.equal(harness.response.headers.get('x-tabular-csrf'), 'c'.repeat(64));
 });
 
@@ -56,6 +63,9 @@ test('file route rejects ambiguous and expanded query envelopes', async () => {
   );
 });
 
+/**
+ * Return the bounded invalid query result.
+ */
 function boundedInvalidQuery(error: unknown) {
   return error instanceof Error
     && error.message === 'File query is invalid'
@@ -65,13 +75,19 @@ function boundedInvalidQuery(error: unknown) {
     && error.statusCode === 400;
 }
 
+/**
+ * Return the route harness result.
+ */
 function routeHarness() {
   type Request = ReturnType<typeof request>;
-  type Handler = (context: { req: Request; res: typeof response }) => Promise<void>;
+  type Handler = (context: { req: Request, res: typeof response, }) => Promise<void>;
   const get: Record<string, Handler> = {};
   const server = {
+    /**
+     * Capture one registered GET route handler by pathname.
+     */
     get(path: string, handler: Handler) { get[path] = handler; }
-  } as unknown as HttpServer<any, any>;
+  } as unknown as DynamicServerDouble;
   const principal: BrowserPrincipal = {
     transport: 'browser',
     sessionId: `sess_${'s'.repeat(32)}`,
@@ -87,10 +103,16 @@ function routeHarness() {
   } as unknown as IdentityPluginService;
   const calls: Array<Record<string, string>> = [];
   const files = {
+    /**
+     * Describe the current value.
+     */
     async describe(caller: BrowserPrincipal, id: string) {
       calls.push({ method: 'describe', identityId: caller.identityId, id });
       return { id };
     },
+    /**
+     * Handle the status operation.
+     */
     async status(caller: BrowserPrincipal, id: string) {
       calls.push({ method: 'status', identityId: caller.identityId, id });
       return { requestId: id, state: 'confirmed' };
@@ -105,11 +127,17 @@ function routeHarness() {
 const response = {
   headers: new Headers(),
   jsonBody: undefined as unknown,
+  /**
+   * Handle the JSON operation.
+   */
   json(value: unknown) {
     this.jsonBody = value;
   }
 };
 
+/**
+ * Return the request with the bounded body loader attached.
+ */
 function request(path: string) {
   return {
     url: new URL(path, 'http://tabular.test'),

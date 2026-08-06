@@ -1,9 +1,14 @@
+//modules
 import { useEffect, useRef } from 'react';
+
+//client
 import type { CommandContext, CommandId } from '../helpers/contracts.js';
 import { commandState } from '../helpers/registry.js';
 
+//The context menu target contract exported for module callers
 export type ContextMenuTarget = 'cell' | 'relation' | 'row' | 'header-row' | 'column' | 'explorer';
-export type ContextMenuState = { target: ContextMenuTarget; x: number; y: number; trigger?: HTMLElement };
+//The context menu state contract exported for module callers
+export type ContextMenuState = { target: ContextMenuTarget, x: number, y: number, trigger?: HTMLElement, };
 
 const entries: Record<ContextMenuTarget, Array<CommandId | 'separator'>> = {
   cell: ['edit.cut', 'edit.copy', 'edit.paste', 'separator', 'edit.cell', 'edit.clear', 'row.insert-above', 'row.insert-below'],
@@ -26,30 +31,42 @@ const labels: Partial<Record<CommandId, string>> = {
   'file.open': 'Open', 'file.table-settings': 'Table settings', 'file.copy': 'Make a copy'
 };
 
+/**
+ * Clamp the menu position.
+ */
 export function clampMenuPosition(x: number, y: number, viewportWidth: number, viewportHeight: number) {
   return { x: Math.max(8, Math.min(x, viewportWidth - 250)), y: Math.max(8, Math.min(y, viewportHeight - 430)) };
 }
 
+/**
+ * Render the command context menu component.
+ */
 export function CommandContextMenu({
   menu,
   context,
   onCommand,
   onClose
 }: {
-  menu: ContextMenuState;
-  context: CommandContext;
-  onCommand: (id: CommandId, trigger: HTMLElement) => void;
-  onClose: () => void;
+  menu: ContextMenuState,
+  context: CommandContext,
+  onCommand: (id: CommandId, trigger: HTMLElement) => void,
+  onClose: () => void,
 }) {
   const root = useRef<HTMLDivElement>(null);
   const viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight;
   const position = clampMenuPosition(menu.x, menu.y, typeof window === 'undefined' ? 1440 : window.innerWidth, viewportHeight);
   useEffect(() => {
     requestAnimationFrame(() => root.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus());
+    /**
+     * Return the down result.
+     */
     const down = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) onClose(); };
     document.addEventListener('pointerdown', down);
     return () => document.removeEventListener('pointerdown', down);
   }, []);
+  /**
+   * Handle the key down event.
+   */
   const onKeyDown = (event: React.KeyboardEvent) => {
     const buttons = [...(root.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') || [])];
     const index = buttons.indexOf(event.target as HTMLButtonElement);
@@ -64,27 +81,29 @@ export function CommandContextMenu({
       buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
     }
   };
-  return <div
-    ref={root}
-    className="command-context-menu"
-    role="menu"
-    aria-label={`${menu.target} context menu`}
-    style={{ left: position.x, top: position.y, maxHeight: Math.max(120, viewportHeight - position.y - 8) }}
-    onKeyDown={onKeyDown}
-  >{entries[menu.target].map((id, index) => id === 'separator'
-    ? <div role="separator" className="command-menu-separator" key={`separator-${index}`} />
-    : (() => {
-      const state = commandState(id, context);
-      return <button
-        type="button"
-        role="menuitem"
-        key={id}
-        data-command={id}
-        disabled={!state.enabled}
-        aria-disabled={!state.enabled}
-        title={state.reason}
-        onClick={(event) => { onCommand(id, event.currentTarget); onClose(); }}
-      >{labels[id] || id}</button>;
-    })()
-  )}</div>;
+  return (
+    <div
+      ref={root}
+      className="command-context-menu"
+      role="menu"
+      aria-label={`${menu.target} context menu`}
+      style={{ left: position.x, top: position.y, maxHeight: Math.max(120, viewportHeight - position.y - 8) }}
+      onKeyDown={onKeyDown}
+    >{entries[menu.target].map((id, index) => id === 'separator'
+      ? <div role="separator" className="command-menu-separator" key={`separator-${index}`} />
+      : (() => {
+        const state = commandState(id, context);
+        return <button
+          type="button"
+          role="menuitem"
+          key={id}
+          data-command={id}
+          disabled={!state.enabled}
+          aria-disabled={!state.enabled}
+          title={state.reason}
+          onClick={(event) => { onCommand(id, event.currentTarget); onClose(); }}
+        >{labels[id] || id}</button>;
+      })()
+    )}</div>
+  );
 }

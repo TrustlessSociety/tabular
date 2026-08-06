@@ -1,7 +1,12 @@
+//node
+import { Readable } from 'node:stream';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Readable } from 'node:stream';
+
+//modules
 import ExcelJS from 'exceljs';
+
+//client
 import { ImportParserError } from '../helpers/contracts.js';
 import { parseCsv } from '../helpers/csv.js';
 import { deterministicFingerprint } from '../helpers/fingerprint.js';
@@ -231,7 +236,9 @@ test('XLSX bounds combined issue and notice reporting memory', async () => {
   );
 });
 
-/** Locates the standard ZIP end record in an ExcelJS-generated fixture. */
+/**
+ * Locates the standard ZIP end record in an ExcelJS-generated fixture.
+ */
 function zipEndOffset(bytes: Buffer) {
   const signature = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
   const offset = bytes.lastIndexOf(signature);
@@ -239,7 +246,9 @@ function zipEndOffset(bytes: Buffer) {
   return offset;
 }
 
-/** Builds a narrow parser-error predicate for central-directory probes. */
+/**
+ * Builds a narrow parser-error predicate for central-directory probes.
+ */
 function archiveError(code: ImportParserError['code']) {
   return (error: unknown) => error instanceof ImportParserError && error.code === code;
 }

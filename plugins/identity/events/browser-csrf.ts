@@ -10,6 +10,9 @@ export function rememberBrowserCsrfToken(value: string | null | undefined) {
   }
 }
 
+/**
+ * Return the browser CSRF token result.
+ */
 export function browserCsrfToken(fallback: string) {
   return currentToken || fallback;
 }

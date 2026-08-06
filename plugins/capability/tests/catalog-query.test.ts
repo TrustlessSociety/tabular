@@ -1,12 +1,18 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type { QueryObject } from '@stackpress/inquire/types';
-import { ActionFault, type PreparedTarget } from '../helpers/contracts.js';
+
+//client
+import type { PreparedTarget } from '../helpers/contracts.js';
+import { ActionFault } from '../helpers/contracts.js';
 import { CatalogPostgreSqlTargetAdapter } from '../helpers/catalog-postgresql-target.js';
 import { DatabaseExecutor } from '../../database/helpers/executor.js';
 
 test('current-grid reads use the shared compiler without changing browse results', async () => {
-  // Exercise the default grid path so its projection and stable key order must
+  //Exercise the default grid path so its projection and stable key order must
   // pass through the same catalog read boundary used by export queries.
   const harness = queryHarness();
   const adapter = new AuthorizedQueryTestAdapter();
@@ -14,7 +20,7 @@ test('current-grid reads use the shared compiler without changing browse results
 
   const result = await adapter.browse(harness.database, target, 2);
 
-  // Preserve the browse result shape while proving the compiler selects only
+  //Preserve the browse result shape while proving the compiler selects only
   // authorized columns and retains the established current-grid key order.
   const request = dataRequest(harness.requests);
   assert.match(
@@ -30,7 +36,7 @@ test('current-grid reads use the shared compiler without changing browse results
 });
 
 test('export-shaped queries use the shared compiler for projection, filters, and ordering', async () => {
-  // Model the saved-view/current-view export input at the capability boundary:
+  //Model the saved-view/current-view export input at the capability boundary:
   // one projected column, one escaped filter, and one explicit descending sort.
   const harness = queryHarness();
   const adapter = new AuthorizedQueryTestAdapter();
@@ -43,7 +49,7 @@ test('export-shaped queries use the shared compiler for projection, filters, and
     limit: 2
   });
 
-  // The hidden key remains projected for opaque row identity, while the public
+  //The hidden key remains projected for opaque row identity, while the public
   // result still returns only the requested export column and sentinel limit.
   const request = dataRequest(harness.requests);
   assert.match(request.query, /SELECT[\s\S]*"id"[\s\S]*"label"/);
@@ -85,7 +91,7 @@ test('shared query validation rejects forged projections, sorts, and filters bef
   const adapter = new AuthorizedQueryTestAdapter();
   const target = queryTarget();
 
-  // A projection outside the role-derived column map fails closed.
+  //A projection outside the role-derived column map fails closed.
   await assert.rejects(() => adapter.query(harness.database, target, {
     columnIds: ['col_forged'],
     sorts: [],
@@ -93,7 +99,7 @@ test('shared query validation rejects forged projections, sorts, and filters bef
     limit: 2
   }), (error: unknown) => actionFault(error, 'not_found'));
 
-  // Duplicate sort columns are not permitted to create ambiguous ordering.
+  //Duplicate sort columns are not permitted to create ambiguous ordering.
   await assert.rejects(() => adapter.query(harness.database, target, {
     columnIds: ['col_label'],
     sorts: [
@@ -104,7 +110,7 @@ test('shared query validation rejects forged projections, sorts, and filters bef
     limit: 2
   }), (error: unknown) => actionFault(error, 'validation_failed'));
 
-  // Null comparisons are limited to equality semantics before SQL assembly.
+  //Null comparisons are limited to equality semantics before SQL assembly.
   await assert.rejects(() => adapter.query(harness.database, target, {
     columnIds: ['col_label'],
     sorts: [],
@@ -115,7 +121,9 @@ test('shared query validation rejects forged projections, sorts, and filters bef
   assert.equal(dataRequests(harness.requests).length, 0);
 });
 
-/** Provides deterministic privileges, rows, and captured SQL for read tests. */
+/**
+ * Provides deterministic privileges, rows, and captured SQL for read tests.
+ */
 function queryHarness() {
   const requests: QueryObject[] = [];
   const sourceRows = [
@@ -124,6 +132,9 @@ function queryHarness() {
     { id: 'three', label: 'Gamma', __tabular_internal_version_0__: '3' }
   ];
   const database = new DatabaseExecutor({
+    /**
+     * Handle the raw operation.
+     */
     async raw<Row>(request: QueryObject) {
       requests.push({ query: request.query, values: [...(request.values || [])] });
       let rows: unknown[];
@@ -144,19 +155,25 @@ function queryHarness() {
   return { database, requests };
 }
 
-/** Returns every captured target-table read, excluding privilege probes. */
+/**
+ * Returns every captured target-table read, excluding privilege probes.
+ */
 function dataRequests(requests: QueryObject[]) {
   return requests.filter((request) => request.query.includes('FROM ONLY "workspace"."records"'));
 }
 
-/** Returns the one compiled target-table read expected by a successful scenario. */
+/**
+ * Returns the one compiled target-table read expected by a successful scenario.
+ */
 function dataRequest(requests: QueryObject[]) {
   const matches = dataRequests(requests);
   assert.equal(matches.length, 1);
   return matches[0]!;
 }
 
-/** Narrows and checks the safe capability failure exposed by invalid query input. */
+/**
+ * Narrows and checks the safe capability failure exposed by invalid query input.
+ */
 function actionFault(error: unknown, code: string) {
   assert.ok(error instanceof ActionFault);
   assert.equal(error.safe.code, code);
@@ -164,11 +181,15 @@ function actionFault(error: unknown, code: string) {
 }
 
 class AuthorizedQueryTestAdapter extends CatalogPostgreSqlTargetAdapter {
-  /** Skips catalog drift probes so each unit test isolates read compilation. */
-  async authorize() {}
+  /**
+   * Skips catalog drift probes so each unit test isolates read compilation.
+   */
+  public async authorize() {}
 }
 
-/** Builds the smallest catalog target that exercises authorized query output. */
+/**
+ * Builds the smallest catalog target that exercises authorized query output.
+ */
 function queryTarget(keyCollatable = true): PreparedTarget {
   const key = {
     columnId: 'col_key',

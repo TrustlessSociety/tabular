@@ -1,57 +1,68 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { opaqueId } from './security.js';
 import type { VerifiedProviderSubject } from './contracts.js';
 import type { VerifiedPostgreSqlSubject } from './postgresql-login.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { opaqueId } from './security.js';
 
 type IdentityRow = {
-  id: string;
-  display_name: string | null;
-  status: 'active' | 'disabled' | 'revoked';
-  identity_generation: string | number;
+  id: string,
+  display_name: string | null,
+  status: 'active' | 'disabled' | 'revoked',
+  identity_generation: string | number,
 };
 
+//The session authority row contract exported for module callers
 export type SessionAuthorityRow = {
-  session_id: string;
-  history_scope_id: string;
-  identity_id: string;
-  connection_id: string;
-  display_name: string | null;
-  token_hash: string;
-  csrf_token_hash: string;
-  idle_expires_at: Date | string;
-  absolute_expires_at: Date | string;
-  revoked_at: Date | string | null;
-  identity_status: string;
-  identity_generation: string | number;
-  session_identity_generation: string | number;
-  mapping_generation: string | number;
-  session_mapping_generation: string | number;
-  mapping_enabled: boolean;
-  role_enabled: boolean;
-  role_generation: string | number;
-  configured_role_oid: string | number;
-  allowed_role_id: string;
-  live_role_oid: string | number | null;
-  configured_role_name: string;
-  live_role_name: string | null;
-  rolsuper: boolean | null;
-  rolcreaterole: boolean | null;
-  rolcreatedb: boolean | null;
-  rolcanlogin: boolean | null;
-  rolreplication: boolean | null;
-  rolbypassrls: boolean | null;
-  same_database: boolean;
-  idle_valid: boolean;
-  absolute_valid: boolean;
-  can_set_role: boolean;
-  login_authority_valid?: boolean;
+  session_id: string,
+  history_scope_id: string,
+  identity_id: string,
+  connection_id: string,
+  display_name: string | null,
+  token_hash: string,
+  csrf_token_hash: string,
+  idle_expires_at: Date | string,
+  absolute_expires_at: Date | string,
+  revoked_at: Date | string | null,
+  identity_status: string,
+  identity_generation: string | number,
+  session_identity_generation: string | number,
+  mapping_generation: string | number,
+  session_mapping_generation: string | number,
+  mapping_enabled: boolean,
+  role_enabled: boolean,
+  role_generation: string | number,
+  configured_role_oid: string | number,
+  allowed_role_id: string,
+  live_role_oid: string | number | null,
+  configured_role_name: string,
+  live_role_name: string | null,
+  rolsuper: boolean | null,
+  rolcreaterole: boolean | null,
+  rolcreatedb: boolean | null,
+  rolcanlogin: boolean | null,
+  rolreplication: boolean | null,
+  rolbypassrls: boolean | null,
+  same_database: boolean,
+  idle_valid: boolean,
+  absolute_valid: boolean,
+  can_set_role: boolean,
+  login_authority_valid?: boolean,
 };
 
+/**
+ * Provide identity persistence operations.
+ */
 export class IdentityRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a IdentityRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async provisionIdentity(subject: VerifiedProviderSubject) {
+  /**
+   * Handle the provision identity operation.
+   */
+  public async provisionIdentity(subject: VerifiedProviderSubject) {
     const id = opaqueId('id');
     const result = await this.database.execute<IdentityRow>(`
       INSERT INTO tabular.identities (
@@ -74,7 +85,10 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async bindPostgreSqlIdentity(
+  /**
+   * Bind the postgre SQL identity.
+   */
+  public async bindPostgreSqlIdentity(
     identityId: string,
     connectionId: string,
     subject: VerifiedPostgreSqlSubject
@@ -98,19 +112,22 @@ export class IdentityRepository {
     ]);
   }
 
-  async resolvePostgreSqlAuthorizationRole(subject: VerifiedPostgreSqlSubject) {
+  /**
+   * Resolve the postgre SQL authorization role.
+   */
+  public async resolvePostgreSqlAuthorizationRole(subject: VerifiedPostgreSqlSubject) {
     const result = await this.database.execute<{
-      database_oid: string | number;
-      role_oid: string | number;
-      role_name: string;
-      rolsuper: boolean;
-      rolcreaterole: boolean;
-      rolcreatedb: boolean;
-      rolcanlogin: boolean;
-      rolreplication: boolean;
-      rolbypassrls: boolean;
-      base_role: boolean;
-      can_set_role: boolean;
+      database_oid: string | number,
+      role_oid: string | number,
+      role_name: string,
+      rolsuper: boolean,
+      rolcreaterole: boolean,
+      rolcreatedb: boolean,
+      rolcanlogin: boolean,
+      rolreplication: boolean,
+      rolbypassrls: boolean,
+      base_role: boolean,
+      can_set_role: boolean,
     }>(`
       SELECT d.oid AS database_oid,
              auth_role.oid AS role_oid,
@@ -158,13 +175,16 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async reservePostgreSqlLoginAttempt(input: {
-    attemptKeyHash: string;
-    maximumAttempts: number;
-    windowSeconds: number;
-    blockSeconds: number;
+  /**
+   * Handle the reserve postgre SQL login attempt operation.
+   */
+  public async reservePostgreSqlLoginAttempt(input: {
+    attemptKeyHash: string,
+    maximumAttempts: number,
+    windowSeconds: number,
+    blockSeconds: number,
   }) {
-    const result = await this.database.execute<{ allowed: boolean }>(`
+    const result = await this.database.execute<{ allowed: boolean, }>(`
       INSERT INTO tabular.postgresql_login_attempts (
         attempt_key_hash, attempt_count
       ) VALUES (?, 1)
@@ -206,25 +226,31 @@ export class IdentityRepository {
     return result.rows[0]?.allowed === true;
   }
 
-  async clearPostgreSqlLoginAttempts(attemptKeyHash: string) {
+  /**
+   * Clear the postgre SQL login attempts.
+   */
+  public async clearPostgreSqlLoginAttempts(attemptKeyHash: string) {
     await this.database.execute(`
       DELETE FROM tabular.postgresql_login_attempts WHERE attempt_key_hash = ?
     `, [attemptKeyHash]);
   }
 
-  async allowRole(connectionId: string, roleName: string) {
+  /**
+   * Handle the allow role operation.
+   */
+  public async allowRole(connectionId: string, roleName: string) {
     const live = await this.database.execute<{
-      database_oid: string | number;
-      role_oid: string | number;
-      role_name: string;
-      rolsuper: boolean;
-      rolcreaterole: boolean;
-      rolcreatedb: boolean;
-      rolcanlogin: boolean;
-      rolreplication: boolean;
-      rolbypassrls: boolean;
-      base_role: boolean;
-      can_set_role: boolean;
+      database_oid: string | number,
+      role_oid: string | number,
+      role_name: string,
+      rolsuper: boolean,
+      rolcreaterole: boolean,
+      rolcreatedb: boolean,
+      rolcanlogin: boolean,
+      rolreplication: boolean,
+      rolbypassrls: boolean,
+      base_role: boolean,
+      can_set_role: boolean,
     }>(`
       SELECT d.oid AS database_oid,
              r.oid AS role_oid,
@@ -245,7 +271,7 @@ export class IdentityRepository {
     if (!role) throw new ApplicationError('role_not_allowed', 403, 'The mapped role is unavailable');
     assertSafeRole(role);
     const id = opaqueId('role');
-    const stored = await this.database.execute<{ id: string }>(`
+    const stored = await this.database.execute<{ id: string, }>(`
       INSERT INTO tabular.allowed_roles (
         id, connection_id, database_oid, role_oid, role_name
       ) VALUES (?, ?, ?, ?, ?)
@@ -265,11 +291,14 @@ export class IdentityRepository {
     return stored.rows[0].id;
   }
 
-  async mapIdentity(identityId: string, connectionId: string, allowedRoleId: string) {
+  /**
+   * Map the identity.
+   */
+  public async mapIdentity(identityId: string, connectionId: string, allowedRoleId: string) {
     const current = await this.database.execute<{
-      allowed_role_id: string;
-      mapping_generation: string | number;
-      enabled: boolean;
+      allowed_role_id: string,
+      mapping_generation: string | number,
+      enabled: boolean,
     }>(`
       SELECT allowed_role_id, mapping_generation, enabled
         FROM tabular.identity_role_mappings
@@ -301,24 +330,27 @@ export class IdentityRepository {
     }
   }
 
-  async resolveLogin(identityId: string, connectionId: string) {
+  /**
+   * Resolve the login.
+   */
+  public async resolveLogin(identityId: string, connectionId: string) {
     const result = await this.database.execute<{
-      identity_id: string;
-      display_name: string | null;
-      identity_generation: string | number;
-      allowed_role_id: string;
-      mapping_generation: string | number;
-      role_oid: string | number;
-      role_name: string;
-      rolsuper: boolean | null;
-      rolcreaterole: boolean | null;
-      rolcreatedb: boolean | null;
-      rolcanlogin: boolean | null;
-      rolreplication: boolean | null;
-      rolbypassrls: boolean | null;
-      base_role: boolean;
-      can_set_role: boolean;
-      login_authority_valid: boolean;
+      identity_id: string,
+      display_name: string | null,
+      identity_generation: string | number,
+      allowed_role_id: string,
+      mapping_generation: string | number,
+      role_oid: string | number,
+      role_name: string,
+      rolsuper: boolean | null,
+      rolcreaterole: boolean | null,
+      rolcreatedb: boolean | null,
+      rolcanlogin: boolean | null,
+      rolreplication: boolean | null,
+      rolbypassrls: boolean | null,
+      base_role: boolean,
+      can_set_role: boolean,
+      login_authority_valid: boolean,
     }>(`
       SELECT i.id AS identity_id,
              i.display_name,
@@ -374,8 +406,11 @@ export class IdentityRepository {
     return row;
   }
 
-  async latestActiveSession(identityId: string, connectionId: string) {
-    const result = await this.database.execute<{ id: string }>(`
+  /**
+   * Handle the latest active session operation.
+   */
+  public async latestActiveSession(identityId: string, connectionId: string) {
+    const result = await this.database.execute<{ id: string, }>(`
       SELECT id
         FROM tabular.browser_sessions
        WHERE identity_id = ? AND connection_id = ? AND revoked_at IS NULL
@@ -386,7 +421,10 @@ export class IdentityRepository {
     return result.rows[0]?.id;
   }
 
-  async revokeIdentitySessions(identityId: string, connectionId: string, reason: string) {
+  /**
+   * Revoke the identity sessions.
+   */
+  public async revokeIdentitySessions(identityId: string, connectionId: string, reason: string) {
     await this.database.execute(`
       UPDATE tabular.browser_sessions
          SET revoked_at = clock_timestamp(), revoke_reason = ?
@@ -394,26 +432,29 @@ export class IdentityRepository {
     `, [reason, identityId, connectionId]);
   }
 
-  async insertSession(input: {
-    id: string;
-    historyScopeId: string;
-    tokenHash: string;
-    csrfTokenHash: string;
-    identityId: string;
-    identityGeneration: string | number;
-    connectionId: string;
-    allowedRoleId: string;
-    roleOid: string | number;
-    mappingGeneration: string | number;
-    idleSeconds: number;
-    absoluteSeconds: number;
-    absoluteExpiresAt?: Date | string;
-    rotatedFromId?: string;
+  /**
+   * Insert the session.
+   */
+  public async insertSession(input: {
+    id: string,
+    historyScopeId: string,
+    tokenHash: string,
+    csrfTokenHash: string,
+    identityId: string,
+    identityGeneration: string | number,
+    connectionId: string,
+    allowedRoleId: string,
+    roleOid: string | number,
+    mappingGeneration: string | number,
+    idleSeconds: number,
+    absoluteSeconds: number,
+    absoluteExpiresAt?: Date | string,
+    rotatedFromId?: string,
   }) {
     const result = await this.database.execute<{
-      issued_at: Date | string;
-      idle_expires_at: Date | string;
-      absolute_expires_at: Date | string;
+      issued_at: Date | string,
+      idle_expires_at: Date | string,
+      absolute_expires_at: Date | string,
     }>(`
       INSERT INTO tabular.browser_sessions (
         id, history_scope_id, token_hash, csrf_token_hash, identity_id, identity_generation,
@@ -456,7 +497,10 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async sessionByTokenHash(hash: string, lock: 'update' | 'share' = 'update') {
+  /**
+   * Handle the session by token hash operation.
+   */
+  public async sessionByTokenHash(hash: string, lock: 'update' | 'share' = 'update') {
     const result = await this.database.execute<SessionAuthorityRow>(`
       SELECT s.id AS session_id,
              s.history_scope_id,
@@ -523,7 +567,10 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async sessionById(sessionId: string) {
+  /**
+   * Handle the session by id operation.
+   */
+  public async sessionById(sessionId: string) {
     const result = await this.database.execute<SessionAuthorityRow>(`
       SELECT s.id AS session_id,
              s.history_scope_id,
@@ -590,10 +637,13 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async touchSession(sessionId: string, idleSeconds: number) {
+  /**
+   * Handle the touch session operation.
+   */
+  public async touchSession(sessionId: string, idleSeconds: number) {
     const result = await this.database.execute<{
-      idle_expires_at: Date | string;
-      absolute_expires_at: Date | string;
+      idle_expires_at: Date | string,
+      absolute_expires_at: Date | string,
     }>(`
       UPDATE tabular.browser_sessions
          SET last_seen_at = clock_timestamp(),
@@ -610,7 +660,10 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async issueCsrfToken(
+  /**
+   * Handle the issue CSRF token operation.
+   */
+  public async issueCsrfToken(
     sessionId: string,
     csrfTokenHash: string,
     absoluteExpiresAt: Date | string
@@ -631,8 +684,11 @@ export class IdentityRepository {
     `, [sessionId]);
   }
 
-  async csrfTokenHashes(sessionId: string) {
-    const result = await this.database.execute<{ token_hash: string }>(`
+  /**
+   * Handle the CSRF token hashes operation.
+   */
+  public async csrfTokenHashes(sessionId: string) {
+    const result = await this.database.execute<{ token_hash: string, }>(`
       SELECT token_hash
         FROM tabular.browser_session_csrf_tokens
        WHERE session_id = ? AND clock_timestamp() < expires_at
@@ -642,10 +698,13 @@ export class IdentityRepository {
     return result.rows.map((row) => row.token_hash);
   }
 
-  async sessionCoordinatesByTokenHash(hash: string) {
+  /**
+   * Handle the session coordinates by token hash operation.
+   */
+  public async sessionCoordinatesByTokenHash(hash: string) {
     const result = await this.database.execute<{
-      identity_id: string;
-      connection_id: string;
+      identity_id: string,
+      connection_id: string,
     }>(`
       SELECT identity_id, connection_id
         FROM tabular.browser_sessions
@@ -654,13 +713,16 @@ export class IdentityRepository {
     return result.rows[0];
   }
 
-  async lockMapping(
+  /**
+   * Handle the lock mapping operation.
+   */
+  public async lockMapping(
     identityId: string,
     connectionId: string,
     mode: 'share' | 'update' = 'share',
     required = true
   ) {
-    const result = await this.database.execute<{ identity_id: string }>(`
+    const result = await this.database.execute<{ identity_id: string, }>(`
       SELECT identity_id
         FROM tabular.identity_role_mappings
        WHERE identity_id = ? AND connection_id = ?
@@ -672,8 +734,11 @@ export class IdentityRepository {
     return Boolean(result.rows[0]);
   }
 
-  async lockIdentity(identityId: string, mode: 'share' | 'update' = 'share') {
-    const result = await this.database.execute<{ id: string }>(`
+  /**
+   * Handle the lock identity operation.
+   */
+  public async lockIdentity(identityId: string, mode: 'share' | 'update' = 'share') {
+    const result = await this.database.execute<{ id: string, }>(`
       SELECT id FROM tabular.identities WHERE id = ?
       ${mode === 'share' ? 'FOR SHARE' : 'FOR UPDATE'}
     `, [identityId]);
@@ -682,8 +747,11 @@ export class IdentityRepository {
     }
   }
 
-  async lockAllowedRoleForMapping(identityId: string, connectionId: string) {
-    const result = await this.database.execute<{ id: string }>(`
+  /**
+   * Handle the lock allowed role for mapping operation.
+   */
+  public async lockAllowedRoleForMapping(identityId: string, connectionId: string) {
+    const result = await this.database.execute<{ id: string, }>(`
       SELECT r.id
         FROM tabular.identity_role_mappings m
         JOIN tabular.allowed_roles r ON r.id = m.allowed_role_id
@@ -695,7 +763,10 @@ export class IdentityRepository {
     }
   }
 
-  async revokeSession(sessionId: string, reason: string) {
+  /**
+   * Revoke the session.
+   */
+  public async revokeSession(sessionId: string, reason: string) {
     await this.database.execute(`
       UPDATE tabular.browser_sessions
          SET revoked_at = COALESCE(revoked_at, clock_timestamp()),
@@ -704,7 +775,10 @@ export class IdentityRepository {
     `, [reason, sessionId]);
   }
 
-  async setIdentityStatus(identityId: string, status: 'active' | 'disabled' | 'revoked') {
+  /**
+   * Set the identity status.
+   */
+  public async setIdentityStatus(identityId: string, status: 'active' | 'disabled' | 'revoked') {
     const result = await this.database.execute(`
       UPDATE tabular.identities
          SET status = ?,
@@ -722,6 +796,9 @@ export class IdentityRepository {
   }
 }
 
+/**
+ * Assert the usable session.
+ */
 export function assertUsableSession(row: SessionAuthorityRow | undefined) {
   if (
     !row
@@ -761,21 +838,24 @@ export function assertUsableSession(row: SessionAuthorityRow | undefined) {
   return row;
 }
 
+/**
+ * Verify the effective role.
+ */
 export async function verifyEffectiveRole(
   database: DatabaseExecutor,
-  expected: { oid: string | number; name: string }
+  expected: { oid: string | number, name: string, }
 ) {
   const result = await database.execute<{
-    oid: string | number;
-    role_name: string;
-    rolsuper: boolean;
-    rolcreaterole: boolean;
-    rolcreatedb: boolean;
-    rolcanlogin: boolean;
-    rolreplication: boolean;
-    rolbypassrls: boolean;
-    base_role: boolean;
-    can_set_role: boolean;
+    oid: string | number,
+    role_name: string,
+    rolsuper: boolean,
+    rolcreaterole: boolean,
+    rolcreatedb: boolean,
+    rolcanlogin: boolean,
+    rolreplication: boolean,
+    rolbypassrls: boolean,
+    base_role: boolean,
+    can_set_role: boolean,
   }>(`
     SELECT r.oid,
            r.rolname::text AS role_name,
@@ -808,15 +888,18 @@ export async function verifyEffectiveRole(
   }
 }
 
+/**
+ * Assert the safe role.
+ */
 function assertSafeRole(role: {
-  rolsuper: boolean | null;
-  rolcreaterole: boolean | null;
-  rolcreatedb: boolean | null;
-  rolcanlogin: boolean | null;
-  rolreplication: boolean | null;
-  rolbypassrls: boolean | null;
-  base_role: boolean;
-  can_set_role: boolean;
+  rolsuper: boolean | null,
+  rolcreaterole: boolean | null,
+  rolcreatedb: boolean | null,
+  rolcanlogin: boolean | null,
+  rolreplication: boolean | null,
+  rolbypassrls: boolean | null,
+  base_role: boolean,
+  can_set_role: boolean,
 }) {
   if (
     role.rolsuper !== false

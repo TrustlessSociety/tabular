@@ -1,49 +1,75 @@
+//node
 import { createHash } from 'node:crypto';
-import { writeLog } from '../../../bootstrap/logger.js';
+
+//client
 import type { OperationAuthority, OperationJob } from './contracts.js';
 import type { OperationsPluginService } from './service.js';
+import { writeLog } from '../../../bootstrap/logger.js';
 
 const PUMP_RETRY_BASE_MS = 250;
 const PUMP_RETRY_MAX_MS = 30_000;
 const PUMP_RETRY_MAX_EXPONENT = 7;
 
 type ActiveExecution = {
-  controller: AbortController;
-  heartbeat?: NodeJS.Timeout;
-  abandoned: boolean;
+  controller: AbortController,
+  heartbeat?: NodeJS.Timeout,
+  abandoned: boolean,
 };
 
+/**
+ * Represent an owned operation execution failure.
+ */
 export class OperationExecutionError extends Error {
-  constructor(
-    readonly code: 'operation_failed' | 'handler_unavailable' | 'invalid_handler_result'
+  /**
+   * Create a OperationExecutionError instance.
+   */
+  public constructor(
+    public readonly code: 'operation_failed' | 'handler_unavailable' | 'invalid_handler_result'
       | 'retention_denied' | 'retention_stale',
-    readonly retryable: boolean
+    public readonly retryable: boolean
   ) {
     super(code);
     this.name = 'OperationExecutionError';
   }
 }
 
+/**
+ * Provide the operation worker behavior used by this module.
+ */
 export class OperationWorker {
+  //The active executions state retained by this class instance
   readonly #activeExecutions = new Set<ActiveExecution>();
+  //The in flight state retained by this class instance
   readonly #inFlight = new Set<Promise<void>>();
+  //The lease owner state retained by this class instance
   readonly #leaseOwner: string;
+  //The timer state retained by this class instance
   #timer?: NodeJS.Timeout;
+  //The draining state retained by this class instance
   #draining = false;
+  //The pump failures state retained by this class instance
   #pumpFailures = 0;
+  //The started state retained by this class instance
   #started = false;
+  //The stopping state retained by this class instance
   #stopping?: Promise<void>;
 
-  constructor(
+  /**
+   * Create a OperationWorker instance.
+   */
+  public constructor(
     private readonly operations: OperationsPluginService,
-    readonly authority: OperationAuthority,
+    public readonly authority: OperationAuthority,
     leaseOwner = `${authority}:${process.pid}`,
     private readonly log: typeof writeLog = writeLog
   ) {
     this.#leaseOwner = leaseOwner;
   }
 
-  start() {
+  /**
+   * Start the current value.
+   */
+  public start() {
     if (this.#started) return this;
     this.operations.prepareAuthority(this.authority);
     this.#started = true;
@@ -55,7 +81,10 @@ export class OperationWorker {
     return this;
   }
 
-  async runOnce(jobId?: string) {
+  /**
+   * Run the once.
+   */
+  public async runOnce(jobId?: string) {
     if (this.#draining) return false;
     this.operations.prepareAuthority(this.authority);
     await this.operations.recoverExpired(this.authority);
@@ -73,11 +102,17 @@ export class OperationWorker {
     return true;
   }
 
-  async stop() {
+  /**
+   * Stop the current value.
+   */
+  public async stop() {
     this.#stopping ||= this.#drain();
     await this.#stopping;
   }
 
+  /**
+   * Handle the internal drain operation.
+   */
   async #drain() {
     this.#draining = true;
     if (this.#timer) clearTimeout(this.#timer);
@@ -97,7 +132,7 @@ export class OperationWorker {
     });
     if (completed) return;
 
-    // Stop lease extension before aborting handlers so another process can
+    //Stop lease extension before aborting handlers so another process can
     // recover the still-running rows after their existing leases expire.
     for (const execution of this.#activeExecutions) {
       execution.abandoned = true;
@@ -107,6 +142,9 @@ export class OperationWorker {
     }
   }
 
+  /**
+   * Handle the internal schedule operation.
+   */
   #schedule(delayMs: number) {
     if (this.#draining || this.#timer) return;
     this.#timer = setTimeout(() => {
@@ -115,6 +153,9 @@ export class OperationWorker {
     }, delayMs);
   }
 
+  /**
+   * Handle the internal run pump operation.
+   */
   async #runPump() {
     try {
       await this.#pump();
@@ -138,6 +179,9 @@ export class OperationWorker {
     }
   }
 
+  /**
+   * Handle the internal pump operation.
+   */
   async #pump() {
     if (this.#draining) return;
     await this.operations.recoverExpired(this.authority);
@@ -162,6 +206,9 @@ export class OperationWorker {
     }
   }
 
+  /**
+   * Handle the internal defer claim for lease recovery operation.
+   */
   #deferClaimForLeaseRecovery() {
     this.log('info', 'operation_worker_claim_deferred', {
       authority: this.authority,
@@ -170,6 +217,9 @@ export class OperationWorker {
     });
   }
 
+  /**
+   * Handle the internal execute operation.
+   */
   async #execute(job: OperationJob) {
     const lease = job.lease;
     if (!lease) throw new Error('Claimed operation did not include a lease');
@@ -209,6 +259,9 @@ export class OperationWorker {
       Math.floor(this.operations.runtime.config.workers.leaseSeconds * 1000 / 3)
     );
     let heartbeatBusy = false;
+    /**
+     * Return the heartbeat result.
+     */
     const heartbeat = async (progress?: number) => {
       if (execution.abandoned) return false;
       if (leaseLost || heartbeatBusy) return !leaseLost;
@@ -290,6 +343,9 @@ export class OperationWorker {
     }
   }
 
+  /**
+   * Handle the internal track operation.
+   */
   #track(job: OperationJob) {
     let work: Promise<void>;
     work = this.#execute(job).finally(() => {
@@ -299,6 +355,9 @@ export class OperationWorker {
     return work;
   }
 
+  /**
+   * Handle the internal finish cancellation operation.
+   */
   async #finishCancellation(job: OperationJob) {
     const lease = job.lease;
     if (!lease) return false;
@@ -327,6 +386,9 @@ export class OperationWorker {
     ));
   }
 
+  /**
+   * Handle the internal finish failure operation.
+   */
   async #finishFailure(job: OperationJob, error: unknown, elapsedMs: number) {
     const lease = job.lease;
     if (!lease) return;
@@ -359,6 +421,9 @@ export class OperationWorker {
   }
 }
 
+/**
+ * Return the retry delay result.
+ */
 function retryDelay(jobId: string, attempt: number) {
   const base = Math.min(60_000, 1000 * (2 ** Math.max(0, attempt - 1)));
   const byte = createHash('sha256')

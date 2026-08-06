@@ -1,38 +1,51 @@
-import type { HttpServer } from '@stackpress/ingest/types';
+//modules
 import type { Response } from '@stackpress/ingest/http';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import { versionPublicArtifactReferences } from '../../app/helpers/assets.js';
 import type {
   OperationActivity,
   OperationActivityList,
   OperationState
 } from '../helpers/contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { versionPublicArtifactReferences } from '../../app/helpers/assets.js';
 import { presentOperationActivity, presentOperationList } from './presenter.js';
 
+//The operations routes value exported for module callers
 export const OPERATIONS_ROUTES = [
   '/pages/system-activity.html',
   '/events/operations'
 ] as const;
 
-/** Structural route boundary keeps HTTP/browser concerns out of the worker service. */
+/**
+ * Structural route boundary keeps HTTP/browser concerns out of the worker service.
+ */
 export type OperationsRouteService = {
-  list(principal: BrowserPrincipal, input: { status?: OperationState[]; limit?: number }): Promise<OperationActivityList>;
-  get(principal: BrowserPrincipal, jobId: string): Promise<OperationActivity | undefined>;
-  markRead(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>;
-  cancel(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>;
-  retry(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>;
-  acknowledge(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>;
-  retention(principal: BrowserMutationPrincipal, input: { retentionDays: number; limit: number }): Promise<unknown>;
+  list(principal: BrowserPrincipal, input: { status?: OperationState[], limit?: number, }): Promise<OperationActivityList>,
+  get(principal: BrowserPrincipal, jobId: string): Promise<OperationActivity | undefined>,
+  markRead(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>,
+  cancel(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>,
+  retry(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>,
+  acknowledge(principal: BrowserMutationPrincipal, jobId: string): Promise<OperationActivity | undefined>,
+  retention(principal: BrowserMutationPrincipal, input: { retentionDays: number, limit: number, }): Promise<unknown>,
 };
 
+/**
+ * Register the operations routes.
+ */
 export function registerOperationsRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   runtime: ApplicationRuntimeService,
   identity: IdentityPluginService,
   operations: OperationsRouteService
@@ -104,7 +117,9 @@ export function registerOperationsRoutes(
   });
 }
 
-/** Converts the configured connection slug into a readable product label. */
+/**
+ * Converts the configured connection slug into a readable product label.
+ */
 function displayConnectionName(connectionId: string) {
   const words = connectionId.replace(/[_-]+/g, ' ').trim();
   return words
@@ -112,13 +127,17 @@ function displayConnectionName(connectionId: string) {
     : connectionId;
 }
 
+//The operation route action contract exported for module callers
 export type OperationRouteAction =
-  | { type: 'operation.retry'; jobId: string }
-  | { type: 'operation.cancel'; jobId: string }
-  | { type: 'operation.acknowledge'; jobId: string }
-  | { type: 'operation.mark-read'; jobId: string }
-  | { type: 'operations.retention.apply'; retentionDays: number; limit: number };
+  | { type: 'operation.retry', jobId: string, }
+  | { type: 'operation.cancel', jobId: string, }
+  | { type: 'operation.acknowledge', jobId: string, }
+  | { type: 'operation.mark-read', jobId: string, }
+  | { type: 'operations.retention.apply', retentionDays: number, limit: number, };
 
+/**
+ * Return the operation action result.
+ */
 export function operationAction(input: unknown): OperationRouteAction {
   const record = object(input, 'Operation action');
   const type = record.type;
@@ -142,6 +161,9 @@ export function operationAction(input: unknown): OperationRouteAction {
   throw new ApplicationError('invalid_action', 400, 'The operation action is invalid');
 }
 
+/**
+ * Render the product page.
+ */
 async function renderProductPage(
   res: Response,
   runtime: ApplicationRuntimeService,
@@ -165,6 +187,9 @@ async function renderProductPage(
   res.html(versionPublicArtifactReferences(html, runtime.artifacts), code);
 }
 
+/**
+ * Return the exact query result.
+ */
 function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   if ([...parameters.keys()].some((key) => !allowed.includes(key))
     || allowed.some((key) => parameters.getAll(key).length > 1)) {
@@ -172,6 +197,9 @@ function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   }
 }
 
+/**
+ * Return the exact keys result.
+ */
 function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   if (Object.keys(value).length !== allowed.length
     || Object.keys(value).some((key) => !allowed.includes(key))) {
@@ -179,6 +207,9 @@ function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   }
 }
 
+/**
+ * Return the object result.
+ */
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new ApplicationError('invalid_action', 400, `${label} is invalid`);
@@ -186,6 +217,9 @@ function object(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the job id result.
+ */
 function jobId(value: unknown) {
   if (typeof value !== 'string' || !/^job_[A-Za-z0-9_-]{32,64}$/.test(value)) {
     throw new ApplicationError('invalid_action', 400, 'The operation ID is invalid');
@@ -193,6 +227,9 @@ function jobId(value: unknown) {
   return value;
 }
 
+/**
+ * Return the bounded integer result.
+ */
 function boundedInteger(value: unknown, label: string, minimum: number, maximum: number) {
   if (!Number.isSafeInteger(value) || Number(value) < minimum || Number(value) > maximum) {
     throw new ApplicationError('invalid_action', 400, `The ${label} is invalid`);
@@ -200,17 +237,26 @@ function boundedInteger(value: unknown, label: string, minimum: number, maximum:
   return Number(value);
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (typeof contentType !== 'string' || !/^application\/json(?:;\s*charset=utf-8)?$/i.test(contentType)) {
     throw new ApplicationError('invalid_content_type', 415, 'Operation actions require JSON');
   }
 }
 
+/**
+ * Report the invalid session condition.
+ */
 function invalidSession(): never {
   throw new ApplicationError('invalid_session', 401, 'The browser session is invalid');
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
-  // Deliberately identical for unauthorized and absent operation IDs.
+  //Deliberately identical for unauthorized and absent operation IDs.
   throw new ApplicationError('operation_unavailable', 404, 'The requested operation is unavailable');
 }

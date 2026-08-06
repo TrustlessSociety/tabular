@@ -1,13 +1,19 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { FilesPluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 
+//The files routes value exported for module callers
 export const FILES_ROUTES = ['/events/files'] as const;
 
-/** Registers Files-owned description routes. */
+/**
+ * Registers Files-owned description routes.
+ */
 export function registerFilesRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   identity: IdentityPluginService,
   files: FilesPluginService
 ) {
@@ -48,6 +54,9 @@ export function registerFilesRoutes(
   });
 }
 
+/**
+ * Report the invalid query condition.
+ */
 function invalidQuery() {
   return new ApplicationError('invalid_query', 400, 'File query is invalid');
 }

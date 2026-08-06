@@ -1,13 +1,20 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  APP_SERVICE,
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService,
-  type AppPluginService
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer,
+  AppPluginService
 } from '../../bootstrap/application.js';
+import { APP_SERVICE, RUNTIME_SERVICE } from '../../bootstrap/application.js';
 import { APP_ROUTES, registerAppRoutes } from './pages/routes.js';
 
-export default function appPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the app plugin with the application server.
+ */
+export default function appPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(APP_SERVICE)) {
     throw new Error(`Service already registered: ${APP_SERVICE}`);
   }

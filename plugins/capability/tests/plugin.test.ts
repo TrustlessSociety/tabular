@@ -1,16 +1,18 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import { createApplication } from '../../../bootstrap/application.js';
-import {
-  AuthorizedExecutionContext,
-  McpAuthorizedExecutionContext,
-  type AuthorityPhases,
-  type CapabilityAction,
-  type CapabilityTargetAdapter
+import type {
+  AuthorityPhases,
+  CapabilityAction,
+  CapabilityTargetAdapter
 } from '../helpers/contracts.js';
+import { createApplication } from '../../../bootstrap/application.js';
+import { AuthorizedExecutionContext, McpAuthorizedExecutionContext } from '../helpers/contracts.js';
 import { DatabaseExecutor as Executor } from '../../database/helpers/executor.js';
 import { WebCapabilityAdapter } from '../events/web-adapter.js';
 import { McpShapedCapabilityAdapter } from '../events/mcp-shaped-adapter.js';
@@ -24,20 +26,35 @@ const columnId = `col_${suffix}`;
 const schemaVersion = 'a'.repeat(64);
 
 class TestTarget implements CapabilityTargetAdapter {
-  readonly name = 'test-target';
-  calls = 0;
-  maximumResultBytes: number | undefined;
+  //The name state retained by this class instance
+  public readonly name = 'test-target';
+  //The calls state retained by this class instance
+  public calls = 0;
+  //The maximum result bytes state retained by this class instance
+  public maximumResultBytes: number | undefined;
 
-  async prepare(_database: DatabaseExecutor, requestedFileId: string) {
+  /**
+   * Prepare the current value.
+   */
+  public async prepare(_database: DatabaseExecutor, requestedFileId: string) {
     if (requestedFileId !== fileId) return undefined;
     return { fileId, schemaVersion, state: {} };
   }
 
-  async validatePatch() { return []; }
+  /**
+   * Validate the patch.
+   */
+  public async validatePatch() { return []; }
 
-  async authorize() { this.calls += 1; }
+  /**
+   * Handle the authorize operation.
+   */
+  public async authorize() { this.calls += 1; }
 
-  async describe() {
+  /**
+   * Describe the current value.
+   */
+  public async describe() {
     return {
       fileId,
       schemaVersion,
@@ -48,7 +65,10 @@ class TestTarget implements CapabilityTargetAdapter {
     };
   }
 
-  async read(
+  /**
+   * Read the current value.
+   */
+  public async read(
     _database: DatabaseExecutor,
     _target: unknown,
     _rowId: string,
@@ -63,15 +83,22 @@ class TestTarget implements CapabilityTargetAdapter {
     };
   }
 
-  async mutate(): Promise<never> {
+  /**
+   * Handle the mutate operation.
+   */
+  public async mutate(): Promise<never> {
     throw new Error('Mutation is not used by this contract test');
   }
 }
 
 class TestMcpAuthority extends McpAuthorizedExecutionContext {
-  transactions = 0;
+  //The transactions state retained by this class instance
+  public transactions = 0;
 
-  constructor(private readonly allowed = true, private readonly database: DatabaseExecutor) {
+  /**
+   * Create a TestMcpAuthority instance.
+   */
+  public constructor(private readonly allowed = true, private readonly database: DatabaseExecutor) {
     super({
       actorIdentityId: `id_${suffix}`,
       sessionId: `mcp_${suffix}`,
@@ -81,9 +108,15 @@ class TestMcpAuthority extends McpAuthorizedExecutionContext {
     });
   }
 
-  allows(_action: CapabilityAction) { return this.allowed; }
+  /**
+   * Handle the allows operation.
+   */
+  public allows(_action: CapabilityAction) { return this.allowed; }
 
-  async transaction<TargetResult, FinalResult = TargetResult>(
+  /**
+   * Handle the transaction operation.
+   */
+  public async transaction<TargetResult, FinalResult = TargetResult>(
     _capability: 'tabular.capability',
     phases: AuthorityPhases<TargetResult, FinalResult>
   ) {
@@ -309,6 +342,9 @@ test('range validation rejects duplicate rows and mismatched cell counts before 
   assert.equal(authority.transactions, 0);
 });
 
+/**
+ * Report the empty database condition.
+ */
 function emptyDatabase() {
   return new Executor({
     raw: async () => ({ rows: [], rowCount: 0 })

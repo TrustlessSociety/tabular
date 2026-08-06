@@ -1,32 +1,42 @@
+//node
 import { Readable } from 'node:stream';
+
+//client
 import type { SseConfig } from '../../../config/sse.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import {
-  AuthorizedOperationEventStream,
-  type OperationEventReader
-} from '../../operations/events/stream.js';
+import type { OperationEventReader } from '../../operations/events/stream.js';
 import type { RealtimeBatch, RealtimeEvent } from './contracts.js';
-import {
-  RealtimeRepository,
-  type OutboxRow,
-  type RealtimeTarget
-} from './repository.js';
+import type { OutboxRow, RealtimeTarget } from './repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { AuthorizedOperationEventStream } from '../../operations/events/stream.js';
+import { RealtimeRepository } from './repository.js';
 
+//The realtime service value exported for module callers
 export const REALTIME_SERVICE = 'tabular.realtime';
 
+/**
+ * Provide realtime plugin operations through one service boundary.
+ */
 export class RealtimePluginService {
-  readonly name = REALTIME_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = REALTIME_SERVICE;
+  //The connections state retained by this class instance
   readonly #connections = new Set<AuthorizedEventStream | AuthorizedOperationEventStream>();
 
-  constructor(
+  /**
+   * Create a RealtimePluginService instance.
+   */
+  public constructor(
     private readonly identity: IdentityPluginService,
-    readonly config: SseConfig
+    public readonly config: SseConfig
   ) {}
 
-  open(principal: BrowserPrincipal, input: { fileId: string; cursor: number }) {
+  /**
+   * Open the current value.
+   */
+  public open(principal: BrowserPrincipal, input: { fileId: string, cursor: number, }) {
     this.requireCapacity();
     const stream = new AuthorizedEventStream(
       this,
@@ -40,10 +50,13 @@ export class RealtimePluginService {
     return stream;
   }
 
-  openOperations(
+  /**
+   * Open the operations.
+   */
+  public openOperations(
     principal: BrowserPrincipal,
     operations: OperationEventReader,
-    input: { cursor: number }
+    input: { cursor: number, }
   ) {
     this.requireCapacity();
     const stream = new AuthorizedOperationEventStream(
@@ -57,14 +70,23 @@ export class RealtimePluginService {
     return stream;
   }
 
-  connectionCount() {
+  /**
+   * Handle the connection count operation.
+   */
+  public connectionCount() {
     return this.#connections.size;
   }
 
-  closeConnections() {
+  /**
+   * Close the connections.
+   */
+  public closeConnections() {
     for (const connection of [...this.#connections]) connection.shutdown();
   }
 
+  /**
+   * Handle the require capacity operation.
+   */
   private requireCapacity() {
     if (this.#connections.size >= this.config.connectionLimit) {
       throw new ApplicationError(
@@ -76,7 +98,10 @@ export class RealtimePluginService {
     }
   }
 
-  async readBatch(
+  /**
+   * Read the batch.
+   */
+  public async readBatch(
     principal: BrowserPrincipal,
     fileId: string,
     after: number
@@ -121,14 +146,23 @@ export class RealtimePluginService {
 }
 
 class AuthorizedEventStream extends Readable {
+  //The cursor state retained by this class instance
   #cursor: number;
+  //The busy state retained by this class instance
   #busy = false;
+  //The paused for backpressure state retained by this class instance
   #pausedForBackpressure = false;
+  //The timer state retained by this class instance
   #timer?: NodeJS.Timeout;
+  //The last write at state retained by this class instance
   #lastWriteAt = Date.now();
+  //The closed state retained by this class instance
   #closed = false;
 
-  constructor(
+  /**
+   * Create a AuthorizedEventStream instance.
+   */
+  public constructor(
     private readonly realtime: RealtimePluginService,
     private readonly principal: BrowserPrincipal,
     private readonly fileId: string,
@@ -144,19 +178,28 @@ class AuthorizedEventStream extends Readable {
     });
   }
 
-  override _read() {
+  /**
+   * Read the current value.
+   */
+  public override _read() {
     this.#pausedForBackpressure = false;
     this.#schedule(0);
   }
 
-  override _destroy(error: Error | null, callback: (error?: Error | null) => void) {
+  /**
+   * Handle the destroy operation.
+   */
+  public override _destroy(error: Error | null, callback: (error?: Error | null) => void) {
     this.#closed = true;
     if (this.#timer) clearTimeout(this.#timer);
     this.#timer = undefined;
     callback(error);
   }
 
-  shutdown() {
+  /**
+   * Handle the shutdown operation.
+   */
+  public shutdown() {
     if (this.#closed) return;
     this.#push(formatControl('server.shutdown', {
       reason: 'The server is restarting; reconnect to resume from the last event ID.'
@@ -164,6 +207,9 @@ class AuthorizedEventStream extends Readable {
     this.#finish();
   }
 
+  /**
+   * Handle the internal schedule operation.
+   */
   #schedule(delay: number) {
     if (this.#closed || this.#busy || this.#pausedForBackpressure || this.#timer) return;
     this.#timer = setTimeout(() => {
@@ -172,6 +218,9 @@ class AuthorizedEventStream extends Readable {
     }, delay);
   }
 
+  /**
+   * Handle the internal pump operation.
+   */
   async #pump() {
     if (this.#closed || this.#busy || this.#pausedForBackpressure) return;
     this.#busy = true;
@@ -225,6 +274,9 @@ class AuthorizedEventStream extends Readable {
     this.#schedule(this.config.pollMs);
   }
 
+  /**
+   * Handle the internal push operation.
+   */
   #push(value: string) {
     if (this.#closed) return false;
     this.#lastWriteAt = Date.now();
@@ -233,6 +285,9 @@ class AuthorizedEventStream extends Readable {
     return writable;
   }
 
+  /**
+   * Handle the internal finish operation.
+   */
   #finish() {
     if (this.#closed) return;
     this.#closed = true;
@@ -242,9 +297,12 @@ class AuthorizedEventStream extends Readable {
   }
 }
 
+/**
+ * Report whether the caller can read target.
+ */
 async function canReadTarget(database: DatabaseExecutor, target: RealtimeTarget) {
   if (!['current', 'renamed', 'changed'].includes(target.state)) return false;
-  const result = await database.execute<{ allowed: boolean }>(`
+  const result = await database.execute<{ allowed: boolean, }>(`
     SELECT has_schema_privilege(current_user, c.relnamespace, 'USAGE') AND (
       has_table_privilege(current_user, c.oid, 'SELECT') OR EXISTS (
         SELECT 1 FROM pg_attribute visible
@@ -259,6 +317,9 @@ async function canReadTarget(database: DatabaseExecutor, target: RealtimeTarget)
   return Boolean(result.rows[0]?.allowed);
 }
 
+/**
+ * Report the safe event condition.
+ */
 function safeEvent(row: OutboxRow): RealtimeEvent {
   return {
     cursor: Number(row.sequence),
@@ -269,14 +330,23 @@ function safeEvent(row: OutboxRow): RealtimeEvent {
   };
 }
 
+/**
+ * Format the event.
+ */
 function formatEvent(cursor: number, event: string, data: Record<string, unknown>) {
   return `id: ${cursor}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+/**
+ * Format the control.
+ */
 function formatControl(event: string, data: Record<string, unknown>) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+/**
+ * Return the access lost result.
+ */
 function accessLost(): never {
   throw new ApplicationError(
     'realtime_access_lost',

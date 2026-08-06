@@ -1,9 +1,12 @@
+//node
 import {
   createCipheriv,
   createDecipheriv,
   createHash,
   randomBytes
 } from 'node:crypto';
+
+//client
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { deterministicFingerprint } from './fingerprint.js';
 
@@ -11,26 +14,38 @@ const GOOGLE_SOURCE_BYTES = 8 * 1024 * 1024;
 const GOOGLE_ROWS = 50_001;
 const GOOGLE_COLUMNS = 200;
 const SHEETS_MEDIA_TYPE = 'application/vnd.google-apps.spreadsheet';
+//The google readonly scopes value exported for module callers
 export const GOOGLE_READONLY_SCOPES = [
   'https://www.googleapis.com/auth/drive.metadata.readonly',
   'https://www.googleapis.com/auth/spreadsheets.readonly'
 ] as const;
+//The google readonly scope value exported for module callers
 export const GOOGLE_READONLY_SCOPE = GOOGLE_READONLY_SCOPES.join(' ');
 
+//The encrypted google secret contract exported for module callers
 export type EncryptedGoogleSecret = {
-  ciphertext: string;
-  iv: string;
-  tag: string;
+  ciphertext: string,
+  iv: string,
+  tag: string,
 };
 
+/**
+ * Provide the google token vault behavior used by this module.
+ */
 export class GoogleTokenVault {
-  constructor(private readonly key: Buffer) {
+  /**
+   * Create a GoogleTokenVault instance.
+   */
+  public constructor(private readonly key: Buffer) {
     if (!Buffer.isBuffer(key) || key.byteLength !== 32) {
       throw new Error('TABULAR_GOOGLE_TOKEN_ENCRYPTION_KEY must encode exactly 32 bytes');
     }
   }
 
-  encrypt(value: string, associatedData: string): EncryptedGoogleSecret {
+  /**
+   * Handle the encrypt operation.
+   */
+  public encrypt(value: string, associatedData: string): EncryptedGoogleSecret {
     const secret = secretText(value);
     const aad = associatedDataText(associatedData);
     const iv = randomBytes(12);
@@ -44,7 +59,10 @@ export class GoogleTokenVault {
     };
   }
 
-  decrypt(value: EncryptedGoogleSecret, associatedData: string) {
+  /**
+   * Handle the decrypt operation.
+   */
+  public decrypt(value: EncryptedGoogleSecret, associatedData: string) {
     const aad = associatedDataText(associatedData);
     try {
       const ciphertext = base64(value.ciphertext, 'ciphertext');
@@ -65,6 +83,9 @@ export class GoogleTokenVault {
   }
 }
 
+/**
+ * Return the google token encryption key result.
+ */
 export function googleTokenEncryptionKey(value: string | undefined) {
   if (!value || value !== value.trim() || /[\u0000-\u0020\u007f]/.test(value)) {
     throw new Error('TABULAR_GOOGLE_TOKEN_ENCRYPTION_KEY must encode exactly 32 bytes');
@@ -80,49 +101,58 @@ export function googleTokenEncryptionKey(value: string | undefined) {
   return key;
 }
 
+//The google sheets credentials contract exported for module callers
 export type GoogleSheetsCredentials = {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
 };
 
+//The Google OAuth token contract exported for module callers
 export type GoogleOAuthTokens = {
-  accessToken: string;
-  expiresIn: number;
-  refreshToken?: string;
-  scope: string;
+  accessToken: string,
+  expiresIn: number,
+  refreshToken?: string,
+  scope: string,
 };
 
+//The google spreadsheet choice contract exported for module callers
 export type GoogleSpreadsheetChoice = {
-  id: string;
-  name: string;
-  modifiedTime: string;
-  version: string;
+  id: string,
+  name: string,
+  modifiedTime: string,
+  version: string,
 };
 
+//The google sheet values contract exported for module callers
 export type GoogleSheetValues = {
-  spreadsheetId: string;
-  spreadsheetName: string;
-  spreadsheetVersion: string;
-  modifiedTime: string;
-  sheetName: string;
-  rows: Array<Array<string | null>>;
-  rowCount: number;
-  columnCount: number;
-  sourceFingerprint: string;
+  spreadsheetId: string,
+  spreadsheetName: string,
+  spreadsheetVersion: string,
+  modifiedTime: string,
+  sheetName: string,
+  rows: Array<Array<string | null>>,
+  rowCount: number,
+  columnCount: number,
+  sourceFingerprint: string,
   provenance: {
-    provider: 'google-sheets';
-    valueRenderOption: 'FORMATTED_VALUE';
-    formulasImported: false;
-    spreadsheetId: string;
-    spreadsheetVersion: string;
-    sheetName: string;
-  };
+    provider: 'google-sheets',
+    valueRenderOption: 'FORMATTED_VALUE',
+    formulasImported: false,
+    spreadsheetId: string,
+    spreadsheetVersion: string,
+    sheetName: string,
+  },
 };
 
-/** Real OAuth/Drive/Sheets boundary. It never returns or persists formula text. */
+/**
+ * Real OAuth/Drive/Sheets boundary. It never returns or persists formula text.
+ */
 export class GoogleSheetsClient {
-  constructor(
+  /**
+   * Create a GoogleSheetsClient instance.
+   */
+  public constructor(
     private readonly credentials: GoogleSheetsCredentials,
     private readonly fetcher: typeof fetch = fetch
   ) {
@@ -131,7 +161,10 @@ export class GoogleSheetsClient {
     }
   }
 
-  authorizationUrl(input: { state: string; codeChallenge: string }) {
+  /**
+   * Handle the authorization URL operation.
+   */
+  public authorizationUrl(input: { state: string, codeChallenge: string, }) {
     boundedToken(input.state, 'Google OAuth state', 512);
     if (!/^[A-Za-z0-9_-]{43,128}$/.test(input.codeChallenge)) {
       invalid('Google OAuth PKCE challenge is invalid');
@@ -151,7 +184,10 @@ export class GoogleSheetsClient {
     return `https://accounts.google.com/o/oauth2/v2/auth?${query}`;
   }
 
-  async exchangeCode(input: { code: string; codeVerifier: string }) {
+  /**
+   * Handle the exchange code operation.
+   */
+  public async exchangeCode(input: { code: string, codeVerifier: string, }) {
     boundedToken(input.code, 'Google OAuth code', 2_048);
     if (!/^[A-Za-z0-9._~-]{43,128}$/.test(input.codeVerifier)) {
       invalid('Google OAuth PKCE verifier is invalid');
@@ -166,7 +202,10 @@ export class GoogleSheetsClient {
     }), true);
   }
 
-  async refresh(refreshToken: string) {
+  /**
+   * Handle the refresh operation.
+   */
+  public async refresh(refreshToken: string) {
     boundedToken(refreshToken, 'Google OAuth refresh token', 4_096);
     return this.tokenRequest(new URLSearchParams({
       client_id: this.credentials.clientId,
@@ -176,7 +215,10 @@ export class GoogleSheetsClient {
     }), false);
   }
 
-  async revoke(token: string) {
+  /**
+   * Revoke the current value.
+   */
+  public async revoke(token: string) {
     const response = await this.fetcher('https://oauth2.googleapis.com/revoke', {
       method: 'POST',
       headers: {
@@ -191,7 +233,10 @@ export class GoogleSheetsClient {
     throw providerError(response.status, body);
   }
 
-  async listSpreadsheets(accessToken: string, pageToken?: string) {
+  /**
+   * List the spreadsheets.
+   */
+  public async listSpreadsheets(accessToken: string, pageToken?: string) {
     const token = bearer(accessToken);
     if (pageToken) boundedToken(pageToken, 'Google Drive page token', 2_048);
     const query = new URLSearchParams({
@@ -202,8 +247,8 @@ export class GoogleSheetsClient {
     });
     if (pageToken) query.set('pageToken', pageToken);
     const body = await this.googleJson<{
-      nextPageToken?: unknown;
-      files?: unknown;
+      nextPageToken?: unknown,
+      files?: unknown,
     }>(`https://www.googleapis.com/drive/v3/files?${query}`, token);
     if (!Array.isArray(body.files) || body.files.length > 100) providerInvalid();
     const files = body.files.map((entry) => spreadsheetChoice(entry));
@@ -215,7 +260,10 @@ export class GoogleSheetsClient {
     };
   }
 
-  async worksheetNames(accessToken: string, spreadsheetId: string) {
+  /**
+   * Handle the worksheet names operation.
+   */
+  public async worksheetNames(accessToken: string, spreadsheetId: string) {
     const token = bearer(accessToken);
     const id = providerId(spreadsheetId, 'Google spreadsheet identity');
     const query = new URLSearchParams({ fields: 'spreadsheetId,properties.title,sheets.properties(sheetId,title,index,gridProperties)' });
@@ -231,10 +279,13 @@ export class GoogleSheetsClient {
     });
   }
 
-  async importValues(input: {
-    accessToken: string;
-    spreadsheetId: string;
-    sheetName: string;
+  /**
+   * Import the values.
+   */
+  public async importValues(input: {
+    accessToken: string,
+    spreadsheetId: string,
+    sheetName: string,
   }): Promise<GoogleSheetValues> {
     const token = bearer(input.accessToken);
     const id = providerId(input.spreadsheetId, 'Google spreadsheet identity');
@@ -249,7 +300,7 @@ export class GoogleSheetsClient {
       valueRenderOption: 'FORMATTED_VALUE',
       dateTimeRenderOption: 'FORMATTED_STRING'
     });
-    const body = await this.googleJson<{ range?: unknown; majorDimension?: unknown; values?: unknown }>(
+    const body = await this.googleJson<{ range?: unknown, majorDimension?: unknown, values?: unknown, }>(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(sheetName)}?${query}`,
       token
     );
@@ -295,7 +346,10 @@ export class GoogleSheetsClient {
     };
   }
 
-  async fileRevision(accessToken: string, spreadsheetId: string) {
+  /**
+   * Handle the file revision operation.
+   */
+  public async fileRevision(accessToken: string, spreadsheetId: string) {
     const token = bearer(accessToken);
     const id = providerId(spreadsheetId, 'Google spreadsheet identity');
     const query = new URLSearchParams({ fields: 'id,name,modifiedTime,version,mimeType,trashed' });
@@ -307,6 +361,9 @@ export class GoogleSheetsClient {
     return spreadsheetChoice(body);
   }
 
+  /**
+   * Handle the token request operation.
+   */
   private async tokenRequest(
     parameters: URLSearchParams,
     scopeRequired: boolean
@@ -336,6 +393,9 @@ export class GoogleSheetsClient {
     };
   }
 
+  /**
+   * Handle the google JSON operation.
+   */
   private async googleJson<T>(url: string, accessToken: string): Promise<T> {
     const response = await this.fetcher(url, {
       headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` }
@@ -346,11 +406,17 @@ export class GoogleSheetsClient {
   }
 }
 
+/**
+ * Return the google pkce challenge result.
+ */
 export function googlePkceChallenge(verifier: string) {
   if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) invalid('Google OAuth PKCE verifier is invalid');
   return createHash('sha256').update(verifier).digest('base64url');
 }
 
+/**
+ * Return the approved scope result.
+ */
 function approvedScope(value: string) {
   const scopes = boundedText(value, 'Google OAuth scope', 2_048).split(/\s+/).filter(Boolean);
   if (scopes.length !== GOOGLE_READONLY_SCOPES.length
@@ -364,6 +430,9 @@ function approvedScope(value: string) {
   return GOOGLE_READONLY_SCOPE;
 }
 
+/**
+ * Return the associated data text result.
+ */
 function associatedDataText(value: string) {
   if (typeof value !== 'string' || value.length < 1 || value.length > 2_048 || value.includes('\u0000')) {
     throw new ApplicationError('google_secret_invalid', 500, 'Google credential binding is invalid');
@@ -371,6 +440,9 @@ function associatedDataText(value: string) {
   return value;
 }
 
+/**
+ * Return the secret text result.
+ */
 function secretText(value: string) {
   if (typeof value !== 'string' || value.length < 1 || value.length > 8_192 || value.includes('\u0000')) {
     throw new ApplicationError('google_secret_invalid', 500, 'Google credential secret is invalid');
@@ -378,6 +450,9 @@ function secretText(value: string) {
   return value;
 }
 
+/**
+ * Return the base64 result.
+ */
 function base64(value: string, label: string, exactLength?: number) {
   if (typeof value !== 'string'
     || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
@@ -390,6 +465,9 @@ function base64(value: string, label: string, exactLength?: number) {
   return bytes;
 }
 
+/**
+ * Return the bounded JSON result.
+ */
 async function boundedJson<T>(response: Response): Promise<T> {
   const declared = response.headers.get('content-length');
   if (declared && Number(declared) > GOOGLE_SOURCE_BYTES) providerTooLarge();
@@ -420,6 +498,9 @@ async function boundedJson<T>(response: Response): Promise<T> {
   }
 }
 
+/**
+ * Normalize the values.
+ */
 function normalizeValues(value: unknown) {
   if (typeof value === 'undefined') return [];
   if (!Array.isArray(value) || value.length > GOOGLE_ROWS) providerTooLarge();
@@ -433,6 +514,9 @@ function normalizeValues(value: unknown) {
   });
 }
 
+/**
+ * Return the spreadsheet choice result.
+ */
 function spreadsheetChoice(value: unknown): GoogleSpreadsheetChoice {
   const entry = record(value, 'Google spreadsheet');
   if (entry.mimeType !== SHEETS_MEDIA_TYPE) providerInvalid();
@@ -444,6 +528,9 @@ function spreadsheetChoice(value: unknown): GoogleSpreadsheetChoice {
   };
 }
 
+/**
+ * Return the provider error result.
+ */
 function providerError(status: number, body: Record<string, unknown>) {
   const message = providerMessage(body);
   if (status === 401) return new ApplicationError('google_reauthentication_required', 401, 'Google access was revoked or expired. Reconnect before importing.');
@@ -452,6 +539,9 @@ function providerError(status: number, body: Record<string, unknown>) {
   return new ApplicationError('google_provider_error', 502, message || 'Google Sheets is temporarily unavailable');
 }
 
+/**
+ * Return the provider message result.
+ */
 function providerMessage(body: Record<string, unknown>) {
   const error = body.error;
   if (!error || typeof error !== 'object' || Array.isArray(error)) return undefined;
@@ -459,45 +549,72 @@ function providerMessage(body: Record<string, unknown>) {
   return typeof value === 'string' && value.length <= 300 ? value : undefined;
 }
 
+/**
+ * Return the bearer result.
+ */
 function bearer(value: string) {
   return boundedToken(value, 'Google access token', 8_192);
 }
 
+/**
+ * Return the provider id result.
+ */
 function providerId(value: unknown, label: string) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{10,256}$/.test(value)) providerInvalid();
   return value;
 }
 
+/**
+ * Return the bounded text result.
+ */
 function boundedText(value: unknown, label: string, maximum: number) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum
     || /[\u0000-\u001f\u007f]/.test(value)) invalid(`${label} is invalid`);
   return value;
 }
 
+/**
+ * Return the bounded token result.
+ */
 function boundedToken(value: unknown, label: string, maximum: number) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum
     || /[\u0000-\u0020\u007f]/.test(value)) invalid(`${label} is invalid`);
   return value;
 }
 
+/**
+ * Return the iso time result.
+ */
 function isoTime(value: unknown) {
   if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) providerInvalid();
   return new Date(value).toISOString();
 }
 
+/**
+ * Return the record result.
+ */
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(`${label} is invalid`);
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('google_import_invalid', 400, message);
 }
 
+/**
+ * Return the provider invalid result.
+ */
 function providerInvalid(): never {
   throw new ApplicationError('google_provider_invalid', 502, 'Google returned an invalid or unsupported response');
 }
 
+/**
+ * Return the provider too large result.
+ */
 function providerTooLarge(): never {
   throw new ApplicationError('google_source_too_large', 413, 'Google source exceeds the bounded import limits');
 }

@@ -1,13 +1,9 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import { ApplicationError } from '../../../bootstrap/errors.js';
-import {
-  renderAuthenticationRequired,
-  renderProductPage
-} from '../../app/helpers/rendering.js';
-import { WebCapabilityAdapter } from '../../capability/events/web-adapter.js';
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import type { CapabilityPluginService } from '../../capability/helpers/service.js';
-import { authenticatedExplorerContext } from '../../explorer/helpers/authenticated-context.js';
 import type { ExplorerPluginService } from '../../explorer/helpers/service.js';
 import type { FileDdlAction } from '../../files/helpers/contracts.js';
 import type { FilesPluginService } from '../../files/helpers/service.js';
@@ -16,16 +12,28 @@ import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js
 import type { SavedViewsPluginService } from '../../saved-views/helpers/service.js';
 import type { GridCellValue } from '../helpers/contracts.js';
 import type { GridPluginService, GridReadQuery } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import {
+  renderAuthenticationRequired,
+  renderProductPage
+} from '../../app/helpers/rendering.js';
+import { WebCapabilityAdapter } from '../../capability/events/web-adapter.js';
+import { authenticatedExplorerContext } from '../../explorer/helpers/authenticated-context.js';
 
+//The grid routes value exported for module callers
 export const GRID_ROUTES = [
   '/pages/table.html',
   '/events/grid',
   '/events/grid-relation'
 ] as const;
 
-/** Registers Grid-owned page, read, relation, and mutation routes. */
+/**
+ * Registers Grid-owned page, read, relation, and mutation routes.
+ */
 export function registerGridRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   runtime: ApplicationRuntimeService,
   identity: IdentityPluginService,
   explorer: ExplorerPluginService,
@@ -254,7 +262,9 @@ export function registerGridRoutes(
   });
 }
 
-/** Rejects review-only and ambiguous table-page query state. */
+/**
+ * Rejects review-only and ambiguous table-page query state.
+ */
 function exactPageQuery(parameters: URLSearchParams) {
   const allowed = new Set(['folder', 'table', 'new', 'view', 'dialog']);
   if (
@@ -270,7 +280,9 @@ function exactPageQuery(parameters: URLSearchParams) {
   }
 }
 
-/** Resolves saved and transient view state into one server-authorized grid query. */
+/**
+ * Resolves saved and transient view state into one server-authorized grid query.
+ */
 export async function resolveGridReadQuery(
   parameters: URLSearchParams,
   principal: Parameters<SavedViewsPluginService['get']>[0],
@@ -371,6 +383,9 @@ export async function resolveGridReadQuery(
   };
 }
 
+/**
+ * Return the exact grid query result.
+ */
 function exactGridQuery(parameters: URLSearchParams) {
   const allowed = new Set([
     'folder',
@@ -388,6 +403,9 @@ function exactGridQuery(parameters: URLSearchParams) {
   }
 }
 
+/**
+ * Return the relation selected keys result.
+ */
 function relationSelectedKeys(value: string | null): GridCellValue[][] {
   if (!value) return [];
   if (value.length > 12_000) throw new Error('Relation lookup keys are invalid');
@@ -419,6 +437,9 @@ function relationSelectedKeys(value: string | null): GridCellValue[][] {
   });
 }
 
+/**
+ * Return the exact keys result.
+ */
 function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   const keys = new Set(allowed);
   if (
@@ -429,6 +450,9 @@ function exactKeys(value: Record<string, unknown>, allowed: string[]) {
   }
 }
 
+/**
+ * Return the object result.
+ */
 function object(value: unknown, label: string) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} is invalid`);
@@ -436,6 +460,9 @@ function object(value: unknown, label: string) {
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the text result.
+ */
 function text(value: unknown, label: string, maximum: number) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum) {
     throw new Error(`${label} is invalid`);
@@ -446,6 +473,9 @@ function text(value: unknown, label: string, maximum: number) {
   return value;
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (
     typeof contentType !== 'string'

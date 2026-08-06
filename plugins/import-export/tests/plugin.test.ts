@@ -1,8 +1,12 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { createApplication } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
-import importExportPlugin, { IMPORT_EXPORT_ROUTES } from '../plugin.js';
+import { IMPORT_EXPORT_ROUTES } from '../plugin.js';
+import importExportPlugin from '../plugin.js';
 
 test('import-export plugin registers one process-scoped service before explorer', async () => {
   const application = await createApplication({

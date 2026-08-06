@@ -1,15 +1,15 @@
-import {
-  ActionFault,
-  type CapabilityAction,
-  type CellPatch,
-  type TypedCellValue,
-  type ValidationIssue
-} from './contracts.js';
+//client
+import type { CapabilityAction, CellPatch, TypedCellValue, ValidationIssue } from './contracts.js';
+import { ActionFault } from './contracts.js';
 
 const MAX_PATCH_CELLS = 1_000;
+//The max range cells value exported for module callers
 export const MAX_RANGE_CELLS = 10_000;
 const MAX_JSON_BYTES = 1_048_576;
 
+/**
+ * Validate the action.
+ */
 export function validateAction(action: CapabilityAction): CapabilityAction {
   if (!action || typeof action !== 'object') invalid('The action is invalid');
   switch (action.type) {
@@ -127,6 +127,9 @@ export function validateAction(action: CapabilityAction): CapabilityAction {
   return action;
 }
 
+/**
+ * Validate the patch shape.
+ */
 export function validatePatchShape(input: CellPatch[], allowEmpty = false): ValidationIssue[] {
   try {
     patch(input, allowEmpty);
@@ -139,6 +142,9 @@ export function validatePatchShape(input: CellPatch[], allowEmpty = false): Vali
   }
 }
 
+/**
+ * Return the patch result.
+ */
 function patch(input: CellPatch[], allowEmpty = false) {
   if (!Array.isArray(input) || (!allowEmpty && input.length < 1) || input.length > MAX_PATCH_CELLS) {
     invalid(`A patch must contain ${allowEmpty ? 'zero to' : 'one to'} ${MAX_PATCH_CELLS} cells`);
@@ -157,6 +163,9 @@ function patch(input: CellPatch[], allowEmpty = false) {
   }
 }
 
+/**
+ * Return the cell value result.
+ */
 function cellValue(input: TypedCellValue) {
   if (!input || typeof input !== 'object' || typeof input.type !== 'string') {
     invalid('A typed cell value is required');
@@ -220,6 +229,9 @@ function cellValue(input: TypedCellValue) {
   invalid('The typed cell value is invalid');
 }
 
+/**
+ * Return the column list result.
+ */
 function columnList(input: string[]) {
   if (!Array.isArray(input) || input.length < 1 || input.length > MAX_PATCH_CELLS) {
     invalid('One to 1000 column identities are required');
@@ -229,52 +241,88 @@ function columnList(input: string[]) {
   input.forEach(columnId);
 }
 
+/**
+ * Return the file id result.
+ */
 function fileId(value: string) {
   matches(value, /^obj_[A-Za-z0-9_-]{32,64}$/, 'file identity');
 }
 
+/**
+ * Return the row id result.
+ */
 function rowId(value: string) {
   matches(value, /^row_[A-Za-z0-9_-]{1,256}$/, 'row identity');
 }
 
+/**
+ * Return the column id result.
+ */
 function columnId(value: string) {
   matches(value, /^col_[A-Za-z0-9_-]{32,64}$/, 'column identity');
 }
 
+/**
+ * Return the draft id result.
+ */
 function draftId(value: string) {
   matches(value, /^draft_[A-Za-z0-9_-]{32,64}$/, 'draft identity');
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId(value: string) {
   matches(value, /^cmd_[A-Za-z0-9_-]{8,96}$/, 'command identity');
 }
 
+/**
+ * Return the schema version result.
+ */
 function schemaVersion(value: string) {
   matches(value, /^[a-f0-9]{64}$/, 'schema version');
 }
 
+/**
+ * Return the version result.
+ */
 function version(value: number, label: string) {
   if (!Number.isSafeInteger(value) || value < 1) invalid(`${label} must be a positive safe integer`);
 }
 
+/**
+ * Return the row version result.
+ */
 function rowVersion(value: string) {
   matches(value, /^ver_[A-Za-z0-9_-]{16,128}$/, 'expected row version');
 }
 
+/**
+ * Return the row rank result.
+ */
 function rowRank(value: string) {
   matches(value, /^[0-9]{24}$/, 'hidden row rank');
 }
 
+/**
+ * Return the timestamp result.
+ */
 function timestamp(value: string, label: string) {
   if (typeof value !== 'string' || !Number.isFinite(new Date(value).getTime())) {
     invalid(`The ${label} must be an ISO timestamp`);
   }
 }
 
+/**
+ * Return the matches result.
+ */
 function matches(value: string, expression: RegExp, label: string) {
   if (typeof value !== 'string' || !expression.test(value)) invalid(`The ${label} is invalid`);
 }
 
+/**
+ * Return the closed result.
+ */
 function closed(value: object, allowed: string[]) {
   const allowedKeys = new Set(allowed);
   if (Object.keys(value).some((key) => !allowedKeys.has(key))) {
@@ -282,6 +330,9 @@ function closed(value: object, allowed: string[]) {
   }
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ActionFault({ code: 'invalid_action', message, retryable: false });
 }

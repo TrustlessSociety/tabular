@@ -1,21 +1,25 @@
+//node
+import type { FileHandle } from 'node:fs/promises';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { FileHandle } from 'node:fs/promises';
+
+//modules
 import ExcelJS from 'exceljs';
-import {
-  IMPORT_PARSER_VERSION,
-  ImportParserError,
-  type ImportParserIssue,
-  type ImportParserLimits,
-  type ImportParserNotice,
-  type ParsedImportCell,
-  type ParsedImportResult,
-  type ParsedImportRow,
-  type XlsxByteInput,
-  type XlsxParserOptions
+
+//client
+import type {
+  ImportParserIssue,
+  ImportParserLimits,
+  ImportParserNotice,
+  ParsedImportCell,
+  ParsedImportResult,
+  ParsedImportRow,
+  XlsxByteInput,
+  XlsxParserOptions
 } from './contracts.js';
+import { IMPORT_PARSER_VERSION, ImportParserError } from './contracts.js';
 import { importFingerprint, SourceFingerprint } from './fingerprint.js';
 import { requireWithinLimit, validateXlsxOptions } from './validation.js';
 
@@ -31,6 +35,9 @@ const XLSX_MAX_COMPRESSION_RATIO = 100;
 const XLSX_MAX_SHARED_STRINGS_BYTES = 16 * 1024 * 1024;
 const XLSX_MAX_STYLES_BYTES = 4 * 1024 * 1024;
 
+/**
+ * Parse the XLSX.
+ */
 export async function parseXlsx(
   input: XlsxByteInput,
   options: XlsxParserOptions = {}
@@ -46,6 +53,9 @@ export async function parseXlsx(
   let scannedCells = 0;
   let selectedFound = false;
 
+  /**
+   * Return the issue result.
+   */
   const issue = (entry: ImportParserIssue) => {
     issues.push(entry);
     requireWithinLimit(
@@ -56,6 +66,9 @@ export async function parseXlsx(
     );
   };
 
+  /**
+   * Return the notice result.
+   */
   const notice = (entry: ImportParserNotice) => {
     notices.push(entry);
     requireWithinLimit(
@@ -75,7 +88,7 @@ export async function parseXlsx(
       styles: 'cache',
       entries: 'ignore'
     });
-    // ExcelJS-generated and third-party ZIPs may place worksheets before
+    //ExcelJS-generated and third-party ZIPs may place worksheets before
     // workbook metadata. WorkbookReader 4.4.0 otherwise defers those entries
     // through temporary streams and can stop after the first early sheet.
     // The metadata-only streaming pass drains early worksheets immediately,
@@ -102,12 +115,12 @@ export async function parseXlsx(
       const next = await workbookEvents.next();
       if (next.done) break;
       const event = next.value as {
-        eventType?: string;
-        value?: unknown;
+        eventType?: string,
+        value?: unknown,
       };
       if (event.eventType !== 'worksheet') continue;
-      const worksheet = event.value as ExcelJS.stream.xlsx.WorksheetReader & { name: string };
-      const sheetName = (worksheet as typeof worksheet & { name: string }).name;
+      const worksheet = event.value as ExcelJS.stream.xlsx.WorksheetReader & { name: string, };
+      const sheetName = (worksheet as typeof worksheet & { name: string, }).name;
       scannedSheets += 1;
       requireWithinLimit(
         scannedSheets,
@@ -216,14 +229,17 @@ export async function parseXlsx(
 }
 
 type XlsxArchiveEntry = {
-  name: string;
-  flags: number;
-  compression: number;
-  compressedBytes: number;
-  uncompressedBytes: number;
-  localOffset: number;
+  name: string,
+  flags: number,
+  compression: number,
+  compressedBytes: number,
+  uncompressedBytes: number,
+  localOffset: number,
 };
 
+/**
+ * Return the preflight XLSX archive result.
+ */
 async function preflightXlsxArchive(filePath: string, limits: ImportParserLimits) {
   const handle = await fsPromises.open(filePath, 'r');
   try {
@@ -250,6 +266,9 @@ async function preflightXlsxArchive(filePath: string, limits: ImportParserLimits
   }
 }
 
+/**
+ * Read the zip end.
+ */
 async function readZipEnd(handle: FileHandle, size: number) {
   if (!Number.isSafeInteger(size) || size < ZIP_END_BYTES) unsafeArchive();
   const length = Math.min(size, ZIP_END_BYTES + ZIP_MAX_COMMENT_BYTES);
@@ -276,6 +295,9 @@ async function readZipEnd(handle: FileHandle, size: number) {
   unsafeArchive();
 }
 
+/**
+ * Read the central entries.
+ */
 function readCentralEntries(
   central: Buffer,
   expectedEntries: number,
@@ -321,6 +343,9 @@ function readCentralEntries(
   return entries;
 }
 
+/**
+ * Validate the local entries.
+ */
 async function validateLocalEntries(
   handle: FileHandle,
   entries: XlsxArchiveEntry[],
@@ -361,6 +386,9 @@ async function validateLocalEntries(
   }
 }
 
+/**
+ * Validate the archive entries.
+ */
 function validateArchiveEntries(entries: XlsxArchiveEntry[], limits: ImportParserLimits) {
   let compressedBytes = 0;
   let uncompressedBytes = 0;
@@ -396,12 +424,18 @@ function validateArchiveEntries(entries: XlsxArchiveEntry[], limits: ImportParse
   );
 }
 
+/**
+ * Report the safe archive name condition.
+ */
 function safeArchiveName(value: string) {
   return value.length > 0 && value.length <= 512 && !value.includes('\u0000')
     && !value.startsWith('/') && !value.includes('\\')
     && !value.split('/').includes('..');
 }
 
+/**
+ * Return the compression ratio exceeded result.
+ */
 function compressionRatioExceeded(): never {
   throw new ImportParserError(
     'xlsx_compression_ratio_exceeded',
@@ -409,6 +443,9 @@ function compressionRatioExceeded(): never {
   );
 }
 
+/**
+ * Return the cache limit exceeded result.
+ */
 function cacheLimitExceeded(): never {
   throw new ImportParserError(
     'xlsx_cache_limit_exceeded',
@@ -416,18 +453,24 @@ function cacheLimitExceeded(): never {
   );
 }
 
+/**
+ * Return the unsafe archive result.
+ */
 function unsafeArchive(): never {
   throw new ImportParserError('xlsx_archive_unsafe', 'XLSX central directory is unsafe or malformed');
 }
 
+/**
+ * Return the XLSX cell result.
+ */
 function xlsxCell(input: {
-  value: ExcelJS.CellValue;
-  rowNumber: number;
-  columnNumber: number;
-  sheetName: string;
-  limits: ImportParserLimits;
-  issue: (issue: ImportParserIssue) => void;
-  notice: (notice: ImportParserNotice) => void;
+  value: ExcelJS.CellValue,
+  rowNumber: number,
+  columnNumber: number,
+  sheetName: string,
+  limits: ImportParserLimits,
+  issue: (issue: ImportParserIssue) => void,
+  notice: (notice: ImportParserNotice) => void,
 }): ParsedImportCell {
   let value = input.value;
   if (isFormula(value)) {
@@ -503,10 +546,16 @@ function xlsxCell(input: {
   return emptyCell();
 }
 
+/**
+ * Report the empty cell condition.
+ */
 function emptyCell(): ParsedImportCell {
   return { type: 'empty', value: null, sourceToken: '' };
 }
 
+/**
+ * Return the text cell result.
+ */
 function textCell(value: string, limits: ImportParserLimits): ParsedImportCell {
   requireWithinLimit(
     value.length,
@@ -517,23 +566,38 @@ function textCell(value: string, limits: ImportParserLimits): ParsedImportCell {
   return { type: 'text', value, sourceToken: value };
 }
 
+/**
+ * Report whether the formula condition holds.
+ */
 function isFormula(value: ExcelJS.CellValue): value is ExcelJS.CellFormulaValue | ExcelJS.CellSharedFormulaValue {
   return Boolean(value && typeof value === 'object'
     && ('formula' in value || 'sharedFormula' in value));
 }
 
+/**
+ * Report whether the cell error condition holds.
+ */
 function isCellError(value: ExcelJS.CellValue): value is ExcelJS.CellErrorValue {
   return Boolean(value && typeof value === 'object' && 'error' in value);
 }
 
+/**
+ * Report whether the rich text condition holds.
+ */
 function isRichText(value: ExcelJS.CellValue): value is ExcelJS.CellRichTextValue {
   return Boolean(value && typeof value === 'object' && 'richText' in value);
 }
 
+/**
+ * Report whether the hyperlink condition holds.
+ */
 function isHyperlink(value: ExcelJS.CellValue): value is ExcelJS.CellHyperlinkValue {
   return Boolean(value && typeof value === 'object' && 'hyperlink' in value && 'text' in value);
 }
 
+/**
+ * Return the limited input result.
+ */
 async function limitedInput(
   input: XlsxByteInput,
   limits: ImportParserLimits,
@@ -582,6 +646,9 @@ async function limitedInput(
   }
 }
 
+/**
+ * Return the XLSX byte chunks result.
+ */
 async function* xlsxByteChunks(
   input: Exclude<XlsxByteInput, string>
 ): AsyncGenerator<Buffer> {
@@ -594,8 +661,11 @@ async function* xlsxByteChunks(
   }
 }
 
+/**
+ * Return the drain result.
+ */
 async function drain(iterator: AsyncIterator<unknown>) {
   while (!(await iterator.next()).done) {
-    // Metadata and shared-string caches are maintained by WorkbookReader.
+    //Metadata and shared-string caches are maintained by WorkbookReader.
   }
 }

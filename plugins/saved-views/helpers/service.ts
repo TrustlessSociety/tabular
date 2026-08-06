@@ -1,13 +1,14 @@
+//node
 import { createHash } from 'node:crypto';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
+import type { CapabilityPluginService } from '../../capability/helpers/service.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import { opaqueId } from '../../identity/helpers/security.js';
-import type { CapabilityPluginService } from '../../capability/helpers/service.js';
 import type {
   CreateSavedViewInput,
   MoveRowInput,
@@ -16,15 +17,16 @@ import type {
   SavedViewCollection,
   UpdateSavedViewInput
 } from './contracts.js';
-import {
-  iso,
-  SavedViewsRepository,
-  type FileColumnRow,
-  type FileTargetRow,
-  type RowOrderRow,
-  type SavedViewCommandRow,
-  type SavedViewRow
+import type {
+  FileColumnRow,
+  FileTargetRow,
+  RowOrderRow,
+  SavedViewCommandRow,
+  SavedViewRow
 } from './repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { opaqueId } from '../../identity/helpers/security.js';
+import { iso, SavedViewsRepository } from './repository.js';
 import {
   validateCreate,
   validateDefinition,
@@ -35,25 +37,36 @@ import {
   validateUpdate
 } from './validation.js';
 
+//The saved views service value exported for module callers
 export const SAVED_VIEWS_SERVICE = 'tabular.saved-views';
 
 type FileAuthority = {
-  canSelect: boolean;
-  canPublishShared: boolean;
-  canMoveRows: boolean;
-  rowOrderState: SavedViewCapabilities['rowOrderState'];
-  rowOrderReason?: string;
+  canSelect: boolean,
+  canPublishShared: boolean,
+  canMoveRows: boolean,
+  rowOrderState: SavedViewCapabilities['rowOrderState'],
+  rowOrderReason?: string,
 };
 
+/**
+ * Provide saved views plugin operations through one service boundary.
+ */
 export class SavedViewsPluginService {
-  readonly name = SAVED_VIEWS_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = SAVED_VIEWS_SERVICE;
 
-  constructor(
+  /**
+   * Create a SavedViewsPluginService instance.
+   */
+  public constructor(
     private readonly identity: IdentityPluginService,
     private readonly capability: CapabilityPluginService
   ) {}
 
-  async list(
+  /**
+   * List saved views visible to the principal for the requested files.
+   */
+  public async list(
     principal: BrowserPrincipal,
     fileIds?: string[]
   ): Promise<SavedViewCollection> {
@@ -108,7 +121,10 @@ export class SavedViewsPluginService {
     );
   }
 
-  async get(principal: BrowserPrincipal, viewId: string) {
+  /**
+   * Return one authorized saved view with its current definition.
+   */
+  public async get(principal: BrowserPrincipal, viewId: string) {
     let row: SavedViewRow | undefined;
     let target: FileTargetRow | undefined;
     let rowOrder: RowOrderRow | undefined;
@@ -136,18 +152,21 @@ export class SavedViewsPluginService {
     );
   }
 
-  async create(
+  /**
+   * Create one saved view after validating file and column authority.
+   */
+  public async create(
     principal: BrowserMutationPrincipal,
     input: CreateSavedViewInput,
     commandId = `cmd_view_create_${Date.now()}`,
     command: {
-      actionType: 'saved-view.create' | 'saved-view.duplicate';
-      requestDigest: string;
+      actionType: 'saved-view.create' | 'saved-view.duplicate',
+      requestDigest: string,
     } = {
       actionType: 'saved-view.create',
       requestDigest: actionDigest('saved-view.create', input)
     }
-  ): Promise<SavedView & { replayed?: true }> {
+  ): Promise<SavedView & { replayed?: true, }> {
     input = validateCreate(input as unknown as Record<string, unknown>);
     const requestDigest = command.actionType === 'saved-view.create'
       ? actionDigest('saved-view.create', input)
@@ -221,11 +240,14 @@ export class SavedViewsPluginService {
     );
   }
 
-  async update(
+  /**
+   * Update one saved view under optimistic version control.
+   */
+  public async update(
     principal: BrowserMutationPrincipal,
     input: UpdateSavedViewInput,
     commandId = `cmd_view_update_${Date.now()}`
-  ): Promise<SavedView & { replayed?: true }> {
+  ): Promise<SavedView & { replayed?: true, }> {
     input = validateUpdate(input as unknown as Record<string, unknown>);
     const requestDigest = actionDigest('saved-view.update', input);
     const eventId = opaqueId('evt');
@@ -314,11 +336,14 @@ export class SavedViewsPluginService {
     );
   }
 
-  async duplicate(
+  /**
+   * Handle the duplicate operation.
+   */
+  public async duplicate(
     principal: BrowserMutationPrincipal,
-    input: { viewId: string; name: string; access: 'private' | 'shared' },
+    input: { viewId: string, name: string, access: 'private' | 'shared', },
     commandId: string
-  ): Promise<SavedView & { replayed?: true }> {
+  ): Promise<SavedView & { replayed?: true, }> {
     input = validateDuplicate(input as unknown as Record<string, unknown>);
     const requestDigest = actionDigest('saved-view.duplicate', input);
     let replay: SavedViewCommandRow | undefined;
@@ -365,11 +390,14 @@ export class SavedViewsPluginService {
     });
   }
 
-  async delete(
+  /**
+   * Delete one saved view under optimistic version control.
+   */
+  public async delete(
     principal: BrowserMutationPrincipal,
-    input: { viewId: string; expectedVersion: number },
+    input: { viewId: string, expectedVersion: number, },
     commandId = `cmd_view_delete_${Date.now()}`
-  ): Promise<{ id: string; deleted: true; replayed?: true }> {
+  ): Promise<{ id: string, deleted: true, replayed?: true, }> {
     input = validateDelete(input as unknown as Record<string, unknown>);
     const requestDigest = actionDigest('saved-view.delete', input);
     const eventId = opaqueId('evt');
@@ -414,7 +442,7 @@ export class SavedViewsPluginService {
       },
       async (database, result) => {
         if (replay) return {
-          ...(result as { id: string; deleted: true }),
+          ...(result as { id: string, deleted: true, }),
           replayed: true as const
         };
         const repository = new SavedViewsRepository(database);
@@ -450,11 +478,14 @@ export class SavedViewsPluginService {
     );
   }
 
-  async moveRow(
+  /**
+   * Move the row.
+   */
+  public async moveRow(
     principal: BrowserMutationPrincipal,
     input: MoveRowInput,
     commandId = `cmd_row_move_${Date.now()}`
-  ): Promise<{ fileId: string; rebalanced: boolean; version: number; replayed?: true }> {
+  ): Promise<{ fileId: string, rebalanced: boolean, version: number, replayed?: true, }> {
     input = validateMove(input as unknown as Record<string, unknown>);
     const requestDigest = actionDigest('row-order.move', input);
     const eventId = opaqueId('evt');
@@ -503,7 +534,7 @@ export class SavedViewsPluginService {
       },
       async (database, effect) => {
         if (replay) return {
-          ...(effect as { fileId: string; rebalanced: boolean; version: number }),
+          ...(effect as { fileId: string, rebalanced: boolean, version: number, }),
           replayed: true as const
         };
         const repository = new SavedViewsRepository(database);
@@ -538,18 +569,21 @@ export class SavedViewsPluginService {
   }
 }
 
+/**
+ * Return the file authority result.
+ */
 async function fileAuthority(
   database: DatabaseExecutor,
   target: FileTargetRow,
   rowOrder?: RowOrderRow
 ): Promise<FileAuthority> {
   const result = await database.execute<{
-    can_select: boolean;
-    can_publish: boolean;
-    rank_valid: boolean;
-    rank_select: boolean;
-    rank_update: boolean;
-    key_select: boolean;
+    can_select: boolean,
+    can_publish: boolean,
+    rank_valid: boolean,
+    rank_select: boolean,
+    rank_update: boolean,
+    key_select: boolean,
   }>(`
     SELECT
       has_schema_privilege(current_user, c.relnamespace, 'USAGE') AND (
@@ -645,6 +679,9 @@ async function fileAuthority(
   };
 }
 
+/**
+ * Assert the definition columns.
+ */
 async function assertDefinitionColumns(
   database: DatabaseExecutor,
   target: FileTargetRow,
@@ -653,7 +690,7 @@ async function assertDefinitionColumns(
 ) {
   if (!columns.length && definition.columnOrder.length) invalidDefinition();
   if (!columns.length) return;
-  const result = await database.execute<{ attribute_number: string | number }>(`
+  const result = await database.execute<{ attribute_number: string | number, }>(`
     SELECT a.attnum AS attribute_number
       FROM pg_attribute a
      WHERE a.attrelid = ?::oid
@@ -670,6 +707,9 @@ async function assertDefinitionColumns(
   }
 }
 
+/**
+ * Return the saved view replay result.
+ */
 function savedViewReplay(replay: SavedViewCommandRow): SavedView {
   const result = replay.result;
   if (typeof result.fileId !== 'string'
@@ -677,27 +717,36 @@ function savedViewReplay(replay: SavedViewCommandRow): SavedView {
   return result as unknown as SavedView;
 }
 
+/**
+ * Return the deleted view replay result.
+ */
 function deletedViewReplay(replay: SavedViewCommandRow) {
   const result = replay.result;
   if (typeof result.id !== 'string' || result.deleted !== true
     || typeof result.fileId !== 'string'
     || (result.access !== 'private' && result.access !== 'shared')) unavailable();
   return result as unknown as {
-    id: string;
-    deleted: true;
-    fileId: string;
-    access: 'private' | 'shared';
+    id: string,
+    deleted: true,
+    fileId: string,
+    access: 'private' | 'shared',
   };
 }
 
+/**
+ * Return the moved row replay result.
+ */
 function movedRowReplay(replay: SavedViewCommandRow) {
   const result = replay.result;
   if (typeof result.fileId !== 'string'
     || typeof result.rebalanced !== 'boolean'
     || !Number.isSafeInteger(result.version)) unavailable();
-  return result as unknown as { fileId: string; rebalanced: boolean; version: number };
+  return result as unknown as { fileId: string, rebalanced: boolean, version: number, };
 }
 
+/**
+ * Report the safe view condition.
+ */
 function safeView(
   row: SavedViewRow,
   principal: BrowserPrincipal,
@@ -724,6 +773,9 @@ function safeView(
   };
 }
 
+/**
+ * Assert the view write authority.
+ */
 function assertViewWriteAuthority(
   nextAccess: 'private' | 'shared',
   principal: BrowserPrincipal,
@@ -739,14 +791,23 @@ function assertViewWriteAuthority(
   }
 }
 
+/**
+ * Return the unique result.
+ */
 function unique(values: string[]) {
   return [...new Set(values)];
 }
 
+/**
+ * Return the action digest result.
+ */
 function actionDigest(type: string, value: unknown) {
   return createHash('sha256').update(JSON.stringify(canonical({ type, value }))).digest('hex');
 }
 
+/**
+ * Return the canonical result.
+ */
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -757,6 +818,9 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
+/**
+ * Assert the replay.
+ */
 function assertReplay(
   replay: SavedViewCommandRow | undefined,
   requestDigest: string,
@@ -772,10 +836,16 @@ function assertReplay(
   }
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ApplicationError('saved_view_unavailable', 404, 'The saved view or file is unavailable');
 }
 
+/**
+ * Report the invalid definition condition.
+ */
 function invalidDefinition(): never {
   throw new ApplicationError(
     'saved_view_invalid_definition',
@@ -784,10 +854,16 @@ function invalidDefinition(): never {
   );
 }
 
+/**
+ * Return the denied result.
+ */
 function denied(message: string): never {
   throw new ApplicationError('saved_view_denied', 403, message);
 }
 
+/**
+ * Return the conflict result.
+ */
 function conflict(message = 'The saved view changed; reload before trying again'): never {
   throw new ApplicationError('saved_view_conflict', 409, message);
 }

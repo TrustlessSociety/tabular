@@ -1,86 +1,100 @@
+//node
 import { createHash } from 'node:crypto';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
+import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
+import type {
+  ActionResult,
+  AppliedCellChange,
+  CapabilityAction,
+  CapabilityExecutionOptions,
+  CapabilityTargetAdapter,
+  CellPatch,
+  PreparedTarget,
+  SafeActionError,
+  TargetMutationEffect,
+  TargetMutationRow,
+  ValidationIssue
+} from './contracts.js';
+import type { CapabilityImportCommit } from './import-commit.js';
+import type { PostgreSqlTargetDefinition, PostgreSqlBrowseResult } from './postgresql-target.js';
+import type { DraftRecord, JournalReplay, SessionHistoryEntry } from './repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 import { opaqueId } from '../../identity/helpers/security.js';
 import {
   ActionFault,
   CapabilityResultBudgetExceededError,
-  AuthorizedExecutionContext,
-  type ActionResult,
-  type AppliedCellChange,
-  type CapabilityAction,
-  type CapabilityExecutionOptions,
-  type CapabilityTargetAdapter,
-  type CellPatch,
-  type PreparedTarget,
-  type SafeActionError,
-  type TargetMutationEffect,
-  type TargetMutationRow,
-  type ValidationIssue
+  AuthorizedExecutionContext
 } from './contracts.js';
-import {
-  CapabilityRepository,
-  safeDraft,
-  type DraftRecord,
-  type JournalReplay,
-  type SessionHistoryEntry
-} from './repository.js';
+import { CapabilityRepository, safeDraft } from './repository.js';
 import { validateAction } from './validation.js';
-import {
-  RegisteredPostgreSqlTargetAdapter,
-  type PostgreSqlTargetDefinition,
-  type PostgreSqlBrowseResult
-} from './postgresql-target.js';
+import { RegisteredPostgreSqlTargetAdapter } from './postgresql-target.js';
 import { CatalogPostgreSqlTargetAdapter } from './catalog-postgresql-target.js';
-import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
-import {
-  commitImportedTable,
-  type CapabilityImportCommit
-} from './import-commit.js';
+import { commitImportedTable } from './import-commit.js';
 
+//The grid target plan contract exported for module callers
 export type GridTargetPlan = {
-  adapter: RegisteredPostgreSqlTargetAdapter | CatalogPostgreSqlTargetAdapter;
-  target: PreparedTarget;
+  adapter: RegisteredPostgreSqlTargetAdapter | CatalogPostgreSqlTargetAdapter,
+  target: PreparedTarget,
 };
 
+//The grid query input contract exported for module callers
 export type GridQueryInput = {
-  columnIds: string[];
-  sorts: GridSort[];
-  filters: GridFilter[];
-  limit: number;
-  maximumResultBytes?: number;
+  columnIds: string[],
+  sorts: GridSort[],
+  filters: GridFilter[],
+  limit: number,
+  maximumResultBytes?: number,
 };
 
+//The capability service value exported for module callers
 export const CAPABILITY_SERVICE = 'tabular.capability';
 
 type TargetPlan = {
-  adapter: CapabilityTargetAdapter;
-  target: PreparedTarget;
+  adapter: CapabilityTargetAdapter,
+  target: PreparedTarget,
 };
 
 type MutationAttempt =
-  | { kind: 'effect'; effect: TargetMutationEffect }
-  | { kind: 'failure'; error: SafeActionError };
+  | { kind: 'effect', effect: TargetMutationEffect, }
+  | { kind: 'failure', error: SafeActionError, };
 
-type IdempotentAttempt = MutationAttempt | { kind: 'replay'; replay: JournalReplay };
-type DraftCommandAttempt = { kind: 'ready' } | { kind: 'replay'; replay: JournalReplay };
+type IdempotentAttempt = MutationAttempt | { kind: 'replay', replay: JournalReplay, };
+type DraftCommandAttempt = { kind: 'ready', } | { kind: 'replay', replay: JournalReplay, };
 
+/**
+ * Provide capability plugin operations through one service boundary.
+ */
 export class CapabilityPluginService {
-  readonly name = CAPABILITY_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = CAPABILITY_SERVICE;
+  //The targets state retained by this class instance
   readonly #targets: CapabilityTargetAdapter[] = [];
-  readonly postgresqlTargets = new RegisteredPostgreSqlTargetAdapter();
-  readonly catalogPostgresqlTargets = new CatalogPostgreSqlTargetAdapter();
+  //The postgresql targets state retained by this class instance
+  public readonly postgresqlTargets = new RegisteredPostgreSqlTargetAdapter();
+  //The catalog postgresql targets state retained by this class instance
+  public readonly catalogPostgresqlTargets = new CatalogPostgreSqlTargetAdapter();
 
-  constructor() {
+  /**
+   * Create a CapabilityPluginService instance.
+   */
+  public constructor() {
     this.registerTargetAdapter(this.catalogPostgresqlTargets);
     this.registerTargetAdapter(this.postgresqlTargets);
   }
 
-  registerPostgreSqlTarget(definition: PostgreSqlTargetDefinition) {
+  /**
+   * Register the postgre SQL target.
+   */
+  public registerPostgreSqlTarget(definition: PostgreSqlTargetDefinition) {
     this.postgresqlTargets.register(definition);
   }
 
-  registerTargetAdapter(adapter: CapabilityTargetAdapter) {
+  /**
+   * Register the target adapter.
+   */
+  public registerTargetAdapter(adapter: CapabilityTargetAdapter) {
     if (!adapter || typeof adapter.name !== 'string' || !adapter.name) {
       throw new Error('A named capability target adapter is required');
     }
@@ -90,7 +104,10 @@ export class CapabilityPluginService {
     this.#targets.push(adapter);
   }
 
-  async prepareGridTarget(
+  /**
+   * Prepare the grid target.
+   */
+  public async prepareGridTarget(
     database: DatabaseExecutor,
     fileId: string,
     connectionId: string
@@ -102,7 +119,10 @@ export class CapabilityPluginService {
     return undefined;
   }
 
-  browseGridTarget(
+  /**
+   * Handle the browse grid target operation.
+   */
+  public browseGridTarget(
     database: DatabaseExecutor,
     plan: GridTargetPlan,
     limit = 1_000
@@ -110,11 +130,17 @@ export class CapabilityPluginService {
     return plan.adapter.browse(database, plan.target, limit);
   }
 
-  describeGridTarget(database: DatabaseExecutor, plan: GridTargetPlan) {
+  /**
+   * Describe the grid target.
+   */
+  public describeGridTarget(database: DatabaseExecutor, plan: GridTargetPlan) {
     return plan.adapter.describe(database, plan.target);
   }
 
-  queryGridTarget(
+  /**
+   * Query the grid target.
+   */
+  public queryGridTarget(
     database: DatabaseExecutor,
     plan: GridTargetPlan,
     input: GridQueryInput
@@ -129,17 +155,23 @@ export class CapabilityPluginService {
     return plan.adapter.query(database, plan.target, input);
   }
 
-  commitImportTable(
+  /**
+   * Handle the commit import table operation.
+   */
+  public commitImportTable(
     database: DatabaseExecutor,
     input: CapabilityImportCommit
   ) {
     return commitImportedTable(database, input);
   }
 
-  moveGridRow(
+  /**
+   * Move the grid row.
+   */
+  public moveGridRow(
     database: DatabaseExecutor,
     plan: GridTargetPlan,
-    input: { rowId: string; beforeRowId?: string; afterRowId?: string }
+    input: { rowId: string, beforeRowId?: string, afterRowId?: string, }
   ) {
     if (!(plan.adapter instanceof CatalogPostgreSqlTargetAdapter)) {
       throw new ActionFault({
@@ -151,7 +183,10 @@ export class CapabilityPluginService {
     return plan.adapter.moveRow(database, plan.target, input);
   }
 
-  async execute(
+  /**
+   * Execute the current value.
+   */
+  public async execute(
     context: AuthorizedExecutionContext,
     input: unknown,
     options: CapabilityExecutionOptions = {}
@@ -180,6 +215,9 @@ export class CapabilityPluginService {
     }
   }
 
+  /**
+   * Dispatch the current value.
+   */
   private dispatch(
     context: AuthorizedExecutionContext,
     action: CapabilityAction,
@@ -203,9 +241,12 @@ export class CapabilityPluginService {
     }
   }
 
+  /**
+   * Read the record.
+   */
   private async readRecord(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'record.read' }>,
+    action: Extract<CapabilityAction, { type: 'record.read', }>,
     maximumResultBytes?: number
   ) {
     let plan: TargetPlan | undefined;
@@ -229,9 +270,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * List the drafts.
+   */
   private async listDrafts(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.list' }>,
+    action: Extract<CapabilityAction, { type: 'draft.list', }>,
     maximumResultBytes?: number
   ) {
     let plan: TargetPlan | undefined;
@@ -253,9 +297,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Handle the patch record operation.
+   */
   private patchRecord(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'record.patch' }>
+    action: Extract<CapabilityAction, { type: 'record.patch', }>
   ) {
     return this.forwardMutation(context, action, [{
       rowId: action.rowId,
@@ -264,16 +311,22 @@ export class CapabilityPluginService {
     }]);
   }
 
+  /**
+   * Handle the patch range operation.
+   */
   private patchRange(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'range.patch' }>
+    action: Extract<CapabilityAction, { type: 'range.patch', }>
   ) {
     return this.forwardMutation(context, action, action.rows);
   }
 
+  /**
+   * Insert the record.
+   */
   private insertRecord(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'record.insert' }>
+    action: Extract<CapabilityAction, { type: 'record.insert', }>
   ) {
     return this.forwardMutation(context, action, [{
       operation: 'insert',
@@ -281,9 +334,12 @@ export class CapabilityPluginService {
     }]);
   }
 
+  /**
+   * Delete the record.
+   */
   private deleteRecord(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'record.delete' }>
+    action: Extract<CapabilityAction, { type: 'record.delete', }>
   ) {
     return this.forwardMutation(context, action, [{
       operation: 'delete',
@@ -293,10 +349,13 @@ export class CapabilityPluginService {
     }]);
   }
 
+  /**
+   * Handle the forward mutation operation.
+   */
   private async forwardMutation(
     context: AuthorizedExecutionContext,
     action: Extract<CapabilityAction, {
-      type: 'record.patch' | 'record.insert' | 'record.delete' | 'range.patch'
+      type: 'record.patch' | 'record.insert' | 'record.delete' | 'range.patch',
     }>,
     rows: TargetMutationRow[]
   ) {
@@ -355,9 +414,12 @@ export class CapabilityPluginService {
     return mutationSummary(actionId, result.effect, false);
   }
 
+  /**
+   * Create the draft.
+   */
   private async createDraft(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.create' }>
+    action: Extract<CapabilityAction, { type: 'draft.create', }>
   ) {
     const digest = actionDigest(action);
     const actionId = opaqueId('act');
@@ -421,9 +483,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Read the draft.
+   */
   private async readDraft(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.read' }>,
+    action: Extract<CapabilityAction, { type: 'draft.read', }>,
     maximumResultBytes?: number
   ) {
     let draft: DraftRecord | undefined;
@@ -447,9 +512,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Update the draft.
+   */
   private async updateDraft(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.update' }>
+    action: Extract<CapabilityAction, { type: 'draft.update', }>
   ) {
     const digest = actionDigest(action);
     const actionId = opaqueId('act');
@@ -510,9 +578,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Delete the draft.
+   */
   private async deleteDraft(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.delete' }>
+    action: Extract<CapabilityAction, { type: 'draft.delete', }>
   ) {
     const digest = actionDigest(action);
     const actionId = opaqueId('act');
@@ -566,9 +637,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Handle the promote draft operation.
+   */
   private async promoteDraft(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'draft.promote' }>
+    action: Extract<CapabilityAction, { type: 'draft.promote', }>
   ) {
     const digest = actionDigest(action);
     const actionId = opaqueId('act');
@@ -644,9 +718,12 @@ export class CapabilityPluginService {
     return mutationSummary(actionId, result.effect, false);
   }
 
+  /**
+   * List the history.
+   */
   private async listHistory(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'history.list' }>,
+    action: Extract<CapabilityAction, { type: 'history.list', }>,
     maximumResultBytes?: number
   ) {
     let plan: TargetPlan | undefined;
@@ -669,9 +746,12 @@ export class CapabilityPluginService {
     });
   }
 
+  /**
+   * Handle the reverse history operation.
+   */
   private async reverseHistory(
     context: AuthorizedExecutionContext,
-    action: Extract<CapabilityAction, { type: 'history.undo' | 'history.redo' }>,
+    action: Extract<CapabilityAction, { type: 'history.undo' | 'history.redo', }>,
     mode: 'undo' | 'redo'
   ) {
     const digest = actionDigest(action);
@@ -738,6 +818,9 @@ export class CapabilityPluginService {
     return mutationSummary(reversalActionId, result.effect, false);
   }
 
+  /**
+   * Prepare the target.
+   */
   private async prepareTarget(
     database: DatabaseExecutor,
     fileId: string,
@@ -751,6 +834,9 @@ export class CapabilityPluginService {
   }
 }
 
+/**
+ * Run the mutation.
+ */
 async function runMutation(
   database: DatabaseExecutor,
   callback: () => Promise<TargetMutationEffect>
@@ -786,12 +872,18 @@ async function runMutation(
   }
 }
 
+/**
+ * Return the recoverable target failure result.
+ */
 function recoverableTargetFailure(error: unknown) {
   if (error instanceof ActionFault) return true;
   const code = postgresCode(error);
   return code === '42501' || code === 'P0001' || code.startsWith('22') || code.startsWith('23');
 }
 
+/**
+ * Report the safe error condition.
+ */
 function safeError(error: unknown): SafeActionError {
   if (error instanceof CapabilityResultBudgetExceededError) {
     return {
@@ -829,6 +921,9 @@ function safeError(error: unknown): SafeActionError {
   };
 }
 
+/**
+ * Return the result budget result.
+ */
 function resultBudget(value: number | undefined) {
   if (value === undefined) return undefined;
   if (!Number.isSafeInteger(value) || value < 1 || value > 1_048_576) {
@@ -837,6 +932,9 @@ function resultBudget(value: number | undefined) {
   return value;
 }
 
+/**
+ * Return the validation attempt result.
+ */
 function validationAttempt(issues: ValidationIssue[]): MutationAttempt {
   return {
     kind: 'failure',
@@ -849,10 +947,16 @@ function validationAttempt(issues: ValidationIssue[]): MutationAttempt {
   };
 }
 
+/**
+ * Return the schema issue result.
+ */
 function schemaIssue(): ValidationIssue {
   return { code: 'schema_changed', message: 'The file schema changed' };
 }
 
+/**
+ * Return the schema error result.
+ */
 function schemaError(issues: ValidationIssue[]): SafeActionError {
   return {
     code: 'schema_changed',
@@ -862,6 +966,9 @@ function schemaError(issues: ValidationIssue[]): SafeActionError {
   };
 }
 
+/**
+ * Return the mutation summary result.
+ */
 function mutationSummary(actionId: string, effect: TargetMutationEffect, replayed: boolean) {
   return {
     actionId,
@@ -872,6 +979,9 @@ function mutationSummary(actionId: string, effect: TargetMutationEffect, replaye
   };
 }
 
+/**
+ * Return the draft summary result.
+ */
 function draftSummary(draft: ReturnType<typeof safeDraft>, replayed: boolean) {
   return {
     id: draft.id,
@@ -884,10 +994,16 @@ function draftSummary(draft: ReturnType<typeof safeDraft>, replayed: boolean) {
   };
 }
 
+/**
+ * Return the deterministic rows result.
+ */
 function deterministicRows(rows: TargetMutationRow[]) {
   return [...rows].sort((left, right) => (left.rowId || '').localeCompare(right.rowId || ''));
 }
 
+/**
+ * Return the reversal rows result.
+ */
 function reversalRows(
   changes: AppliedCellChange[],
   operations: Record<string, 'insert' | 'update' | 'delete'>,
@@ -895,7 +1011,7 @@ function reversalRows(
   activeVersions: Record<string, string>,
   activeIncarnations: Record<string, string>
 ): TargetMutationRow[] {
-  const rows = new Map<string, { patch: CellPatch[]; preconditions: CellPatch[] }>();
+  const rows = new Map<string, { patch: CellPatch[], preconditions: CellPatch[], }>();
   for (const change of changes) {
     const row = rows.get(change.rowId) || { patch: [], preconditions: [] };
     row.patch.push({ columnId: change.columnId, value: change.after });
@@ -946,12 +1062,18 @@ function reversalRows(
     });
 }
 
+/**
+ * Merge the patch.
+ */
 function mergePatch(current: CellPatch[], update: CellPatch[]) {
   const merged = new Map(current.map((entry) => [entry.columnId, entry]));
   for (const entry of update) merged.set(entry.columnId, entry);
   return [...merged.values()].sort((left, right) => left.columnId.localeCompare(right.columnId));
 }
 
+/**
+ * Return the bounded draft expiry result.
+ */
 function boundedDraftExpiry(value: string) {
   const requested = new Date(value);
   const now = Date.now();
@@ -966,6 +1088,9 @@ function boundedDraftExpiry(value: string) {
   return requested;
 }
 
+/**
+ * Assert the editable draft.
+ */
 function assertEditableDraft(draft: DraftRecord | undefined, expectedVersion: number) {
   if (!draft) notFound();
   if (draft.state !== 'active') conflict('The draft is no longer active');
@@ -974,10 +1099,16 @@ function assertEditableDraft(draft: DraftRecord | undefined, expectedVersion: nu
   }
 }
 
+/**
+ * Return the action digest result.
+ */
 function actionDigest(action: CapabilityAction) {
   return createHash('sha256').update(stableJson(action)).digest('hex');
 }
 
+/**
+ * Return the stable JSON result.
+ */
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -989,15 +1120,24 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * Return the postgres code result.
+ */
 function postgresCode(error: unknown) {
   return error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
 }
 
+/**
+ * Return the required result.
+ */
 function required<Value>(value: Value | undefined, message: string): Value {
   if (typeof value === 'undefined') throw new Error(message);
   return value;
 }
 
+/**
+ * Return the not found result.
+ */
 function notFound(): never {
   throw new ActionFault({
     code: 'not_found',
@@ -1006,6 +1146,9 @@ function notFound(): never {
   });
 }
 
+/**
+ * Return the history unavailable result.
+ */
 function historyUnavailable(): never {
   throw new ActionFault({
     code: 'history_not_available',
@@ -1014,10 +1157,16 @@ function historyUnavailable(): never {
   });
 }
 
+/**
+ * Return the conflict result.
+ */
 function conflict(message: string): never {
   throw new ActionFault({ code: 'conflict', message, retryable: false });
 }
 
+/**
+ * Return the idempotency conflict result.
+ */
 function idempotencyConflict(): never {
   conflict('The command identity was already used for a different action');
 }

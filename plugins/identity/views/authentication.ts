@@ -1,4 +1,6 @@
-/** Renders the normal signed-out PostgreSQL login document. */
+/**
+ * Renders the normal signed-out PostgreSQL login document.
+ */
 export function renderPostgreSqlLogin(failed = false) {
   return document('Sign in — Tabular', `
     <main aria-labelledby="postgres-login-title">
@@ -21,7 +23,9 @@ export function renderPostgreSqlLogin(failed = false) {
   `);
 }
 
-/** Renders a signed-in identity and a server-revoking logout form. */
+/**
+ * Renders a signed-in identity and a server-revoking logout form.
+ */
 export function renderSignedInAccount(displayName: string, csrfToken: string) {
   return document('Account — Tabular', `
     <main aria-labelledby="signed-in-title">
@@ -37,7 +41,9 @@ export function renderSignedInAccount(displayName: string, csrfToken: string) {
   `);
 }
 
-/** Wraps identity content in a minimal CSP-compatible HTML document. */
+/**
+ * Wraps identity content in a minimal CSP-compatible HTML document.
+ */
 function document(title: string, body: string) {
   return `<!doctype html>
 <html lang="en">
@@ -50,7 +56,9 @@ function document(title: string, body: string) {
 </html>`;
 }
 
-/** Escapes the two dynamic values permitted in the account document. */
+/**
+ * Escapes the two dynamic values permitted in the account document.
+ */
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({
     '&': '&amp;',

@@ -1,23 +1,25 @@
+/* Page: health and readiness status */
+
 :root {
   color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  background: #f4f4f2;
+  background: #F4F4F2;
   color: #171717;
 }
 
 body {
-  min-height: 100vh;
-  margin: 0;
   display: grid;
+  margin: 0;
+  min-height: 100vh;
   place-items: center;
 }
 
 main {
   width: min(34rem, calc(100vw - 3rem));
   padding: 2rem;
-  border: 1px solid #c9c9c5;
+  border: 1px solid #C9C9C5;
   border-radius: 0.75rem;
-  background: #fff;
+  background: #FFFFFF;
   box-shadow: 0 1rem 3rem rgb(0 0 0 / 8%);
 }
 
@@ -30,21 +32,21 @@ main {
 }
 
 h1 {
-  margin: 0.5rem 0 1.5rem;
   font-size: clamp(2rem, 8vw, 4rem);
+  margin: 0.5rem 0 1.5rem;
 }
 
 .status {
-  margin: 0;
   font-weight: 650;
+  margin: 0;
 }
 
 .status::before {
+  background: #4D4D4A;
+  border-radius: 50%;
   content: '';
   display: inline-block;
-  width: 0.65rem;
   height: 0.65rem;
   margin-right: 0.5rem;
-  border-radius: 50%;
-  background: #4d4d4a;
+  width: 0.65rem;
 }

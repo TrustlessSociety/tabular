@@ -1,16 +1,21 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type { ClientConfig } from 'pg';
-import {
-  PostgreSqlIdentityProvider,
-  type PostgreSqlLoginClient
-} from '../helpers/postgresql-login.js';
+
+//client
+import type { PostgreSqlLoginClient } from '../helpers/postgresql-login.js';
+import { PostgreSqlIdentityProvider } from '../helpers/postgresql-login.js';
 import {
   renderPostgreSqlLogin,
   renderSignedInAccount
 } from '../views/authentication.js';
 
-/** Builds a fake ordinary client at the authentication network boundary. */
+/**
+ * Builds a fake ordinary client at the authentication network boundary.
+ */
 function loginClient(overrides: Record<string, unknown> = {}) {
   let ended = false;
   const client: PostgreSqlLoginClient = {

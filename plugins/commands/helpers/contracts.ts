@@ -1,5 +1,7 @@
+//client
 import type { GridCellPresentation } from '../../grid/helpers/contracts.js';
 
+//The command id contract exported for module callers
 export type CommandId =
   | 'file.new' | 'file.open' | 'file.import' | 'file.export' | 'file.copy'
   | 'view.list' | 'view.new' | 'file.version-history' | 'file.table-settings'
@@ -35,57 +37,63 @@ export type CommandId =
   | 'column.clear' | 'column.move-left' | 'column.move-right'
   | 'column.resize' | 'column.delete' | 'relation.configure';
 
+//The command context contract exported for module callers
 export type CommandContext = {
-  selectionKind: 'none' | 'cell' | 'range' | 'row' | 'header-row' | 'header' | 'column';
-  canUndo: boolean;
-  canRedo: boolean;
-  hasDraft: boolean;
-  readOnly: boolean;
-  canMutateValues: boolean;
-  canMutateSelection: boolean;
-  canCreateFile: boolean;
-  canImportFile: boolean;
-  canConfigureFile: boolean;
-  canSaveViews?: boolean;
-  canMoveRows?: boolean;
-  canMoveRowUp?: boolean;
-  canMoveRowDown?: boolean;
-  rowMoveUpReason?: string;
-  rowMoveDownReason?: string;
-  rowOrderReason?: string;
-  canDeleteColumn?: boolean;
-  columnDeleteReason?: string;
-  canSortSelection?: boolean;
-  sortReason?: string;
-  relationSelection: boolean;
-  currentRowLabel?: string;
-  currentColumnLabel?: string;
+  selectionKind: 'none' | 'cell' | 'range' | 'row' | 'header-row' | 'header' | 'column',
+  canUndo: boolean,
+  canRedo: boolean,
+  hasDraft: boolean,
+  readOnly: boolean,
+  canMutateValues: boolean,
+  canMutateSelection: boolean,
+  canCreateFile: boolean,
+  canImportFile: boolean,
+  canConfigureFile: boolean,
+  canSaveViews?: boolean,
+  canMoveRows?: boolean,
+  canMoveRowUp?: boolean,
+  canMoveRowDown?: boolean,
+  rowMoveUpReason?: string,
+  rowMoveDownReason?: string,
+  rowOrderReason?: string,
+  canDeleteColumn?: boolean,
+  columnDeleteReason?: string,
+  canSortSelection?: boolean,
+  sortReason?: string,
+  relationSelection: boolean,
+  currentRowLabel?: string,
+  currentColumnLabel?: string,
 };
 
+//The command state contract exported for module callers
 export type CommandState = {
-  enabled: boolean;
-  checked?: boolean;
-  mixed?: boolean;
-  reason?: string;
+  enabled: boolean,
+  checked?: boolean,
+  mixed?: boolean,
+  reason?: string,
 };
 
+//The command menu entry contract exported for module callers
 export type CommandMenuEntry =
-  | { type: 'separator' }
-  | { type: 'command'; id: CommandId; label: string; shortcut?: string; secondary?: string }
-  | { type: 'submenu'; label: string; entries: CommandMenuEntry[] };
+  | { type: 'separator', }
+  | { type: 'command', id: CommandId, label: string, shortcut?: string, secondary?: string, }
+  | { type: 'submenu', label: string, entries: CommandMenuEntry[], };
 
+//The command menu contract exported for module callers
 export type CommandMenu = {
-  label: 'File' | 'Edit' | 'View' | 'Format';
-  entries: CommandMenuEntry[];
+  label: 'File' | 'Edit' | 'View' | 'Format',
+  entries: CommandMenuEntry[],
 };
 
+//The presentation patch contract exported for module callers
 export type PresentationPatch = {
   [Property in keyof GridCellPresentation]?: GridCellPresentation[Property] | null;
 };
 
+//The presentation history frame contract exported for module callers
 export type PresentationHistoryFrame = {
-  kind: 'presentation';
-  label: string;
-  before: Record<string, GridCellPresentation>;
-  after: Record<string, GridCellPresentation>;
+  kind: 'presentation',
+  label: string,
+  before: Record<string, GridCellPresentation>,
+  after: Record<string, GridCellPresentation>,
 };

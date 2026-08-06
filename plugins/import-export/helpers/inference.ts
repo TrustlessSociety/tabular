@@ -1,3 +1,4 @@
+//client
 import type {
   ColumnInference,
   InferredStorageType,
@@ -11,6 +12,9 @@ const DATE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?$/;
 const TIMESTAMP = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
 
+/**
+ * Return the infer columns result.
+ */
 export function inferColumns(rows: readonly ParsedImportRow[]): ColumnInference[] {
   const width = rows.reduce((maximum, row) => Math.max(maximum, row.cells.length), 0);
   return Array.from({ length: width }, (_, index) => inferColumn(
@@ -19,6 +23,9 @@ export function inferColumns(rows: readonly ParsedImportRow[]): ColumnInference[
   ));
 }
 
+/**
+ * Return the infer column result.
+ */
 export function inferColumn(
   columnNumber: number,
   cells: readonly ParsedImportCell[]
@@ -63,30 +70,48 @@ export function inferColumn(
   };
 }
 
-function cellToken(cell: Exclude<ParsedImportCell, { type: 'empty' }>) {
+/**
+ * Return the cell token result.
+ */
+function cellToken(cell: Exclude<ParsedImportCell, { type: 'empty', }>) {
   return cell.type === 'boolean' ? cell.sourceToken : cell.sourceToken;
 }
 
+/**
+ * Report whether the boolean condition holds.
+ */
 function isBoolean(value: string) {
   return value === 'true' || value === 'false';
 }
 
+/**
+ * Report whether the integer condition holds.
+ */
 function isInteger(value: string) {
   if (!INTEGER.test(value)) return false;
   const unsigned = value.startsWith('-') ? value.slice(1) : value;
   return unsigned === '0' || !unsigned.startsWith('0');
 }
 
+/**
+ * Report whether the date condition holds.
+ */
 function isDate(value: string) {
   if (!DATE.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+/**
+ * Report whether the timestamp condition holds.
+ */
 function isTimestamp(value: string) {
   return TIMESTAMP.test(value) && Number.isFinite(Date.parse(value));
 }
 
+/**
+ * Report whether the JSON condition holds.
+ */
 function isJson(value: string) {
   if (!/^[\[{]/.test(value)) return false;
   try {

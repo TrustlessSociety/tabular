@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import {
   CatalogDiscoveryQueue,
   reconciliationRetryDelayMs,

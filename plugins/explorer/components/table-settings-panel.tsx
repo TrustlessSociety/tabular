@@ -1,15 +1,22 @@
+//modules
 import { useEffect, useRef, useState } from 'react';
-import { Icon } from '../../ui/components/icon.js';
+
+//client
 import type { ExplorerFile, ExplorerFolder } from '../helpers/contracts.js';
+import { Icon } from '../../ui/components/icon.js';
 import { derivePhysicalName } from '../events/actions.js';
 
+//The table settings draft contract exported for module callers
 export type TableSettingsDraft = {
-  displayName: string;
-  folderId: string;
-  physicalName: string;
-  physicalNameOverridden: boolean;
+  displayName: string,
+  folderId: string,
+  physicalName: string,
+  physicalNameOverridden: boolean,
 };
 
+/**
+ * Render the table settings panel component.
+ */
 export function TableSettingsPanel({
   open,
   file,
@@ -22,16 +29,16 @@ export function TableSettingsPanel({
   onClose,
   onApply
 }: {
-  open: boolean;
-  file: ExplorerFile;
-  folder: ExplorerFolder;
-  folders: ExplorerFolder[];
-  derivePhysicalFromDisplay?: boolean;
-  initialPhysicalNameOverridden?: boolean;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
-  error?: string;
-  onClose: () => void;
-  onApply: (draft: TableSettingsDraft) => void;
+  open: boolean,
+  file: ExplorerFile,
+  folder: ExplorerFolder,
+  folders: ExplorerFolder[],
+  derivePhysicalFromDisplay?: boolean,
+  initialPhysicalNameOverridden?: boolean,
+  triggerRef: React.RefObject<HTMLButtonElement | null>,
+  error?: string,
+  onClose: () => void,
+  onApply: (draft: TableSettingsDraft) => void,
 }) {
   const panel = useRef<HTMLElement>(null);
   const close = useRef<HTMLButtonElement>(null);
@@ -51,6 +58,9 @@ export function TableSettingsPanel({
       physicalNameOverridden: initialPhysicalNameOverridden
     });
     close.current?.focus();
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();

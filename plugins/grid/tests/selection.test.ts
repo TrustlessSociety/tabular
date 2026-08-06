@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import {
   coverageFor,
   coverageForIndexMaps,
@@ -114,6 +117,9 @@ test('range coverage performs constant index-map lookups independent of logical 
   let rowLookups = 0;
   let columnLookups = 0;
   const rowIndexes = new Proxy(rows, {
+    /**
+     * Count row-index lookups while preserving ordinary Map behavior.
+     */
     get(target, property, receiver) {
       if (property === 'get') return (key: string) => {
         rowLookups += 1;
@@ -123,6 +129,9 @@ test('range coverage performs constant index-map lookups independent of logical 
     }
   });
   const columnIndexes = new Proxy(columns, {
+    /**
+     * Count column-index lookups while preserving ordinary Map behavior.
+     */
     get(target, property, receiver) {
       if (property === 'get') return (key: string) => {
         columnLookups += 1;

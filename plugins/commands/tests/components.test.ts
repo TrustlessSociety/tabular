@@ -1,7 +1,14 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+
+//client
+import type { PresentationToolbarState } from '../components/command-surface.js';
+import type { CommandContext } from '../helpers/contracts.js';
 import {
   BorderGlyph,
   BorderFormattingAccordion,
@@ -11,14 +18,12 @@ import {
   STANDARD_COLOR_PALETTE,
   SpreadsheetMenuBar,
   addSessionCustomColor,
-  anchoredPopoverLeft,
-  type PresentationToolbarState
+  anchoredPopoverLeft
 } from '../components/command-surface.js';
 import {
   CommandContextMenu,
   clampMenuPosition
 } from '../components/context-menu.js';
-import type { CommandContext } from '../helpers/contracts.js';
 
 //A fully authorized cell context keeps static rendering focused on component
 //semantics rather than permission setup.
@@ -67,7 +72,9 @@ test('formatting popovers anchor to their trigger and clamp within the viewport'
   assert.equal(anchoredPopoverLeft(354, 8, 192, 390), 182);
 });
 
-/** Extracts command identities without coupling assertions to label markup. */
+/**
+ * Extracts command identities without coupling assertions to label markup.
+ */
 function commandIds(markup: string) {
   return [ ...markup.matchAll(/data-command="([^"]+)"/g) ].map((match) => match[1]);
 }

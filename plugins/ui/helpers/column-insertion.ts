@@ -1,23 +1,29 @@
+//client
 import type { GridColumn } from '../../grid/helpers/contracts.js';
 
+//The column insertion request contract exported for module callers
 export type ColumnInsertionRequest = {
-  anchorColumnId: string;
-  knownColumnIds: string[];
-  placement: 'left' | 'right';
+  anchorColumnId: string,
+  knownColumnIds: string[],
+  placement: 'left' | 'right',
 };
 
+//The applied column insertion contract exported for module callers
 export type AppliedColumnInsertion = {
-  columns: GridColumn[];
-  createdColumn: GridColumn;
+  columns: GridColumn[],
+  createdColumn: GridColumn,
 };
 
+//The blank column insertion contract exported for module callers
 export type BlankColumnInsertion = {
-  id: string;
-  anchorColumnId: string;
-  placement: 'left' | 'right';
+  id: string,
+  anchorColumnId: string,
+  placement: 'left' | 'right',
 };
 
-/** Projects tab-local blank spreadsheet columns beside their requested anchors. */
+/**
+ * Projects tab-local blank spreadsheet columns beside their requested anchors.
+ */
 export function applyBlankColumnInsertions(
   columns: GridColumn[],
   insertions: BlankColumnInsertion[]
@@ -44,7 +50,9 @@ export function applyBlankColumnInsertions(
   return next;
 }
 
-/** Re-anchors tab-local blanks after the visible columns are dragged. */
+/**
+ * Re-anchors tab-local blanks after the visible columns are dragged.
+ */
 export function reconcileBlankColumnInsertions(
   columnIds: readonly string[],
   insertions: BlankColumnInsertion[]
@@ -83,7 +91,9 @@ export function reconcileBlankColumnInsertions(
   return next;
 }
 
-/** Removes one tab-local blank while retaining the remaining visual order. */
+/**
+ * Removes one tab-local blank while retaining the remaining visual order.
+ */
 export function removeBlankColumnInsertion(
   columnIds: readonly string[],
   insertions: BlankColumnInsertion[],
@@ -95,7 +105,9 @@ export function removeBlankColumnInsertion(
   );
 }
 
-/** Places the one newly discovered stable column beside its requested anchor. */
+/**
+ * Places the one newly discovered stable column beside its requested anchor.
+ */
 export function applyColumnInsertion(
   columns: GridColumn[],
   request: ColumnInsertionRequest

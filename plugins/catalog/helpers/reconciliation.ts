@@ -1,6 +1,8 @@
+//node
 import { createHash } from 'node:crypto';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { opaqueId } from '../../identity/helpers/security.js';
 import type {
   CatalogFile,
   StableCatalogSnapshot,
@@ -8,28 +10,32 @@ import type {
   StableObject,
   StableSchema
 } from './contracts.js';
+import { opaqueId } from '../../identity/helpers/security.js';
 
-type LiveSchema = { database_oid: string | number; namespace_oid: string | number; name: string };
+type LiveSchema = { database_oid: string | number, namespace_oid: string | number, name: string, };
 type LiveObject = {
-  relation_oid: string | number;
-  namespace_oid: string | number;
-  schema_name: string;
-  name: string;
-  relkind: string;
-  view_definition: string | null;
+  relation_oid: string | number,
+  namespace_oid: string | number,
+  schema_name: string,
+  name: string,
+  relkind: string,
+  view_definition: string | null,
 };
 type LiveColumn = {
-  relation_oid: string | number;
-  attribute_number: number;
-  name: string;
-  formatted_type: string;
-  nullable: boolean;
-  identity_kind: string;
-  generated_kind: string;
+  relation_oid: string | number,
+  attribute_number: number,
+  name: string,
+  formatted_type: string,
+  nullable: boolean,
+  identity_kind: string,
+  generated_kind: string,
 };
 
 let reconciliationTail = Promise.resolve();
 
+/**
+ * Reconcile the catalog.
+ */
 export async function reconcileCatalog(
   database: DatabaseExecutor,
   connectionId: string
@@ -45,13 +51,16 @@ export async function reconcileCatalog(
   }
 }
 
+/**
+ * Reconcile the catalog transaction.
+ */
 async function reconcileCatalogTransaction(
   database: DatabaseExecutor,
   connectionId: string
 ): Promise<StableCatalogSnapshot> {
   const scope = await database.execute<{
-    database_oid: string | number;
-    database_name: string;
+    database_oid: string | number,
+    database_name: string,
   }>(`
     SELECT oid AS database_oid, datname AS database_name
       FROM pg_database
@@ -138,6 +147,9 @@ async function reconcileCatalogTransaction(
   };
 }
 
+/**
+ * Reconcile the schemas.
+ */
 async function reconcileSchemas(
   database: DatabaseExecutor,
   connectionId: string,
@@ -145,11 +157,11 @@ async function reconcileSchemas(
   live: LiveSchema[]
 ) {
   const stored = await database.execute<{
-    id: string;
-    namespace_oid: string | number;
-    accepted_name: string;
-    observed_name: string;
-    state: string;
+    id: string,
+    namespace_oid: string | number,
+    accepted_name: string,
+    observed_name: string,
+    state: string,
   }>(`
     SELECT id, namespace_oid, accepted_name, observed_name, state
       FROM tabular.catalog_schemas
@@ -214,6 +226,9 @@ async function reconcileSchemas(
   return output;
 }
 
+/**
+ * Reconcile the objects.
+ */
 async function reconcileObjects(
   database: DatabaseExecutor,
   connectionId: string,
@@ -222,11 +237,11 @@ async function reconcileObjects(
   live: LiveObject[]
 ) {
   const stored = await database.execute<{
-    id: string;
-    relation_oid: string | number;
-    accepted_schema: string;
-    accepted_name: string;
-    accepted_fingerprint: string;
+    id: string,
+    relation_oid: string | number,
+    accepted_schema: string,
+    accepted_name: string,
+    accepted_fingerprint: string,
   }>(`
     SELECT id, relation_oid, accepted_schema, accepted_name, accepted_fingerprint
       FROM tabular.catalog_objects
@@ -328,6 +343,9 @@ async function reconcileObjects(
   return output;
 }
 
+/**
+ * Reconcile the columns.
+ */
 async function reconcileColumns(
   database: DatabaseExecutor,
   objects: Map<string, StableObject>,
@@ -335,11 +353,11 @@ async function reconcileColumns(
 ) {
   const objectIds = new Set([...objects.values()].map((item) => item.stableId));
   const stored = await database.execute<{
-    id: string;
-    object_id: string;
-    attribute_number: number;
-    accepted_name: string;
-    accepted_fingerprint: string;
+    id: string,
+    object_id: string,
+    attribute_number: number,
+    accepted_name: string,
+    accepted_fingerprint: string,
   }>(`
     SELECT id, object_id, attribute_number, accepted_name, accepted_fingerprint
       FROM tabular.catalog_columns
@@ -445,6 +463,9 @@ async function reconcileColumns(
   return output;
 }
 
+/**
+ * Return the object kind result.
+ */
 function objectKind(relkind: string): CatalogFile['kind'] {
   if (relkind === 'r') return 'table';
   if (relkind === 'p') return 'partitioned-table';
@@ -454,6 +475,9 @@ function objectKind(relkind: string): CatalogFile['kind'] {
   throw new Error(`Unsupported PostgreSQL relation kind: ${relkind}`);
 }
 
+/**
+ * Return the digest result.
+ */
 function digest(parts: string[]) {
   return createHash('sha256').update(JSON.stringify(parts)).digest('hex');
 }

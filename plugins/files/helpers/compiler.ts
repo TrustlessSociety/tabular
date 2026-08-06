@@ -1,5 +1,7 @@
+//node
 import { createHash } from 'node:crypto';
-import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+
+//client
 import type {
   ColumnDefault,
   DdlLiteral,
@@ -7,15 +9,25 @@ import type {
   FileStorageType,
   GeneratedColumn
 } from './contracts.js';
+import { quoteIdentifier } from '../../database/helpers/identifiers.js';
 
+/**
+ * Return the qualified result.
+ */
 export function qualified(schema: string, relation: string) {
   return `${quoteIdentifier(schema, 'PostgreSQL schema')}.${quoteIdentifier(relation, 'PostgreSQL relation')}`;
 }
 
+/**
+ * Return the column result.
+ */
 export function column(identifier: string) {
   return quoteIdentifier(identifier, 'PostgreSQL column');
 }
 
+/**
+ * Return the storage SQL result.
+ */
 export function storageSql(storage: FileStorageType) {
   const allowed: Record<FileStorageType, string> = {
     text: 'text',
@@ -31,6 +43,9 @@ export function storageSql(storage: FileStorageType) {
   return allowed[storage];
 }
 
+/**
+ * Return the default SQL result.
+ */
 export function defaultSql(value: ColumnDefault) {
   if (value.mode === 'drop') return undefined;
   if (value.mode === 'current-timestamp') return 'CURRENT_TIMESTAMP';
@@ -38,6 +53,9 @@ export function defaultSql(value: ColumnDefault) {
   return literalSql(value.value);
 }
 
+/**
+ * Return the literal SQL result.
+ */
 export function literalSql(value: DdlLiteral) {
   if (value.type === 'null') return 'NULL';
   if (value.type === 'boolean') return value.value ? 'TRUE' : 'FALSE';
@@ -46,6 +64,9 @@ export function literalSql(value: DdlLiteral) {
   return `${literal}::${storageSql(value.type)}`;
 }
 
+/**
+ * Return the generated SQL result.
+ */
 export function generatedSql(
   generated: GeneratedColumn,
   physicalNames: Map<string, string>
@@ -59,6 +80,9 @@ export function generatedSql(
   return parts.join(` || ${separator}::text || `);
 }
 
+/**
+ * Return the constraint name result.
+ */
 export function constraintName(
   action: FileDdlAction,
   purpose: 'pk' | 'uniq' | 'fk' | 'required'
@@ -67,11 +91,17 @@ export function constraintName(
   return `tabular_${purpose}_${hash}`;
 }
 
+/**
+ * Quote the literal.
+ */
 export function quoteLiteral(value: string) {
   if (value.includes('\u0000')) throw new Error('PostgreSQL literals cannot contain NUL');
   return `'${value.replaceAll("'", "''")}'`;
 }
 
+/**
+ * Return the promotion value SQL result.
+ */
 export function promotionValueSql(
   jsonColumnName: string,
   jsonKey: string,

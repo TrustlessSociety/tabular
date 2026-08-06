@@ -1,26 +1,31 @@
+//node
 import { createHash, randomBytes } from 'node:crypto';
+
+//modules
 import type { Value } from '@stackpress/inquire/types';
-import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+
+//client
 import type {
   StableCatalogSnapshot,
   StableColumn,
   StableObject,
   StableSchema
 } from '../../catalog/helpers/contracts.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import {
-  ActionFault,
-  CapabilityResultBudgetExceededError,
-  type CapabilityTargetAdapter,
-  type CellPatch,
-  type PreparedTarget,
-  type TargetMutationEffect,
-  type TargetMutationRow,
-  type TypedCellValue,
-  type ValidationIssue
+import type { DatabaseExecutor } from '../../database/helpers/executor.js';
+import type {
+  CapabilityTargetAdapter,
+  CellPatch,
+  PreparedTarget,
+  TargetMutationEffect,
+  TargetMutationRow,
+  TypedCellValue,
+  ValidationIssue
 } from './contracts.js';
+import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import { ActionFault, CapabilityResultBudgetExceededError } from './contracts.js';
 
+//The postgre sql column codec contract exported for module callers
 export type PostgreSqlColumnCodec =
   | 'text'
   | 'integer'
@@ -31,92 +36,102 @@ export type PostgreSqlColumnCodec =
   | 'timestamp'
   | 'json';
 
+//The postgre sql target definition contract exported for module callers
 export type PostgreSqlTargetDefinition = {
-  fileId: string;
+  fileId: string,
   rowIdentity: {
-    kind: 'prefixed-text-versioned-unique-key';
-    columnId: string;
-    incarnationColumnId: string;
-    versionColumnId: string;
-  };
+    kind: 'prefixed-text-versioned-unique-key',
+    columnId: string,
+    incarnationColumnId: string,
+    versionColumnId: string,
+  },
   columns: Array<{
-    columnId: string;
-    codec: PostgreSqlColumnCodec;
-  }>;
-  insertAuthorityColumnId?: string;
+    columnId: string,
+    codec: PostgreSqlColumnCodec,
+  }>,
+  insertAuthorityColumnId?: string,
 };
 
+//The postgre sql browse result contract exported for module callers
 export type PostgreSqlBrowseResult = {
-  fileId: string;
-  schemaVersion: string;
-  truncated?: boolean;
+  fileId: string,
+  schemaVersion: string,
+  truncated?: boolean,
   columns: Array<{
-    columnId: string;
-    codec: PostgreSqlColumnCodec;
-    physicalName: string;
-    editable: boolean;
-    key: boolean;
-    generated: boolean;
-  }>;
+    columnId: string,
+    codec: PostgreSqlColumnCodec,
+    physicalName: string,
+    editable: boolean,
+    key: boolean,
+    generated: boolean,
+  }>,
   rows: Array<{
-    rowId: string;
-    version: string;
-    rank?: string;
-    cells: CellPatch[];
-  }>;
+    rowId: string,
+    version: string,
+    rank?: string,
+    cells: CellPatch[],
+  }>,
 };
 
 type RegisteredColumn = PostgreSqlTargetDefinition['columns'][number];
 
 type RegisteredDefinition = PostgreSqlTargetDefinition & {
-  columnsById: Map<string, RegisteredColumn>;
+  columnsById: Map<string, RegisteredColumn>,
 };
 
 type PreparedColumn = RegisteredColumn & {
-  columnName: string;
-  attributeNumber: number;
-  typeName: string;
+  columnName: string,
+  attributeNumber: number,
+  typeName: string,
 };
 
 type PreparedDefinition = Omit<RegisteredDefinition, 'columns' | 'columnsById'> & {
-  relationOid: string;
-  schemaName: string;
-  tableName: string;
-  qualifiedName: string;
-  tableReference: string;
-  rowIdColumnName: string;
-  rowIdAttributeNumber: number;
-  rowIdentityConstraintOid: string;
-  rowIdentityIndexOid: string;
-  rowIncarnationColumnName: string;
-  rowVersionColumnName: string;
-  columns: PreparedColumn[];
-  columnsById: Map<string, PreparedColumn>;
-  insertAuthorityColumnName?: string;
-  preparedLiveColumns: LiveColumn[];
+  relationOid: string,
+  schemaName: string,
+  tableName: string,
+  qualifiedName: string,
+  tableReference: string,
+  rowIdColumnName: string,
+  rowIdAttributeNumber: number,
+  rowIdentityConstraintOid: string,
+  rowIdentityIndexOid: string,
+  rowIncarnationColumnName: string,
+  rowVersionColumnName: string,
+  columns: PreparedColumn[],
+  columnsById: Map<string, PreparedColumn>,
+  insertAuthorityColumnName?: string,
+  preparedLiveColumns: LiveColumn[],
 };
 
 type TargetState = {
-  definition: PreparedDefinition;
+  definition: PreparedDefinition,
 };
 
 type LiveColumn = {
-  attribute_number: number;
-  name: string;
-  type_name: string;
-  formatted_type: string;
-  nullable: boolean;
-  identity_kind: string;
-  generated_kind: string;
+  attribute_number: number,
+  name: string,
+  type_name: string,
+  formatted_type: string,
+  nullable: boolean,
+  identity_kind: string,
+  generated_kind: string,
 };
 
 type DatabaseRow = Record<string, unknown>;
 
+/**
+ * Adapt registered postgre sql target behavior to its external boundary.
+ */
 export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
-  readonly name = 'registered-postgresql-targets';
+  //The name state retained by this class instance
+  public readonly name = 'registered-postgresql-targets';
+  //The definitions state retained by this class instance
   readonly #definitions = new Map<string, RegisteredDefinition>();
 
-  register(input: PostgreSqlTargetDefinition) {
+  /**
+   * Register the current value.
+   */
+  public register(input: PostgreSqlTargetDefinition) {
     stableId(input.fileId, 'PostgreSQL target file');
     if (this.#definitions.has(input.fileId)) {
       throw new Error(`PostgreSQL target already registered: ${input.fileId}`);
@@ -174,7 +189,10 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     });
   }
 
-  async prepare(database: DatabaseExecutor, fileId: string, connectionId?: string) {
+  /**
+   * Prepare the current value.
+   */
+  public async prepare(database: DatabaseExecutor, fileId: string, connectionId?: string) {
     const registered = this.#definitions.get(fileId);
     if (!registered || !connectionId) return undefined;
     const snapshot = await reconcileCatalog(database, connectionId);
@@ -285,7 +303,10 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     return { fileId, schemaVersion, state: { definition } satisfies TargetState };
   }
 
-  async browse(
+  /**
+   * Handle the browse operation.
+   */
+  public async browse(
     database: DatabaseExecutor,
     target: PreparedTarget,
     limit = 1_000
@@ -328,7 +349,10 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     };
   }
 
-  async validatePatch(target: PreparedTarget, patch: CellPatch[]): Promise<ValidationIssue[]> {
+  /**
+   * Validate the patch.
+   */
+  public async validatePatch(target: PreparedTarget, patch: CellPatch[]): Promise<ValidationIssue[]> {
     const definition = state(target).definition;
     const issues: ValidationIssue[] = [];
     for (const entry of patch) {
@@ -350,14 +374,17 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     return issues;
   }
 
-  async authorize(
+  /**
+   * Handle the authorize operation.
+   */
+  public async authorize(
     database: DatabaseExecutor,
     target: PreparedTarget,
     _operation: 'read' | 'mutate'
   ) {
     const definition = state(target).definition;
     await database.execute(`SELECT 1 FROM ${definition.tableReference} WHERE false`);
-    const identity = await database.execute<{ relation_oid: string | null }>(`
+    const identity = await database.execute<{ relation_oid: string | null, }>(`
       SELECT to_regclass(?)::oid::text AS relation_oid
     `, [`${definition.schemaName}.${definition.tableName}`]);
     if (identity.rows[0]?.relation_oid !== definition.relationOid) unavailable();
@@ -384,13 +411,16 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     )) schemaChanged();
   }
 
-  async describe(database: DatabaseExecutor, target: PreparedTarget) {
+  /**
+   * Describe the current value.
+   */
+  public async describe(database: DatabaseExecutor, target: PreparedTarget) {
     await this.authorize(database, target, 'read');
     const definition = state(target).definition;
     const privileges = await database.execute<{
-      attribute_number: number;
-      can_select: boolean;
-      can_update: boolean;
+      attribute_number: number,
+      can_select: boolean,
+      can_update: boolean,
     }>(`
       SELECT a.attnum AS attribute_number,
              has_column_privilege(current_user, a.attrelid, a.attnum, 'SELECT') AS can_select,
@@ -420,9 +450,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
       }));
     if (!columns.length) unavailable();
     const tablePrivileges = await database.execute<{
-      can_select: boolean;
-      can_insert: boolean;
-      can_delete: boolean;
+      can_select: boolean,
+      can_insert: boolean,
+      can_delete: boolean,
     }>(`
       SELECT has_table_privilege(current_user, ?::oid, 'SELECT') AS can_select,
              has_table_privilege(current_user, ?::oid, 'INSERT') AS can_insert,
@@ -442,7 +472,10 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     };
   }
 
-  async read(
+  /**
+   * Read the current value.
+   */
+  public async read(
     database: DatabaseExecutor,
     target: PreparedTarget,
     rowId: string,
@@ -471,7 +504,10 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     };
   }
 
-  async mutate(
+  /**
+   * Handle the mutate operation.
+   */
+  public async mutate(
     database: DatabaseExecutor,
     target: PreparedTarget,
     rows: TargetMutationRow[]
@@ -492,6 +528,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     return effect;
   }
 
+  /**
+   * Apply one authorized direct-target row update with optimistic locking.
+   */
   private async update(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -548,6 +587,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     }
   }
 
+  /**
+   * Insert one authorized direct-target row and capture its stable identity.
+   */
   private async insert(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -594,6 +636,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     }
   }
 
+  /**
+   * Delete one authorized direct-target row while retaining reversal values.
+   */
   private async delete(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -601,7 +646,7 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     effect: TargetMutationEffect
   ) {
     const definition = state(target).definition;
-    // A direct delete must capture every registered value so undo can restore
+    //A direct delete must capture every registered value so undo can restore
     // the row exactly. A reversal already carries the bounded values it must
     // compare and does not gain authority to read unrelated columns.
     const needed = requested.preconditions?.length
@@ -636,6 +681,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
     }
   }
 
+  /**
+   * Handle the lock row operation.
+   */
   private async lockRow(
     database: DatabaseExecutor,
     definition: PreparedDefinition,
@@ -653,6 +701,9 @@ export class RegisteredPostgreSqlTargetAdapter implements CapabilityTargetAdapte
   }
 }
 
+/**
+ * Assert the bounded read.
+ */
 async function assertBoundedRead(
   database: DatabaseExecutor,
   query: string,
@@ -665,7 +716,7 @@ async function assertBoundedRead(
     || maximumResultBytes > 1_048_576) {
     throw new Error('Capability result budget is invalid');
   }
-  const measured = await database.execute<{ bytes: string }>(`
+  const measured = await database.execute<{ bytes: string, }>(`
     SELECT COALESCE(sum(octet_length(row_to_json(bounded_row)::text) + 1), 0)::text AS bytes
       FROM (${query}) AS bounded_row
   `, values);
@@ -678,22 +729,37 @@ const supportedCodecs = new Set<PostgreSqlColumnCodec>([
   'text', 'integer', 'decimal', 'boolean', 'date', 'time', 'timestamp', 'json'
 ]);
 
+/**
+ * Return the stable id result.
+ */
 function stableId(value: string, label: string) {
   if (!/^obj_[A-Za-z0-9_-]{32,64}$/.test(value)) throw new Error(`${label} identity is invalid`);
 }
 
+/**
+ * Return the stable column id result.
+ */
 function stableColumnId(value: string, label: string) {
   if (!/^col_[A-Za-z0-9_-]{32,64}$/.test(value)) throw new Error(`${label} identity is invalid`);
 }
 
+/**
+ * Return the stable object result.
+ */
 function stableObject(snapshot: StableCatalogSnapshot, fileId: string): StableObject | undefined {
   return [...snapshot.objects.values()].find((object) => object.stableId === fileId);
 }
 
+/**
+ * Return the stable schema result.
+ */
 function stableSchema(snapshot: StableCatalogSnapshot, schemaId: string): StableSchema | undefined {
   return [...snapshot.schemas.values()].find((schema) => schema.stableId === schemaId);
 }
 
+/**
+ * Return the stable column result.
+ */
 function stableColumn(
   snapshot: StableCatalogSnapshot,
   fileId: string,
@@ -704,6 +770,9 @@ function stableColumn(
   );
 }
 
+/**
+ * Return the codec matches result.
+ */
 function codecMatches(codec: PostgreSqlColumnCodec, typeName: string) {
   if (codec === 'text') return ['text', 'varchar', 'bpchar'].includes(typeName);
   if (codec === 'integer') return ['int2', 'int4', 'int8'].includes(typeName);
@@ -715,14 +784,23 @@ function codecMatches(codec: PostgreSqlColumnCodec, typeName: string) {
   return ['json', 'jsonb'].includes(typeName);
 }
 
+/**
+ * Return the state result.
+ */
 function state(target: PreparedTarget) {
   return target.state as TargetState;
 }
 
+/**
+ * Return the ordered patch result.
+ */
 function orderedPatch(patch: CellPatch[]) {
   return [...patch].sort((left, right) => left.columnId.localeCompare(right.columnId));
 }
 
+/**
+ * Report the unique columns condition.
+ */
 function uniqueColumns(definition: PreparedDefinition, columnIds: string[]) {
   return [...new Set(columnIds)]
     .sort()
@@ -730,6 +808,9 @@ function uniqueColumns(definition: PreparedDefinition, columnIds: string[]) {
     .filter(Boolean);
 }
 
+/**
+ * Return the projection result.
+ */
 function projection(definition: PreparedDefinition, columns: PreparedColumn[]) {
   return [
     quoteIdentifier(definition.rowIncarnationColumnName),
@@ -746,6 +827,9 @@ function projection(definition: PreparedDefinition, columns: PreparedColumn[]) {
   ].join(', ');
 }
 
+/**
+ * Read the live columns.
+ */
 async function readLiveColumns(database: DatabaseExecutor, relationOid: string) {
   const result = await database.execute<LiveColumn>(`
     SELECT a.attnum AS attribute_number, a.attname AS name,
@@ -764,12 +848,15 @@ async function readLiveColumns(database: DatabaseExecutor, relationOid: string) 
   }));
 }
 
+/**
+ * Read the stable unique keys.
+ */
 async function readStableUniqueKeys(
   database: DatabaseExecutor,
   relationOid: string,
   rowIdentityAttributeNumber: number
 ) {
-  const result = await database.execute<{ constraint_oid: string; index_oid: string }>(`
+  const result = await database.execute<{ constraint_oid: string, index_oid: string, }>(`
     SELECT c.oid::text AS constraint_oid, i.indexrelid::text AS index_oid
       FROM pg_constraint c
       JOIN pg_index i
@@ -786,6 +873,9 @@ async function readStableUniqueKeys(
   return result.rows;
 }
 
+/**
+ * Assert the preconditions.
+ */
 function assertPreconditions(
   definition: PreparedDefinition,
   row: DatabaseRow,
@@ -798,6 +888,9 @@ function assertPreconditions(
   }
 }
 
+/**
+ * Assert the advanced row controls.
+ */
 function assertAdvancedRowControls(
   definition: PreparedDefinition,
   before: DatabaseRow,
@@ -812,6 +905,9 @@ function assertAdvancedRowControls(
   }
 }
 
+/**
+ * Assert the initial row controls.
+ */
 function assertInitialRowControls(definition: PreparedDefinition, row: DatabaseRow) {
   const incarnation = row[definition.rowIncarnationColumnName];
   const version = BigInt(String(row[definition.rowVersionColumnName]));
@@ -820,6 +916,9 @@ function assertInitialRowControls(definition: PreparedDefinition, row: DatabaseR
   }
 }
 
+/**
+ * Return the typed database value result.
+ */
 function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): TypedCellValue {
   if (value === null || typeof value === 'undefined') return { type: 'null' };
   if (codec === 'text') return { type: 'text', value: String(value) };
@@ -840,11 +939,17 @@ function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): Typed
   return { type: 'json', value: typeof value === 'string' ? value : JSON.stringify(value) };
 }
 
+/**
+ * Return the database value result.
+ */
 function databaseValue(value: TypedCellValue): Value {
   if (value.type === 'null') return null;
   return value.value;
 }
 
+/**
+ * Return the version token result.
+ */
 function versionToken(target: PreparedTarget, rowId: string, row: DatabaseRow) {
   const definition = state(target).definition;
   const incarnation = row[definition.rowIncarnationColumnName];
@@ -867,6 +972,9 @@ function versionToken(target: PreparedTarget, rowId: string, row: DatabaseRow) {
     .digest('base64url')}`;
 }
 
+/**
+ * Return the incarnation token result.
+ */
 function incarnationToken(target: PreparedTarget, rowId: string, row: DatabaseRow) {
   const definition = state(target).definition;
   const incarnation = row[definition.rowIncarnationColumnName];
@@ -878,12 +986,18 @@ function incarnationToken(target: PreparedTarget, rowId: string, row: DatabaseRo
     .digest('base64url')}`;
 }
 
+/**
+ * Return the tombstone version result.
+ */
 function tombstoneVersion(target: PreparedTarget, rowId: string) {
   return `ver_${createHash('sha256')
     .update(`${target.fileId}:${target.schemaVersion}:${rowId}:absent`)
     .digest('base64url')}`;
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ActionFault({
     code: 'not_found',
@@ -892,6 +1006,9 @@ function unavailable(): never {
   });
 }
 
+/**
+ * Return the changed result.
+ */
 function changed(): never {
   throw new ActionFault({
     code: 'conflict',
@@ -900,6 +1017,9 @@ function changed(): never {
   });
 }
 
+/**
+ * Return the schema changed result.
+ */
 function schemaChanged(): never {
   throw new ActionFault({
     code: 'schema_changed',
@@ -909,6 +1029,9 @@ function schemaChanged(): never {
   });
 }
 
+/**
+ * Return the validation rejected result.
+ */
 function validationRejected(message: string): never {
   throw new ActionFault({
     code: 'validation_failed',

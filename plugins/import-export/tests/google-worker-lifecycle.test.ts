@@ -1,28 +1,31 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type { QueryObject, Value } from '@stackpress/inquire/types';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import {
-  DatabaseExecutor,
-  type RawDatabaseConnection
-} from '../../database/helpers/executor.js';
-import type { DatabasePluginService } from '../../database/helpers/service.js';
-import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import type { SessionAuthorityRow } from '../../identity/helpers/repository.js';
 import type { CapabilityPluginService } from '../../capability/helpers/service.js';
+import type { RawDatabaseConnection } from '../../database/helpers/executor.js';
+import type { DatabasePluginService } from '../../database/helpers/service.js';
 import type { FilesPluginService } from '../../files/helpers/service.js';
-import type { SavedViewsPluginService } from '../../saved-views/helpers/service.js';
+import type { SessionAuthorityRow } from '../../identity/helpers/repository.js';
+import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationsPluginService } from '../../operations/helpers/service.js';
+import type { SavedViewsPluginService } from '../../saved-views/helpers/service.js';
+import type {
+  StoredGoogleConnection,
+  StoredImportOperation
+} from '../helpers/repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { DatabaseExecutor } from '../../database/helpers/executor.js';
 import {
   GOOGLE_READONLY_SCOPE,
   GoogleTokenVault,
   googleTokenEncryptionKey
 } from '../helpers/google-sheets.js';
-import type {
-  StoredGoogleConnection,
-  StoredImportOperation
-} from '../helpers/repository.js';
 import { ImportExportPluginService } from '../helpers/service.js';
 
 const publicOrigin = 'https://tabular.test';
@@ -112,12 +115,14 @@ test('Google worker persists local revocation when provider refresh authorizatio
 });
 
 type HarnessOptions = {
-  authority: SessionAuthorityRow;
-  connection: StoredGoogleConnection;
-  provider?: typeof fetch;
+  authority: SessionAuthorityRow,
+  connection: StoredGoogleConnection,
+  provider?: typeof fetch,
 };
 
-/** Builds a worker service over a deterministic query script. */
+/**
+ * Builds a worker service over a deterministic query script.
+ */
 function workerHarness(options: HarnessOptions) {
   const operation = importOperation();
   let providerRequests = 0;
@@ -167,6 +172,9 @@ function workerHarness(options: HarnessOptions) {
     processKind: 'worker',
     config: { environment: { publicOrigin } }
   } as unknown as ApplicationRuntimeService;
+  /**
+   * Return the fetcher result.
+   */
   const fetcher: typeof fetch = async (input, init) => {
     providerRequests += 1;
     return provider(input, init);
@@ -197,7 +205,9 @@ function workerHarness(options: HarnessOptions) {
   };
 }
 
-/** Supplies a complete current authority row with narrow per-test overrides. */
+/**
+ * Supplies a complete current authority row with narrow per-test overrides.
+ */
 function authorityRow(overrides: Partial<SessionAuthorityRow> = {}): SessionAuthorityRow {
   const expiresAt = new Date(Date.now() + 30 * 60_000);
   return {
@@ -238,7 +248,9 @@ function authorityRow(overrides: Partial<SessionAuthorityRow> = {}): SessionAuth
   };
 }
 
-/** Supplies the confirmed Google import record bound to the authority fixture. */
+/**
+ * Supplies the confirmed Google import record bound to the authority fixture.
+ */
 function importOperation(): StoredImportOperation {
   const now = new Date();
   return {
@@ -300,10 +312,12 @@ function importOperation(): StoredImportOperation {
   };
 }
 
-/** Encrypts a provider connection exactly as the production binding expects. */
+/**
+ * Encrypts a provider connection exactly as the production binding expects.
+ */
 function googleConnection(options: {
-  expired?: boolean;
-  includeRefresh?: boolean;
+  expired?: boolean,
+  includeRefresh?: boolean,
 } = {}): StoredGoogleConnection {
   const vault = new GoogleTokenVault(googleTokenEncryptionKey(encryptionKeyText));
   const access = vault.encrypt('provider-access-token', associatedData('access-token'));
@@ -328,7 +342,9 @@ function googleConnection(options: {
   };
 }
 
-/** Reconstructs the production AES-GCM associated-data tuple. */
+/**
+ * Reconstructs the production AES-GCM associated-data tuple.
+ */
 function associatedData(secret: string) {
   return [
     'tabular-google-v1',
@@ -340,12 +356,16 @@ function associatedData(secret: string) {
   ].join(':');
 }
 
-/** Matches an application error without depending on provider wording. */
+/**
+ * Matches an application error without depending on provider wording.
+ */
 function applicationCode(code: string) {
   return (error: unknown) => error instanceof ApplicationError && error.errorCode === code;
 }
 
-/** Produces a bounded JSON response for the provider test double. */
+/**
+ * Produces a bounded JSON response for the provider test double.
+ */
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -354,18 +374,27 @@ function json(value: unknown, status = 200) {
 }
 
 type ScriptedResult = {
-  rows?: unknown[];
-  affectedRows?: number;
+  rows?: unknown[],
+  affectedRows?: number,
 };
 
-/** Records repository queries and delegates their deterministic results. */
+/**
+ * Records repository queries and delegates their deterministic results.
+ */
 class ScriptedConnection implements RawDatabaseConnection {
+  //The queries state retained by this class instance
   public readonly queries: string[] = [];
 
+  /**
+   * Create a ScriptedConnection instance.
+   */
   public constructor(
     private readonly handler: (query: string, values: Value[]) => ScriptedResult
   ) {}
 
+  /**
+   * Handle the raw operation.
+   */
   public async raw<Row = unknown>(request: QueryObject) {
     this.queries.push(request.query);
     const result = this.handler(request.query, request.values || []);

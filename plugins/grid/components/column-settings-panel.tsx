@@ -1,4 +1,7 @@
+//modules
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+//client
 import type { ExplorerFile, ExplorerFolder } from '../../explorer/helpers/contracts.js';
 import type {
   FileDescription,
@@ -9,32 +12,36 @@ import type {
   FileStorageType,
   PlannedFileDdl
 } from '../../files/helpers/contracts.js';
+import type { GridColumn } from '../helpers/contracts.js';
 import { Icon } from '../../ui/components/icon.js';
 import {
   confirmGridDdl,
   loadFileDescription,
   planGridDdl
 } from '../events/actions.js';
-import type { GridColumn } from '../helpers/contracts.js';
 
+//The column form contract exported for module callers
 export type ColumnForm = {
-  displayName: string;
-  physicalName: string;
-  storageType: FileStorageType;
-  field: FileFieldKind;
-  format: FileFormatKind;
-  defaultValue: string;
-  required: boolean;
-  unique: boolean;
-  generated: boolean;
-  optionsText: string;
-  targetFileId: string;
-  targetConstraintName: string;
-  sourceColumnIds: string[];
-  pickerTemplate: string;
-  outputTemplate: string;
+  displayName: string,
+  physicalName: string,
+  storageType: FileStorageType,
+  field: FileFieldKind,
+  format: FileFormatKind,
+  defaultValue: string,
+  required: boolean,
+  unique: boolean,
+  generated: boolean,
+  optionsText: string,
+  targetFileId: string,
+  targetConstraintName: string,
+  sourceColumnIds: string[],
+  pickerTemplate: string,
+  outputTemplate: string,
 };
 
+/**
+ * Render the column settings panel component.
+ */
 export function ColumnSettingsPanel({
   open,
   file,
@@ -46,15 +53,15 @@ export function ColumnSettingsPanel({
   onClose,
   onConfirmed
 }: {
-  open: boolean;
-  file: ExplorerFile;
-  columns: GridColumn[];
-  columnId?: string;
-  folders: ExplorerFolder[];
-  csrfToken: string;
-  triggerRef: React.RefObject<HTMLElement | null>;
-  onClose: () => void;
-  onConfirmed: (message: string) => void;
+  open: boolean,
+  file: ExplorerFile,
+  columns: GridColumn[],
+  columnId?: string,
+  folders: ExplorerFolder[],
+  csrfToken: string,
+  triggerRef: React.RefObject<HTMLElement | null>,
+  onClose: () => void,
+  onConfirmed: (message: string) => void,
 }) {
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -83,6 +90,9 @@ export function ColumnSettingsPanel({
     setTargetDescription(undefined);
     setTargetSearch('');
     requestAnimationFrame(() => closeButton.current?.focus());
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -137,6 +147,9 @@ export function ColumnSettingsPanel({
     selected.generated || selected.key || selected.editable === false
   ));
 
+  /**
+   * Return the submit plan result.
+   */
   const submitPlan = async () => {
     setBusy(true);
     setError(undefined);
@@ -155,6 +168,9 @@ export function ColumnSettingsPanel({
     }
   };
 
+  /**
+   * Return the confirm plan result.
+   */
   const confirmPlan = async () => {
     if (!plan) return;
     setBusy(true);
@@ -427,6 +443,9 @@ export function ColumnSettingsPanel({
   );
 }
 
+/**
+ * Return the initial form result.
+ */
 function initialForm(column: GridColumn | undefined, file: ExplorerFile): ColumnForm {
   const name = column?.label || 'New column';
   const field = (column?.field || fieldForGridKind(column?.kind)) as FileFieldKind;
@@ -452,6 +471,9 @@ function initialForm(column: GridColumn | undefined, file: ExplorerFile): Column
   };
 }
 
+/**
+ * Return the matching relation constraint name result.
+ */
 export function matchingRelationConstraintName(
   column: GridColumn | undefined,
   description: Pick<FileDescription, 'constraints'>
@@ -465,11 +487,17 @@ export function matchingRelationConstraintName(
   ))?.name || '';
 }
 
+/**
+ * Normalize the column name.
+ */
 function normalizeColumnName(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 63)
     || 'new_column';
 }
 
+/**
+ * Build the column settings action.
+ */
 export function buildColumnSettingsAction(
   file: ExplorerFile,
   selected: GridColumn | undefined,
@@ -552,12 +580,18 @@ export function buildColumnSettingsAction(
   };
 }
 
+/**
+ * Return the literal default result.
+ */
 function literalDefault(storage: FileStorageType, value: string): DdlLiteral {
   if (storage === 'boolean') return { type: 'boolean' as const, value: value === 'true' };
   if (storage === 'jsonb') return { type: 'jsonb' as const, value };
   return { type: storage, value } as DdlLiteral;
 }
 
+/**
+ * Return the storage for field result.
+ */
 function storageForField(field: FileFieldKind): FileStorageType {
   if (field === 'number' || field === 'price' || field === 'rating' || field === 'slider') return 'numeric';
   if (field === 'checkbox' || field === 'switch') return 'boolean';
@@ -566,6 +600,9 @@ function storageForField(field: FileFieldKind): FileStorageType {
   return 'text';
 }
 
+/**
+ * Format the for field.
+ */
 function formatForField(field: FileFieldKind): FileFormatKind {
   if (field === 'number') return 'number';
   if (field === 'email') return 'email-link';
@@ -580,6 +617,9 @@ function formatForField(field: FileFieldKind): FileFormatKind {
   return 'plain-text';
 }
 
+/**
+ * Return the field for grid kind result.
+ */
 function fieldForGridKind(kind: GridColumn['kind']): FileFieldKind {
   if (kind === 'number') return 'number';
   if (kind === 'boolean') return 'checkbox';
@@ -595,6 +635,9 @@ function fieldForGridKind(kind: GridColumn['kind']): FileFieldKind {
   return 'text';
 }
 
+/**
+ * Return the impact message result.
+ */
 function impactMessage(
   actionType: FileDdlAction['type'],
   form: ColumnForm,

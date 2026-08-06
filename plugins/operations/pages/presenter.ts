@@ -1,6 +1,10 @@
-import type { OperationActivity, OperationKind } from '../helpers/contracts.js';
+//client
 import type { ActivityItem, ActivityTimelineEntry } from '../components/activity-center.js';
+import type { OperationActivity, OperationKind } from '../helpers/contracts.js';
 
+/**
+ * Return the present operation activity result.
+ */
 export function presentOperationActivity(operation: OperationActivity): ActivityItem {
   const progress = Math.max(0, Math.min(100, Math.round(operation.progress)));
   const resultHref = operation.resultLink ? sameOriginResultHref(operation.resultLink.href) : undefined;
@@ -44,11 +48,14 @@ export function presentOperationActivity(operation: OperationActivity): Activity
   };
 }
 
+/**
+ * Return the present operation list result.
+ */
 export function presentOperationList(input: {
-  items: OperationActivity[];
-  cursor: number;
-  canManageRetention: boolean;
-  retentionDays: number;
+  items: OperationActivity[],
+  cursor: number,
+  canManageRetention: boolean,
+  retentionDays: number,
 }) {
   return {
     items: input.items.map(presentOperationActivity),
@@ -58,6 +65,9 @@ export function presentOperationList(input: {
   };
 }
 
+/**
+ * Return the operation title result.
+ */
 function operationTitle(kind: OperationKind) {
   const titles: Record<OperationKind, string> = {
     'import.commit': 'Import values',
@@ -71,6 +81,9 @@ function operationTitle(kind: OperationKind) {
   return titles[kind];
 }
 
+/**
+ * Return the operation timeline result.
+ */
 function operationTimeline(operation: OperationActivity): ActivityTimelineEntry[] {
   const entries: ActivityTimelineEntry[] = [
     { label: 'Operation queued', at: operation.createdAt }
@@ -85,6 +98,9 @@ function operationTimeline(operation: OperationActivity): ActivityTimelineEntry[
   return entries;
 }
 
+/**
+ * Return the terminal label result.
+ */
 function terminalLabel(state: OperationActivity['state']) {
   if (state === 'succeeded') return 'Operation completed';
   if (state === 'cancelled') return 'Operation cancelled';
@@ -93,6 +109,9 @@ function terminalLabel(state: OperationActivity['state']) {
   return 'Operation updated';
 }
 
+/**
+ * Return the result summary result.
+ */
 function resultSummary(summary: Record<string, unknown>) {
   const entries = Object.entries(summary)
     .filter((entry): entry is [string, string | number | boolean] => (
@@ -103,19 +122,31 @@ function resultSummary(summary: Record<string, unknown>) {
   return entries.length ? entries.join(' · ') : 'The operation completed successfully.';
 }
 
+/**
+ * Return the error title result.
+ */
 function errorTitle(code: string) {
   const label = humanLabel(code);
   return label ? label.charAt(0).toUpperCase() + label.slice(1) : 'Operation failed';
 }
 
+/**
+ * Return the human label result.
+ */
 function humanLabel(value: string) {
   return value.replace(/[_-]+/g, ' ').trim();
 }
 
+/**
+ * Report the same origin result href condition.
+ */
 function sameOriginResultHref(value: string) {
   return /^\/(?!\/)[^\u0000-\u0020\u007f]*$/.test(value) ? value : undefined;
 }
 
+/**
+ * Return the operation target result.
+ */
 function operationTarget(operation: OperationActivity, href?: string) {
   if (href) {
     const target = new URL(href, 'http://tabular.local');
@@ -128,6 +159,9 @@ function operationTarget(operation: OperationActivity, href?: string) {
   return operation.fileId ? `Authorized file · …${operation.fileId.slice(-8)}` : 'System operation';
 }
 
+/**
+ * Return the title label result.
+ */
 function titleLabel(value: string) {
   const label = humanLabel(value);
   return label ? label.charAt(0).toUpperCase() + label.slice(1) : value;

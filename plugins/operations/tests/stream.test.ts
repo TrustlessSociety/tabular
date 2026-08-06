@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import { AuthorizedOperationEventStream } from '../events/stream.js';
 
@@ -23,8 +26,11 @@ const config = {
 };
 
 test('operations stream emits visible changes then an explicit invisible cursor advance', async () => {
-  const calls: Array<{ identityId: string; after: number; limit: number }> = [];
+  const calls: Array<{ identityId: string, after: number, limit: number, }> = [];
   const stream = new AuthorizedOperationEventStream({
+    /**
+     * Read the events.
+     */
     async readEvents(caller, after, limit) {
       calls.push({ identityId: caller.identityId, after, limit });
       return {
@@ -57,6 +63,9 @@ test('operations stream emits visible changes then an explicit invisible cursor 
 
 test('operations stream requests a snapshot at the permission-filtered high water after a gap', async () => {
   const stream = new AuthorizedOperationEventStream({
+    /**
+     * Read the events.
+     */
     async readEvents() {
       return {
         events: [],
@@ -77,6 +86,9 @@ test('operations stream requests a snapshot at the permission-filtered high wate
 test('operations stream clamps the shared replay batch to its permission-filtered reader bound', async () => {
   let requestedLimit = 0;
   const stream = new AuthorizedOperationEventStream({
+    /**
+     * Read the events.
+     */
     async readEvents(_caller, _after, limit) {
       requestedLimit = limit;
       return {
@@ -89,6 +101,9 @@ test('operations stream clamps the shared replay batch to its permission-filtere
   assert.equal(requestedLimit, 500);
 });
 
+/**
+ * Read the until.
+ */
 function readUntil(stream: AuthorizedOperationEventStream, pattern: string) {
   return new Promise<string>((resolve, reject) => {
     let output = '';

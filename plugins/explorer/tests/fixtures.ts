@@ -1,3 +1,4 @@
+//client
 import type { CatalogFile } from '../../catalog/helpers/contracts.js';
 import type {
   ExplorerFile,
@@ -21,7 +22,9 @@ const FILES: Record<string, Array<Omit<ExplorerFile, 'folderId'>>> = {
   ]
 };
 
-/** Builds a deterministic authorized Explorer snapshot for isolated tests. */
+/**
+ * Builds a deterministic authorized Explorer snapshot for isolated tests.
+ */
 export function createExplorerSnapshot(readOnly = false): ExplorerSnapshot {
   const databaseId = 'database_tabular';
   return {
@@ -38,7 +41,9 @@ export function createExplorerSnapshot(readOnly = false): ExplorerSnapshot {
   };
 }
 
-/** Builds one schema folder with the fixture files owned by this test module. */
+/**
+ * Builds one schema folder with the fixture files owned by this test module.
+ */
 function folder(
   id: string,
   databaseId: string,
@@ -66,7 +71,9 @@ function folder(
   };
 }
 
-/** Builds one deterministic file record for component and action tests. */
+/**
+ * Builds one deterministic file record for component and action tests.
+ */
 function file(
   id: string,
   slug: string,

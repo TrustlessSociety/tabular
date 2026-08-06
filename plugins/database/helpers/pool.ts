@@ -1,25 +1,41 @@
-import pg, { type PoolClient, type PoolConfig } from 'pg';
+//modules
+import type { PoolClient, PoolConfig } from 'pg';
+import pg from 'pg';
 
 const { Client, Pool } = pg;
 
+//The managed postgres pool options contract exported for module callers
 export type ManagedPostgresPoolOptions = {
-  name: string;
-  connectionString: string;
-  maximum: number;
-  applicationName: string;
-  connectionTimeoutMs?: number;
+  name: string,
+  connectionString: string,
+  maximum: number,
+  applicationName: string,
+  connectionTimeoutMs?: number,
 };
 
+/**
+ * Provide the managed postgres pool behavior used by this module.
+ */
 export class ManagedPostgresPool {
-  readonly name: string;
+  //The name state retained by this class instance
+  public readonly name: string;
+  //The pool state retained by this class instance
   readonly #pool: InstanceType<typeof Pool>;
+  //The cancel config state retained by this class instance
   readonly #cancelConfig: PoolConfig;
+  //The checked out state retained by this class instance
   readonly #checkedOut = new Set<PoolClient>();
+  //The client error listeners state retained by this class instance
   readonly #clientErrorListeners = new Map<PoolClient, (error: Error) => void>();
+  //The closing state retained by this class instance
   #closing = false;
+  //The close promise state retained by this class instance
   #closePromise?: Promise<void>;
 
-  constructor(options: ManagedPostgresPoolOptions) {
+  /**
+   * Create a ManagedPostgresPool instance.
+   */
+  public constructor(options: ManagedPostgresPoolOptions) {
     this.name = options.name;
     const config: PoolConfig = {
       connectionString: options.connectionString,
@@ -36,19 +52,28 @@ export class ManagedPostgresPool {
     this.#pool = new Pool(config);
   }
 
-  get checkedOutCount() {
+  /**
+   * Return the checked out count value.
+   */
+  public get checkedOutCount() {
     return this.#checkedOut.size;
   }
 
-  async checkout() {
+  /**
+   * Handle the checkout operation.
+   */
+  public async checkout() {
     if (this.#closing) throw new Error(`PostgreSQL pool ${this.name} is closing`);
     const client = await this.#pool.connect();
     if (this.#closing) {
       client.release(new Error(`PostgreSQL pool ${this.name} closed during checkout`));
       throw new Error(`PostgreSQL pool ${this.name} is closing`);
     }
+    /**
+     * Handle the client error event.
+     */
     const onClientError = (_error: Error) => {
-      // The active transaction observes query/cleanup rejection. This listener
+      //The active transaction observes query/cleanup rejection. This listener
       // prevents a checked-out pg client error from becoming an uncaught event.
     };
     client.on('error', onClientError);
@@ -57,7 +82,10 @@ export class ManagedPostgresPool {
     return client;
   }
 
-  release(client: PoolClient, error?: Error) {
+  /**
+   * Release the current value.
+   */
+  public release(client: PoolClient, error?: Error) {
     if (!this.#checkedOut.delete(client)) {
       throw new Error(`PostgreSQL client does not belong to active pool ${this.name}`);
     }
@@ -69,18 +97,20 @@ export class ManagedPostgresPool {
     client.release(error);
   }
 
-  /** Cancel one currently checked-out backend through a separate connection.
+  /**
+   * Cancel one currently checked-out backend through a separate connection.
    * The transaction owner still awaits rollback and state verification before
-   * releasing the target client. */
-  async cancel(client: PoolClient) {
-    const processId = (client as PoolClient & { processID?: number }).processID;
+   * releasing the target client.
+   */
+  public async cancel(client: PoolClient) {
+    const processId = (client as PoolClient & { processID?: number, }).processID;
     if (!this.#checkedOut.has(client) || typeof processId !== 'number' || !Number.isInteger(processId)) {
       throw new Error(`PostgreSQL client cannot be cancelled by pool ${this.name}`);
     }
     const control = new Client(this.#cancelConfig);
     try {
       await control.connect();
-      const result = await control.query<{ cancelled: boolean }>(
+      const result = await control.query<{ cancelled: boolean, }>(
         'SELECT pg_cancel_backend($1) AS cancelled',
         [processId]
       );
@@ -92,13 +122,19 @@ export class ManagedPostgresPool {
     }
   }
 
-  async ready() {
+  /**
+   * Handle the ready operation.
+   */
+  public async ready() {
     if (this.#closing) return false;
     const result = await this.#pool.query('SELECT 1 AS ready');
     return result.rows[0]?.ready === 1;
   }
 
-  async close(timeoutMs = 10_000) {
+  /**
+   * Close the current value.
+   */
+  public async close(timeoutMs = 10_000) {
     if (this.#closePromise) return this.#closePromise;
     this.#closing = true;
     this.#closePromise = (async () => {

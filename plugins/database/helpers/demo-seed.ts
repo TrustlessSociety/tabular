@@ -1,7 +1,7 @@
 //client
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import type { DatabaseExecutor } from './executor.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 import { quoteIdentifier, validateIdentifier } from './identifiers.js';
 
 const DEMO_SEED_LOCK = '-4887435399321779074';
@@ -10,26 +10,26 @@ const DEMO_SCHEMAS = ['operations', 'finance'] as const;
 type DemoSchema = typeof DEMO_SCHEMAS[number];
 
 type DemoTable = {
-  schema: DemoSchema;
-  table: string;
-  displayName: string;
-  createSql: string;
-  insertSql: string;
+  schema: DemoSchema,
+  table: string,
+  displayName: string,
+  createSql: string,
+  insertSql: string,
   columns: Array<{
-    name: string;
-    dataType: string;
-    nullable: 'YES' | 'NO';
-    displayName: string;
-    field: string;
-    format: string;
-    hidden?: boolean;
-    hiddenPurpose?: 'shared-rank';
-    fieldConfig?: Record<string, unknown>;
-    formatConfig?: Record<string, unknown>;
-  }>;
+    name: string,
+    dataType: string,
+    nullable: 'YES' | 'NO',
+    displayName: string,
+    field: string,
+    format: string,
+    hidden?: boolean,
+    hiddenPurpose?: 'shared-rank',
+    fieldConfig?: Record<string, unknown>,
+    formatConfig?: Record<string, unknown>,
+  }>,
 };
 
-// Representative files cover cross-schema relations and ordinary spreadsheet fields.
+//Representative files cover cross-schema relations and ordinary spreadsheet fields.
 const DEMO_TABLES: DemoTable[] = [
   {
     schema: 'finance',
@@ -195,12 +195,13 @@ const DEMO_TABLES: DemoTable[] = [
   }
 ];
 
+//The demo seed result contract exported for module callers
 export type DemoSeedResult = {
-  schemas: readonly DemoSchema[];
-  files: string[];
-  insertedRows: number;
-  metadataRecords: number;
-  memberRole?: string;
+  schemas: readonly DemoSchema[],
+  files: string[],
+  insertedRows: number,
+  metadataRecords: number,
+  memberRole?: string,
 };
 
 /**
@@ -218,7 +219,7 @@ export async function seedLocalDemo(
   for (const schema of DEMO_SCHEMAS) await ensureOwnedSchema(database, schema, memberRole);
   for (const table of DEMO_TABLES) await ensureOwnedTable(database, table, memberRole);
 
-  // Inserts never overwrite a reviewer's edits when the seed is rerun.
+  //Inserts never overwrite a reviewer's edits when the seed is rerun.
   let insertedRows = 0;
   for (const table of DEMO_TABLES) {
     const inserted = await database.execute(table.insertSql);
@@ -226,7 +227,7 @@ export async function seedLocalDemo(
   }
   if (memberRole) await grantDemoAccess(database, memberRole);
 
-  // Reconcile live OIDs before binding friendly metadata to stable identities.
+  //Reconcile live OIDs before binding friendly metadata to stable identities.
   const catalog = await reconcileCatalog(database, connectionId);
   const metadataRecords = await installMetadata(database, catalog);
   return {
@@ -238,13 +239,15 @@ export async function seedLocalDemo(
   };
 }
 
-/** Creates or validates one business-role-owned schema. */
+/**
+ * Creates or validates one business-role-owned schema.
+ */
 async function ensureOwnedSchema(
   database: DatabaseExecutor,
   schema: DemoSchema,
   memberRole?: string
 ) {
-  const existing = await database.execute<{ owner: string; current_user: string }>(`
+  const existing = await database.execute<{ owner: string, current_user: string, }>(`
     SELECT pg_get_userbyid(nspowner)::text AS owner,
            current_user::text AS current_user
       FROM pg_namespace
@@ -263,16 +266,18 @@ async function ensureOwnedSchema(
   }
 }
 
-/** Creates or validates one exact representative table contract. */
+/**
+ * Creates or validates one exact representative table contract.
+ */
 async function ensureOwnedTable(
   database: DatabaseExecutor,
   table: DemoTable,
   memberRole?: string
 ) {
   const existing = await database.execute<{
-    kind: string;
-    owner: string;
-    current_user: string;
+    kind: string,
+    owner: string,
+    current_user: string,
   }>(`
     SELECT relation.relkind::text AS kind,
            pg_get_userbyid(relation.relowner)::text AS owner,
@@ -297,9 +302,9 @@ async function ensureOwnedTable(
     throw new Error(`Refusing to adopt an invalid or foreign-owned ${table.schema}.${table.table}`);
   }
   const columns = await database.execute<{
-    column_name: string;
-    data_type: string;
-    is_nullable: 'YES' | 'NO';
+    column_name: string,
+    data_type: string,
+    is_nullable: 'YES' | 'NO',
   }>(`
     SELECT column_name, data_type, is_nullable
       FROM information_schema.columns
@@ -317,7 +322,9 @@ async function ensureOwnedTable(
   }
 }
 
-/** Installs friendly file and field metadata using reconciled stable identities. */
+/**
+ * Installs friendly file and field metadata using reconciled stable identities.
+ */
 async function installMetadata(
   database: DatabaseExecutor,
   catalog: StableCatalogSnapshot
@@ -358,17 +365,19 @@ async function installMetadata(
   return inserted;
 }
 
-/** Proves the configured member is a safe NOLOGIN role the migrator may install. */
+/**
+ * Proves the configured member is a safe NOLOGIN role the migrator may install.
+ */
 async function assertDemoMemberRole(database: DatabaseExecutor, memberRole: string) {
   validateIdentifier(memberRole, 'TABULAR_DEMO_MEMBER_ROLE');
   const role = await database.execute<{
-    rolcanlogin: boolean;
-    rolsuper: boolean;
-    rolcreatedb: boolean;
-    rolcreaterole: boolean;
-    rolreplication: boolean;
-    rolbypassrls: boolean;
-    can_set_role: boolean;
+    rolcanlogin: boolean,
+    rolsuper: boolean,
+    rolcreatedb: boolean,
+    rolcreaterole: boolean,
+    rolreplication: boolean,
+    rolbypassrls: boolean,
+    can_set_role: boolean,
   }>(`
     SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole,
            rolreplication, rolbypassrls,
@@ -393,7 +402,9 @@ async function assertDemoMemberRole(database: DatabaseExecutor, memberRole: stri
   }
 }
 
-/** Grants the safe member explicit access to both representative peer schemas. */
+/**
+ * Grants the safe member explicit access to both representative peer schemas.
+ */
 async function grantDemoAccess(database: DatabaseExecutor, memberRole: string) {
   const identifier = quoteIdentifier(memberRole, 'TABULAR_DEMO_MEMBER_ROLE');
   await database.execute(`GRANT USAGE, CREATE ON SCHEMA operations, finance TO ${identifier}`);
@@ -406,7 +417,9 @@ async function grantDemoAccess(database: DatabaseExecutor, memberRole: string) {
   );
 }
 
-/** Finds the stable file identity for one exact live schema and relation. */
+/**
+ * Finds the stable file identity for one exact live schema and relation.
+ */
 function stableFile(catalog: StableCatalogSnapshot, schemaName: string, tableName: string) {
   const schema = [...catalog.schemas.values()].find((item) => item.name === schemaName);
   const file = [...catalog.objects.values()].find((item) =>
@@ -416,7 +429,9 @@ function stableFile(catalog: StableCatalogSnapshot, schemaName: string, tableNam
   return file.stableId;
 }
 
-/** Finds the stable catalog column identity for one reconciled file. */
+/**
+ * Finds the stable catalog column identity for one reconciled file.
+ */
 function stableColumn(catalog: StableCatalogSnapshot, fileId: string, columnName: string) {
   const column = [...catalog.columns.values()].find((item) =>
     item.objectId === fileId && item.name === columnName
@@ -425,7 +440,9 @@ function stableColumn(catalog: StableCatalogSnapshot, fileId: string, columnName
   return column.stableId;
 }
 
-/** Produces one readable metadata contract entry. */
+/**
+ * Produces one readable metadata contract entry.
+ */
 function column(
   name: string,
   dataType: string,
@@ -452,17 +469,23 @@ function column(
   };
 }
 
-/** Builds the reviewed select-option metadata shape. */
+/**
+ * Builds the reviewed select-option metadata shape.
+ */
 function options(values: string[]) {
   return { options: values.map((value) => ({ value, label: value })) };
 }
 
-/** Quotes one two-part seed relation identifier. */
+/**
+ * Quotes one two-part seed relation identifier.
+ */
 function qualified(schema: string, table: string) {
   return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`;
 }
 
-/** Keeps catalog records scoped to one safe local connection identifier. */
+/**
+ * Keeps catalog records scoped to one safe local connection identifier.
+ */
 function validateConnectionId(value: string) {
   if (!/^[a-z][a-z0-9_-]{0,62}$/.test(value)) {
     throw new Error('Demo seed connection ID must be a safe non-secret slug');

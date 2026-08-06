@@ -1,21 +1,21 @@
+//client
 import type {
   AuthorityPhases,
   CapabilityAction
 } from '../../capability/helpers/contracts.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
+import type {
+  McpCapabilityToolName,
+  McpTransportRequest,
+  VerifiedMcpPrincipal
+} from './contracts.js';
 import { PostgreSqlTransactionCancelledError } from '../../database/helpers/transactions.js';
 import {
   IdentityRepository,
   verifyEffectiveRole
 } from '../../identity/helpers/repository.js';
-import {
-  GovernedMcpExecutionContext,
-  MCP_CAPABILITY_ACTIONS,
-  type McpCapabilityToolName,
-  type McpTransportRequest,
-  type VerifiedMcpPrincipal
-} from './contracts.js';
+import { GovernedMcpExecutionContext, MCP_CAPABILITY_ACTIONS } from './contracts.js';
 
 const actionTools = new Map<CapabilityAction['type'], McpCapabilityToolName>(
   Object.entries(MCP_CAPABILITY_ACTIONS).map(([tool, action]) => [
@@ -24,17 +24,26 @@ const actionTools = new Map<CapabilityAction['type'], McpCapabilityToolName>(
   ])
 );
 
+//The mcp execution boundary contract exported for module callers
 export type McpExecutionBoundary = {
-  signal: AbortSignal;
-  timeoutMs: number;
-  deadlineExceeded(): boolean;
+  signal: AbortSignal,
+  timeoutMs: number,
+  deadlineExceeded(): boolean,
 };
 
+/**
+ * Provide the web pool governed mcp authority behavior used by this module.
+ */
 export class WebPoolGovernedMcpAuthority extends GovernedMcpExecutionContext {
+  //The transaction cancelled state retained by this class instance
   #transactionCancelled = false;
+  //The transaction deadline exceeded state retained by this class instance
   #transactionDeadlineExceeded = false;
 
-  constructor(
+  /**
+   * Create a WebPoolGovernedMcpAuthority instance.
+   */
+  public constructor(
     private readonly database: DatabasePluginService,
     private readonly principal: VerifiedMcpPrincipal,
     private readonly execution: McpExecutionBoundary
@@ -48,36 +57,57 @@ export class WebPoolGovernedMcpAuthority extends GovernedMcpExecutionContext {
     });
   }
 
-  allowsMcp(request: McpTransportRequest) {
+  /**
+   * Report the allows MCP condition.
+   */
+  public allowsMcp(request: McpTransportRequest) {
     if (request.kind === 'tool') return this.principal.scopes.tools.includes(request.name);
     return this.principal.scopes.resources.includes('tabular_frontend_contract')
       && request.uri.startsWith('tabular://frontend-contract/v1/');
   }
 
-  allows(action: CapabilityAction) {
+  /**
+   * Handle the allows operation.
+   */
+  public allows(action: CapabilityAction) {
     const tool = actionTools.get(action.type);
     return Boolean(tool && this.principal.scopes.tools.includes(tool));
   }
 
-  get transactionCancelled() {
+  /**
+   * Return the transaction cancelled value.
+   */
+  public get transactionCancelled() {
     return this.#transactionCancelled;
   }
 
-  get transactionDeadlineExceeded() {
+  /**
+   * Return the transaction deadline exceeded value.
+   */
+  public get transactionDeadlineExceeded() {
     return this.#transactionDeadlineExceeded || this.execution.deadlineExceeded();
   }
 
-  async transaction<TargetResult, FinalResult = TargetResult>(
+  /**
+   * Handle the transaction operation.
+   */
+  public async transaction<TargetResult, FinalResult = TargetResult>(
     _capability: 'tabular.capability',
     phases: AuthorityPhases<TargetResult, FinalResult>
   ) {
     return this.#transaction(phases, false);
   }
 
-  readTransaction<TargetResult>(phases: AuthorityPhases<TargetResult>) {
+  /**
+   * Read the transaction.
+   */
+  public readTransaction<TargetResult>(phases: AuthorityPhases<TargetResult>) {
     return this.#transaction(phases, true);
   }
 
+  /**
+   * Handle the internal transaction operation.
+   */
   async #transaction<TargetResult, FinalResult = TargetResult>(
     phases: AuthorityPhases<TargetResult, FinalResult>,
     repeatableRead: boolean
@@ -121,6 +151,9 @@ export class WebPoolGovernedMcpAuthority extends GovernedMcpExecutionContext {
   }
 }
 
+/**
+ * Return the postgres code result.
+ */
 function postgresCode(error: unknown) {
   return error && typeof error === 'object' && 'code' in error
     ? String(error.code)

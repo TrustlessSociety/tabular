@@ -1,3 +1,4 @@
+//client
 import type {
   ExplorerCatalogSource,
   ExplorerFile,
@@ -7,6 +8,9 @@ import type {
   ExplorerSnapshot
 } from './contracts.js';
 
+/**
+ * Map the catalog to explorer.
+ */
 export function mapCatalogToExplorer(
   catalog: ExplorerCatalogSource,
   permissions: ReadonlyMap<string, ExplorerFolderPermissions> = new Map()
@@ -47,17 +51,26 @@ export function mapCatalogToExplorer(
   };
 }
 
+/**
+ * Filter the explorer items.
+ */
 export function filterExplorerItems<T>(items: T[], query: string, searchable: (item: T) => string) {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) return items;
   return items.filter((item) => searchable(item).toLocaleLowerCase().includes(normalized));
 }
 
+/**
+ * Reconcile the explorer selection.
+ */
 export function reconcileExplorerSelection(selectedId: string | null, availableIds: Iterable<string>) {
   if (!selectedId) return null;
   return new Set(availableIds).has(selectedId) ? selectedId : null;
 }
 
+/**
+ * Normalize the physical name.
+ */
 export function normalizePhysicalName(displayName: string) {
   const normalized = displayName
     .normalize('NFKD')
@@ -69,6 +82,9 @@ export function normalizePhysicalName(displayName: string) {
   return normalized || 'untitled_file';
 }
 
+/**
+ * Return the duplicate display name result.
+ */
 export function duplicateDisplayName(
   files: ExplorerFile[],
   displayName: string,
@@ -78,10 +94,16 @@ export function duplicateDisplayName(
   return files.some((item) => item.id !== currentId && item.displayName.toLocaleLowerCase() === wanted);
 }
 
+/**
+ * Return the slugify result.
+ */
 function slugify(value: string) {
   return value.toLocaleLowerCase().replace(/_/g, '-').replace(/[^a-z0-9-]+/g, '-');
 }
 
+/**
+ * Return the humanize result.
+ */
 function humanize(value: string) {
   const words = value.replace(/[_-]+/g, ' ').trim();
   return words ? words[0]!.toLocaleUpperCase() + words.slice(1) : value;

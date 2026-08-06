@@ -1,3 +1,4 @@
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type {
@@ -9,14 +10,23 @@ import type {
 } from './contracts.js';
 
 type StoredFileDdlOperation = {
-  state: FileDdlApplyState;
-  error_summary: Record<string, unknown> | null;
+  state: FileDdlApplyState,
+  error_summary: Record<string, unknown> | null,
 };
 
+/**
+ * Provide file persistence operations.
+ */
 export class FileRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a FileRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async requestReplay(principal: BrowserPrincipal, commandId: string) {
+  /**
+   * Handle the request replay operation.
+   */
+  public async requestReplay(principal: BrowserPrincipal, commandId: string) {
     const result = await this.database.execute<StoredFileDdlRequest>(`
       SELECT * FROM tabular.file_ddl_requests
        WHERE actor_identity_id = ? AND connection_id = ? AND command_id = ?
@@ -25,14 +35,20 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async requestById(requestId: string) {
+  /**
+   * Handle the request by id operation.
+   */
+  public async requestById(requestId: string) {
     const result = await this.database.execute<StoredFileDdlRequest>(`
       SELECT * FROM tabular.file_ddl_requests WHERE id = ?
     `, [requestId]);
     return result.rows[0];
   }
 
-  async ownedRequest(principal: BrowserPrincipal, requestId: string) {
+  /**
+   * Handle the owned request operation.
+   */
+  public async ownedRequest(principal: BrowserPrincipal, requestId: string) {
     const result = await this.database.execute<StoredFileDdlRequest>(`
       SELECT * FROM tabular.file_ddl_requests
        WHERE id = ? AND actor_identity_id = ? AND session_id = ?
@@ -48,7 +64,10 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async ownedApplyOperation(principal: BrowserPrincipal, requestId: string) {
+  /**
+   * Handle the owned apply operation operation.
+   */
+  public async ownedApplyOperation(principal: BrowserPrincipal, requestId: string) {
     const result = await this.database.execute<StoredFileDdlOperation>(`
       SELECT state, error_summary
         FROM tabular.operation_jobs
@@ -67,16 +86,19 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async insertPlan(input: {
-    id: string;
-    principal: BrowserPrincipal;
-    roleOid: string;
-    roleName: string;
-    action: FileDdlAction;
-    digest: string;
-    expected: ExpectedDdlContext;
-    confirmationHash: string;
-    expiresAt: Date;
+  /**
+   * Insert the plan.
+   */
+  public async insertPlan(input: {
+    id: string,
+    principal: BrowserPrincipal,
+    roleOid: string,
+    roleName: string,
+    action: FileDdlAction,
+    digest: string,
+    expected: ExpectedDdlContext,
+    confirmationHash: string,
+    expiresAt: Date,
   }) {
     await this.database.execute(`
       INSERT INTO tabular.file_ddl_requests (
@@ -109,7 +131,10 @@ export class FileRepository {
     ]);
   }
 
-  async lockOwnedRequest(principal: BrowserPrincipal, requestId: string) {
+  /**
+   * Handle the lock owned request operation.
+   */
+  public async lockOwnedRequest(principal: BrowserPrincipal, requestId: string) {
     const result = await this.database.execute<StoredFileDdlRequest>(`
       SELECT * FROM tabular.file_ddl_requests
        WHERE id = ? AND actor_identity_id = ? AND session_id = ?
@@ -125,7 +150,10 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async rotatePlannedConfirmation(
+  /**
+   * Handle the rotate planned confirmation operation.
+   */
+  public async rotatePlannedConfirmation(
     requestId: string,
     confirmationHash: string,
     expiresAt: Date
@@ -138,8 +166,11 @@ export class FileRepository {
     if (result.affectedRows !== 1) throw new Error('Planned DDL request changed before replay');
   }
 
-  async confirm(requestId: string) {
-    const result = await this.database.execute<{ expires_at: Date | string }>(`
+  /**
+   * Handle the confirm operation.
+   */
+  public async confirm(requestId: string) {
+    const result = await this.database.execute<{ expires_at: Date | string, }>(`
       UPDATE tabular.file_ddl_requests
          SET state = 'confirmed', confirmed_at = clock_timestamp()
        WHERE id = ? AND state = 'planned' AND expires_at > clock_timestamp()
@@ -148,7 +179,10 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async lockConfirmedRequest(requestId: string) {
+  /**
+   * Handle the lock confirmed request operation.
+   */
+  public async lockConfirmedRequest(requestId: string) {
     const result = await this.database.execute<StoredFileDdlRequest>(`
       SELECT * FROM tabular.file_ddl_requests
        WHERE id = ? AND state IN ('confirmed', 'applied')
@@ -157,7 +191,10 @@ export class FileRepository {
     return result.rows[0];
   }
 
-  async markApplied(request: StoredFileDdlRequest, result: AppliedFileDdl) {
+  /**
+   * Mark applied.
+   */
+  public async markApplied(request: StoredFileDdlRequest, result: AppliedFileDdl) {
     await this.database.execute(`
       INSERT INTO tabular.file_ddl_versions (
         request_id, connection_id, database_oid, action_type, request_digest,
@@ -182,6 +219,9 @@ export class FileRepository {
   }
 }
 
+/**
+ * Return the iso result.
+ */
 export function iso(value: Date | string) {
   return new Date(value).toISOString();
 }

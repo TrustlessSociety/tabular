@@ -1,15 +1,26 @@
+//node
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+
+//modules
 import type { CookieOptions } from '@stackpress/ingest/types';
+
+//client
 import type { SessionConfig } from '../../../config/sessions.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 
 const TOKEN_BYTES = 32;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
+/**
+ * Return the opaque token result.
+ */
 export function opaqueToken() {
   return randomBytes(TOKEN_BYTES).toString('base64url');
 }
 
+/**
+ * Return the opaque id result.
+ */
 export function opaqueId(
   prefix: 'id' | 'role' | 'sess' | 'hist' | 'obj' | 'schema' | 'col' | 'act' | 'draft'
     | 'view' | 'evt' | 'job'
@@ -17,6 +28,9 @@ export function opaqueId(
   return `${prefix}_${opaqueToken()}`;
 }
 
+/**
+ * Return the token hash result.
+ */
 export function tokenHash(token: string) {
   if (!TOKEN_PATTERN.test(token)) {
     throw new ApplicationError('invalid_session', 401, 'The browser session is invalid');
@@ -24,6 +38,9 @@ export function tokenHash(token: string) {
   return createHash('sha256').update(token, 'utf8').digest('hex');
 }
 
+/**
+ * Report the matches token hash condition.
+ */
 export function matchesTokenHash(token: string, expectedHash: string) {
   let actual: Buffer;
   let expected: Buffer;
@@ -36,6 +53,9 @@ export function matchesTokenHash(token: string, expectedHash: string) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+/**
+ * Return the canonical origin result.
+ */
 export function canonicalOrigin(value: string | undefined) {
   if (!value) throw new Error('TABULAR_PUBLIC_ORIGIN is required for browser mutations');
   let parsed: URL;
@@ -58,6 +78,9 @@ export function canonicalOrigin(value: string | undefined) {
   return value;
 }
 
+/**
+ * Return the require exact origin result.
+ */
 export function requireExactOrigin(
   supplied: string | string[] | undefined,
   trustedOrigin: string | undefined
@@ -68,6 +91,9 @@ export function requireExactOrigin(
   }
 }
 
+/**
+ * Return the session cookie options result.
+ */
 export function sessionCookieOptions(config: SessionConfig): CookieOptions {
   return {
     httpOnly: config.httpOnly,
@@ -79,6 +105,9 @@ export function sessionCookieOptions(config: SessionConfig): CookieOptions {
   };
 }
 
+/**
+ * Report the expired session cookie options condition.
+ */
 export function expiredSessionCookieOptions(config: SessionConfig): CookieOptions {
   return {
     ...sessionCookieOptions(config),

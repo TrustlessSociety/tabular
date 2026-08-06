@@ -1,7 +1,12 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
 import { createApplication } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
@@ -20,6 +25,9 @@ const identityId = `id_${'i'.repeat(32)}`;
 const sessionId = `sess_${'s'.repeat(32)}`;
 const historyScopeId = `hist_${'h'.repeat(32)}`;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -701,6 +709,9 @@ test('PostgreSQL 18 durable workers claim, fence, retry, link results, and isola
   }
 });
 
+/**
+ * Wait for the state.
+ */
 async function waitForState(admin: pg.Pool, jobId: string, state: string) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -714,6 +725,9 @@ async function waitForState(admin: pg.Pool, jobId: string, state: string) {
   throw new Error(`Timed out waiting for ${jobId} to reach ${state}`);
 }
 
+/**
+ * Wait for the lease expiry.
+ */
 async function waitForLeaseExpiry(admin: pg.Pool, jobId: string) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -727,17 +741,23 @@ async function waitForLeaseExpiry(admin: pg.Pool, jobId: string) {
   throw new Error(`Timed out waiting for ${jobId} lease expiry`);
 }
 
+/**
+ * Return the delay result.
+ */
 function delay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/**
+ * Return the job input result.
+ */
 function jobInput(input: {
-  seed: string;
-  idempotencySeed?: string;
-  kind: 'import.commit' | 'maintenance.import-staging' | 'ddl.apply';
-  authority: 'worker' | 'migrator';
-  payload: { importId: string } | { limit: number } | { requestId: string };
-  maxAttempts?: number;
+  seed: string,
+  idempotencySeed?: string,
+  kind: 'import.commit' | 'maintenance.import-staging' | 'ddl.apply',
+  authority: 'worker' | 'migrator',
+  payload: { importId: string, } | { limit: number, } | { requestId: string, },
+  maxAttempts?: number,
 }) {
   return {
     jobId: `job_${input.seed.repeat(32)}`,
@@ -755,6 +775,9 @@ function jobInput(input: {
   };
 }
 
+/**
+ * Return the enqueue result.
+ */
 async function enqueue(
   pool: ManagedPostgresPool,
   input: Parameters<typeof jobInput>[0]
@@ -765,11 +788,17 @@ async function enqueue(
   return created.job.id;
 }
 
+/**
+ * Return the digest seed result.
+ */
 function digestSeed(seed: string) {
   const code = seed.charCodeAt(0).toString(16).slice(-1);
   return /[a-f0-9]/.test(code) ? code : 'f';
 }
 
+/**
+ * Return the transaction result.
+ */
 function transaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -781,6 +810,9 @@ function transaction(pool: ManagedPostgresPool) {
     }, callback);
 }
 
+/**
+ * Return the role URL result.
+ */
 function roleUrl(base: string, role: string, password: string) {
   const url = new URL(base);
   url.username = role;
@@ -788,6 +820,9 @@ function roleUrl(base: string, role: string, password: string) {
   return url.toString();
 }
 
+/**
+ * Reset the current value.
+ */
 async function reset(admin: pg.Pool) {
   await admin.query('DROP SCHEMA IF EXISTS tabular CASCADE');
   await admin.query('DROP SCHEMA IF EXISTS workspace CASCADE');

@@ -1,22 +1,30 @@
+//node
 import { createHash } from 'node:crypto';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import { quoteIdentifier } from '../../database/helpers/identifiers.js';
 
+//The capability import column contract exported for module callers
 export type CapabilityImportColumn = {
-  sourceColumn: number;
-  physicalName: string;
-  storageType: 'text' | 'bigint' | 'numeric' | 'boolean' | 'date' | 'time' | 'timestamptz' | 'jsonb';
+  sourceColumn: number,
+  physicalName: string,
+  storageType: 'text' | 'bigint' | 'numeric' | 'boolean' | 'date' | 'time' | 'timestamptz' | 'jsonb',
 };
 
+//The capability import commit contract exported for module callers
 export type CapabilityImportCommit = {
-  importId: string;
-  schemaName: string;
-  tableName: string;
-  rowCount: number;
-  columns: CapabilityImportColumn[];
-  failpoint?: 'after-table-create' | 'after-row-insert';
+  importId: string,
+  schemaName: string,
+  tableName: string,
+  rowCount: number,
+  columns: CapabilityImportColumn[],
+  failpoint?: 'after-table-create' | 'after-row-insert',
 };
 
+/**
+ * Return the commit imported table result.
+ */
 export async function commitImportedTable(
   database: DatabaseExecutor,
   input: CapabilityImportCommit
@@ -61,7 +69,7 @@ export async function commitImportedTable(
     throw new Error('Worker import row count changed during commit');
   }
   if (input.failpoint === 'after-row-insert') throw new Error('Import failpoint after row insertion');
-  const relation = await database.execute<{ relation_oid: string | number }>(`
+  const relation = await database.execute<{ relation_oid: string | number, }>(`
     SELECT c.oid AS relation_oid
       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = ? AND c.relname = ? AND c.relkind = 'r'
@@ -76,6 +84,9 @@ export async function commitImportedTable(
   };
 }
 
+/**
+ * Return the source expression result.
+ */
 function sourceExpression(column: CapabilityImportColumn) {
   const index = column.sourceColumn - 1;
   const token = `(source_values ->> ${index})`;
@@ -83,6 +94,9 @@ function sourceExpression(column: CapabilityImportColumn) {
   return `${token}::${storageSql(column.storageType)}`;
 }
 
+/**
+ * Return the storage SQL result.
+ */
 function storageSql(type: CapabilityImportColumn['storageType']) {
   const allowed: Record<CapabilityImportColumn['storageType'], string> = {
     text: 'text',

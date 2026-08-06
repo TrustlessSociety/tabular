@@ -1,20 +1,22 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
+import type { ExplorerPluginService } from '../../explorer/helpers/service.js';
+import type { IdentityPluginService } from '../../identity/helpers/service.js';
+import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
+import type { ImportExportPluginService } from '../helpers/service.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import {
   renderAuthenticationRequired,
   renderProductPage
 } from '../../app/helpers/rendering.js';
 import { authenticatedExplorerContext } from '../../explorer/helpers/authenticated-context.js';
-import {
-  EXPLORER_SERVICE,
-  type ExplorerPluginService
-} from '../../explorer/helpers/service.js';
-import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
+import { EXPLORER_SERVICE } from '../../explorer/helpers/service.js';
 import { validateDefinition } from '../../saved-views/helpers/validation.js';
-import type { ImportExportPluginService } from '../helpers/service.js';
 
+//The import export routes value exported for module callers
 export const IMPORT_EXPORT_ROUTES = [
   '/pages/import.html',
   '/events/import-export',
@@ -22,8 +24,13 @@ export const IMPORT_EXPORT_ROUTES = [
   '/events/import-google-callback'
 ] as const;
 
+/**
+ * Register the import export routes.
+ */
 export function registerImportExportRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   runtime: ApplicationRuntimeService,
   identity: IdentityPluginService,
   importExport: ImportExportPluginService
@@ -181,40 +188,43 @@ export function registerImportExportRoutes(
 }
 
 type ImportAction =
-  | { type: 'google.oauth.start'; returnPath: string }
-  | { type: 'google.spreadsheets.list'; pageToken?: string }
-  | { type: 'google.worksheets.list'; spreadsheetId: string }
+  | { type: 'google.oauth.start', returnPath: string, }
+  | { type: 'google.spreadsheets.list', pageToken?: string, }
+  | { type: 'google.worksheets.list', spreadsheetId: string, }
   | {
-    type: 'google.import.stage';
-    commandId: string;
-    folderId: string;
-    spreadsheetId: string;
-    sheetName: string;
+    type: 'google.import.stage',
+    commandId: string,
+    folderId: string,
+    spreadsheetId: string,
+    sheetName: string,
   }
-  | { type: 'google.connection.revoke' }
+  | { type: 'google.connection.revoke', }
   | {
-    type: 'import.mapping';
-    importId: string;
-    mapping: unknown;
-    fileDisplayName: string;
-    tableName: string;
+    type: 'import.mapping',
+    importId: string,
+    mapping: unknown,
+    fileDisplayName: string,
+    tableName: string,
   }
-  | { type: 'import.sheet'; importId: string; sheetName: string }
-  | { type: 'import.prepare-confirmation'; importId: string }
-  | { type: 'import.confirm'; importId: string; confirmationToken: string }
-  | { type: 'import.cancel'; importId: string }
-  | { type: 'import.retry'; importId: string }
+  | { type: 'import.sheet', importId: string, sheetName: string, }
+  | { type: 'import.prepare-confirmation', importId: string, }
+  | { type: 'import.confirm', importId: string, confirmationToken: string, }
+  | { type: 'import.cancel', importId: string, }
+  | { type: 'import.retry', importId: string, }
   | {
-    type: 'export.csv';
-    fileId: string;
-    viewId?: string;
-    expectedViewVersion?: number;
-    columnIds?: string[];
-    sorts?: SavedViewDefinition['sorts'];
-    filters?: SavedViewDefinition['filters'];
-    presentation?: SavedViewDefinition['presentation'];
+    type: 'export.csv',
+    fileId: string,
+    viewId?: string,
+    expectedViewVersion?: number,
+    columnIds?: string[],
+    sorts?: SavedViewDefinition['sorts'],
+    filters?: SavedViewDefinition['filters'],
+    presentation?: SavedViewDefinition['presentation'],
   };
 
+/**
+ * Return the action input result.
+ */
 function actionInput(value: unknown): ImportAction {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid('Import/export action is invalid');
   const action = value as Record<string, unknown>;
@@ -350,14 +360,23 @@ function actionInput(value: unknown): ImportAction {
   invalid('Import/export action type is invalid');
 }
 
+/**
+ * Return the exact result.
+ */
 function exact(value: Record<string, unknown>, allowed: string[]) {
   if (Object.keys(value).some((key) => !allowed.includes(key))) invalid('Import/export action has an unsupported property');
 }
 
+/**
+ * Return the exact query result.
+ */
 function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   if ([...parameters.keys()].some((key) => !allowed.includes(key))) invalid('Import/export query is invalid');
 }
 
+/**
+ * Return the bounded result.
+ */
 function bounded(value: unknown, label: string, maximum: number, spaces = false) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum
     || /[\u0000-\u001f\u007f]/.test(value)
@@ -365,43 +384,67 @@ function bounded(value: unknown, label: string, maximum: number, spaces = false)
   return value;
 }
 
+/**
+ * Return the positive result.
+ */
 function positive(value: unknown, label: string) {
   if (!Number.isSafeInteger(value) || Number(value) < 1) invalid(`${label} is invalid`);
   return Number(value);
 }
 
+/**
+ * Return the return path result.
+ */
 function returnPath(value: unknown) {
   if (typeof value !== 'string' || value.length < 18 || value.length > 500
     || /[\u0000-\u001f\u007f]/.test(value)) invalid('Google return path is invalid');
   return value;
 }
 
+/**
+ * Return the provider identifier result.
+ */
 function providerIdentifier(value: unknown, label: string) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{10,256}$/.test(value)) invalid(`${label} is invalid`);
   return value;
 }
 
+/**
+ * Return the provider token result.
+ */
 function providerToken(value: unknown, label: string, maximum: number) {
   if (typeof value !== 'string' || value.length < 1 || value.length > maximum
     || /[\u0000-\u0020\u007f]/.test(value)) invalid(`${label} is invalid`);
   return value;
 }
 
+/**
+ * Return the string array result.
+ */
 function stringArray(value: unknown, label: string, maximum: number) {
   if (!Array.isArray(value) || value.length < 1 || value.length > maximum) invalid(`${label} are invalid`);
   return value.map((item) => bounded(item, label, 100));
 }
 
+/**
+ * Return the array result.
+ */
 function array(value: unknown, label: string, maximum: number) {
   if (!Array.isArray(value) || value.length > maximum) invalid(`${label} are invalid`);
   return value;
 }
 
+/**
+ * Return the record result.
+ */
 function record(value: unknown, label: string) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid(`${label} is invalid`);
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (typeof contentType !== 'string'
     || !/^application\/json(?:;\s*charset=utf-8)?$/i.test(contentType)) {
@@ -409,10 +452,16 @@ function requireJson(contentType: string | string[] | undefined) {
   }
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('invalid_import_export_action', 400, message);
 }
 
+/**
+ * Report the invalid session condition.
+ */
 function invalidSession(): never {
   throw new ApplicationError('invalid_session', 401, 'The browser session is invalid');
 }

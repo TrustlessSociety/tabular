@@ -1,7 +1,11 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { createApplication } from '../../../bootstrap/application.js';
-import operationsPlugin, { OPERATIONS_ROUTES } from '../plugin.js';
+import { OPERATIONS_ROUTES } from '../plugin.js';
+import operationsPlugin from '../plugin.js';
 
 test('operations plugin registers before import/export and exposes the activity routes', async () => {
   const application = await createApplication({

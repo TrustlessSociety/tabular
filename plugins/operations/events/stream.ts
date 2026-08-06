@@ -1,22 +1,38 @@
+//node
 import { Readable } from 'node:stream';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { SseConfig } from '../../../config/sse.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { OperationEventBatch } from '../helpers/contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 
+//The operation event reader contract exported for module callers
 export type OperationEventReader = {
-  readEvents(principal: BrowserPrincipal, after: number, limit: number): Promise<OperationEventBatch>;
+  readEvents(principal: BrowserPrincipal, after: number, limit: number): Promise<OperationEventBatch>,
 };
 
+/**
+ * Provide the authorized operation event stream behavior used by this module.
+ */
 export class AuthorizedOperationEventStream extends Readable {
+  //The cursor state retained by this class instance
   #cursor: number;
+  //The busy state retained by this class instance
   #busy = false;
+  //The paused for backpressure state retained by this class instance
   #pausedForBackpressure = false;
+  //The timer state retained by this class instance
   #timer?: NodeJS.Timeout;
+  //The last write at state retained by this class instance
   #lastWriteAt = Date.now();
+  //The closed state retained by this class instance
   #closed = false;
 
-  constructor(
+  /**
+   * Create a AuthorizedOperationEventStream instance.
+   */
+  public constructor(
     private readonly operations: OperationEventReader,
     private readonly principal: BrowserPrincipal,
     cursor: number,
@@ -31,19 +47,28 @@ export class AuthorizedOperationEventStream extends Readable {
     });
   }
 
-  override _read() {
+  /**
+   * Read the current value.
+   */
+  public override _read() {
     this.#pausedForBackpressure = false;
     this.#schedule(0);
   }
 
-  override _destroy(error: Error | null, callback: (error?: Error | null) => void) {
+  /**
+   * Handle the destroy operation.
+   */
+  public override _destroy(error: Error | null, callback: (error?: Error | null) => void) {
     this.#closed = true;
     if (this.#timer) clearTimeout(this.#timer);
     this.#timer = undefined;
     callback(error);
   }
 
-  shutdown() {
+  /**
+   * Handle the shutdown operation.
+   */
+  public shutdown() {
     if (this.#closed) return;
     this.#push(formatControl('server.shutdown', {
       reason: 'The server is restarting; reconnect to resume from the last event ID.'
@@ -51,6 +76,9 @@ export class AuthorizedOperationEventStream extends Readable {
     this.#finish();
   }
 
+  /**
+   * Handle the internal schedule operation.
+   */
   #schedule(delay: number) {
     if (this.#closed || this.#busy || this.#pausedForBackpressure || this.#timer) return;
     this.#timer = setTimeout(() => {
@@ -59,6 +87,9 @@ export class AuthorizedOperationEventStream extends Readable {
     }, delay);
   }
 
+  /**
+   * Handle the internal pump operation.
+   */
   async #pump() {
     if (this.#closed || this.#busy || this.#pausedForBackpressure) return;
     this.#busy = true;
@@ -66,7 +97,7 @@ export class AuthorizedOperationEventStream extends Readable {
       const batch = await this.operations.readEvents(
         this.principal,
         this.#cursor,
-        // The operations reader deliberately bounds permission-filtered scans
+        //The operations reader deliberately bounds permission-filtered scans
         // at 500 rows even when the shared SSE configuration permits a larger
         // generic replay batch.
         Math.min(this.config.replayLimit, 500)
@@ -126,6 +157,9 @@ export class AuthorizedOperationEventStream extends Readable {
     this.#schedule(this.config.pollMs);
   }
 
+  /**
+   * Handle the internal push operation.
+   */
   #push(value: string) {
     if (this.#closed) return false;
     this.#lastWriteAt = Date.now();
@@ -134,6 +168,9 @@ export class AuthorizedOperationEventStream extends Readable {
     return writable;
   }
 
+  /**
+   * Handle the internal finish operation.
+   */
   #finish() {
     if (this.#closed) return;
     this.#closed = true;
@@ -143,10 +180,16 @@ export class AuthorizedOperationEventStream extends Readable {
   }
 }
 
+/**
+ * Format the event.
+ */
 function formatEvent(cursor: number, event: string, data: Record<string, unknown>) {
   return `id: ${cursor}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+/**
+ * Format the control.
+ */
 function formatControl(event: string, data: Record<string, unknown>) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }

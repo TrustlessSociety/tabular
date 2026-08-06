@@ -1,3 +1,4 @@
+//client
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
@@ -7,20 +8,30 @@ import type { CapabilityAction } from '../helpers/contracts.js';
 import type { CapabilityPluginService } from '../helpers/service.js';
 import { BrowserAuthorizedExecutionContext } from '../helpers/web-authority.js';
 
+//The web action response contract exported for module callers
 export type WebActionResponse =
-  | { status: 'ok'; data: unknown }
+  | { status: 'ok', data: unknown, }
   | {
-    status: 'error';
-    error: { code: string; message: string; retryable: boolean; issues?: unknown[] };
+    status: 'error',
+    error: { code: string, message: string, retryable: boolean, issues?: unknown[], },
   };
 
+/**
+ * Adapt web capability behavior to its external boundary.
+ */
 export class WebCapabilityAdapter {
-  constructor(
+  /**
+   * Create a WebCapabilityAdapter instance.
+   */
+  public constructor(
     private readonly identity: IdentityPluginService,
     private readonly capability: CapabilityPluginService
   ) {}
 
-  async invoke(
+  /**
+   * Handle the invoke operation.
+   */
+  public async invoke(
     principal: BrowserPrincipal | BrowserMutationPrincipal,
     body: unknown
   ): Promise<WebActionResponse> {
@@ -47,6 +58,9 @@ export class WebCapabilityAdapter {
   }
 }
 
+/**
+ * Report the invalid web action condition.
+ */
 function invalidWebAction(): WebActionResponse {
   return {
     status: 'error',
@@ -58,6 +72,9 @@ function invalidWebAction(): WebActionResponse {
   };
 }
 
+/**
+ * Return the strict envelope result.
+ */
 function strictEnvelope(input: unknown, keys: string[]) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('The web action envelope is invalid');

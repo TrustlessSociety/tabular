@@ -1,21 +1,24 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import {
-  IDENTITY_SERVICE,
-  type IdentityPluginService
-} from '../identity/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import type { OperationEventReader } from '../operations/events/stream.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
 import {
   REALTIME_SERVICE,
   RealtimePluginService
 } from './helpers/service.js';
-import type { OperationEventReader } from '../operations/events/stream.js';
 import { OPERATIONS_SERVICE } from '../operations/helpers/service.js';
 import { registerRealtimeRoutes } from './pages/routes.js';
 
-export default function realtimePlugin(server: HttpServer<any, any>) {
+/**
+ * Register the realtime plugin with the application server.
+ */
+export default function realtimePlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(REALTIME_SERVICE)) {
     throw new Error(`Service already registered: ${REALTIME_SERVICE}`);
   }

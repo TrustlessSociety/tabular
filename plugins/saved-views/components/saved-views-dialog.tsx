@@ -1,33 +1,41 @@
+//modules
 import { useEffect, useId, useRef, useState } from 'react';
-import { Icon } from '../../ui/components/icon.js';
+
+//client
 import type {
   SavedView,
   SavedViewAccess,
   SavedViewCapabilities
 } from '../helpers/contracts.js';
+import { Icon } from '../../ui/components/icon.js';
 
+//The saved view includes contract exported for module callers
 export type SavedViewIncludes = {
-  filtersAndSorting: boolean;
-  columnLayout: boolean;
-  cellPresentation: boolean;
+  filtersAndSorting: boolean,
+  columnLayout: boolean,
+  cellPresentation: boolean,
 };
 
+//The saved views dialog props contract exported for module callers
 export type SavedViewsDialogProps = {
-  mode: 'list' | 'create';
-  views: SavedView[];
-  capabilities: SavedViewCapabilities;
-  folderSlug: string;
-  fileSlug: string;
-  busy?: boolean;
-  error?: string;
-  onModeChange: (mode: 'list' | 'create') => void;
-  onCreate: (input: { name: string; access: SavedViewAccess; includes: SavedViewIncludes }) => void;
-  onUpdate: (view: SavedView) => void;
-  onDuplicate: (view: SavedView) => void;
-  onDelete: (view: SavedView) => void;
-  onClose: () => void;
+  mode: 'list' | 'create',
+  views: SavedView[],
+  capabilities: SavedViewCapabilities,
+  folderSlug: string,
+  fileSlug: string,
+  busy?: boolean,
+  error?: string,
+  onModeChange: (mode: 'list' | 'create') => void,
+  onCreate: (input: { name: string, access: SavedViewAccess, includes: SavedViewIncludes, }) => void,
+  onUpdate: (view: SavedView) => void,
+  onDuplicate: (view: SavedView) => void,
+  onDelete: (view: SavedView) => void,
+  onClose: () => void,
 };
 
+/**
+ * Render the saved views dialog component.
+ */
 export function SavedViewsDialog(props: SavedViewsDialogProps) {
   const titleId = useId();
   const dialog = useRef<HTMLElement>(null);
@@ -74,6 +82,9 @@ export function SavedViewsDialog(props: SavedViewsDialogProps) {
   }, [deleteCandidate]);
 
   useEffect(() => {
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -98,6 +109,9 @@ export function SavedViewsDialog(props: SavedViewsDialogProps) {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [deleteCandidate, props.mode]);
 
+  /**
+   * Return the request delete result.
+   */
   const requestDelete = (view: SavedView, trigger: HTMLElement) => {
     deleteTrigger.current = trigger;
     setDeleteCandidate(view);
@@ -238,14 +252,17 @@ export function SavedViewsDialog(props: SavedViewsDialogProps) {
   );
 }
 
+/**
+ * Render the view group component.
+ */
 function ViewGroup(props: {
-  label: 'Personal' | 'Shared';
-  views: SavedView[];
-  folderSlug: string;
-  fileSlug: string;
-  onUpdate: (view: SavedView) => void;
-  onDuplicate: (view: SavedView) => void;
-  onDelete: (view: SavedView, trigger: HTMLElement) => void;
+  label: 'Personal' | 'Shared',
+  views: SavedView[],
+  folderSlug: string,
+  fileSlug: string,
+  onUpdate: (view: SavedView) => void,
+  onDuplicate: (view: SavedView) => void,
+  onDelete: (view: SavedView, trigger: HTMLElement) => void,
 }) {
   return (
     <section className="saved-view-group" aria-label={`${props.label} views`}>
@@ -279,10 +296,13 @@ function ViewGroup(props: {
   );
 }
 
+/**
+ * Render the include choice component.
+ */
 function IncludeChoice(props: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
+  label: string,
+  checked: boolean,
+  onChange: (checked: boolean) => void,
 }) {
   return (
     <label><input type="checkbox" checked={props.checked} onChange={(event) => props.onChange(event.target.checked)} />{props.label}</label>

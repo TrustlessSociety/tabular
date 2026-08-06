@@ -1,3 +1,4 @@
+//client
 import type {
   CapabilityAction,
   SafeDraft,
@@ -12,47 +13,53 @@ import type {
   LogicalGridSelection
 } from './contracts.js';
 
+//The grid draft change contract exported for module callers
 export type GridDraftChange = {
-  point: GridPoint;
-  before: GridCellValue;
-  after: GridCellValue;
-  raw: string;
-  issue?: ValidationIssue;
-  userEdited?: boolean;
+  point: GridPoint,
+  before: GridCellValue,
+  after: GridCellValue,
+  raw: string,
+  issue?: ValidationIssue,
+  userEdited?: boolean,
 };
 
+//The grid edit draft contract exported for module callers
 export type GridEditDraft =
   | {
-    id: string;
-    kind: 'cells';
-    source: 'edit' | 'paste' | 'fill' | 'clear';
-    changes: GridDraftChange[];
+    id: string,
+    kind: 'cells',
+    source: 'edit' | 'paste' | 'fill' | 'clear',
+    changes: GridDraftChange[],
   }
   | {
-    id: string;
-    kind: 'insert';
-    row: GridRow;
-    index: number;
-    rowRank?: string;
-    changes: GridDraftChange[];
+    id: string,
+    kind: 'insert',
+    row: GridRow,
+    index: number,
+    rowRank?: string,
+    changes: GridDraftChange[],
   }
   | {
-    id: string;
-    kind: 'delete';
-    row: GridRow;
-    index: number;
-    changes: GridDraftChange[];
+    id: string,
+    kind: 'delete',
+    row: GridRow,
+    index: number,
+    changes: GridDraftChange[],
   };
 
+//The grid history frame contract exported for module callers
 export type GridHistoryFrame = {
-  beforeRows: GridRow[];
-  afterRows: GridRow[];
-  beforeVersions: Record<string, string>;
-  afterVersions: Record<string, string>;
-  selection: LogicalGridSelection | null;
-  label: string;
+  beforeRows: GridRow[],
+  afterRows: GridRow[],
+  beforeVersions: Record<string, string>,
+  afterVersions: Record<string, string>,
+  selection: LogicalGridSelection | null,
+  label: string,
 };
 
+/**
+ * Return the stage cell edit result.
+ */
 export function stageCellEdit(
   rows: GridRow[],
   columns: GridColumn[],
@@ -71,6 +78,9 @@ export function stageCellEdit(
   };
 }
 
+/**
+ * Return the stage relation choice result.
+ */
 export function stageRelationChoice(
   rows: GridRow[],
   columns: GridColumn[],
@@ -94,8 +104,11 @@ export function stageRelationChoice(
   return { id, kind: 'cells', source: 'edit', changes };
 }
 
+/**
+ * Update the insert relation draft.
+ */
 export function updateInsertRelationDraft(
-  draft: Extract<GridEditDraft, { kind: 'insert' }>,
+  draft: Extract<GridEditDraft, { kind: 'insert', }>,
   columns: GridColumn[],
   patch: Record<string, GridCellValue>
 ) {
@@ -117,6 +130,9 @@ export function updateInsertRelationDraft(
   };
 }
 
+/**
+ * Return the stage scalar range result.
+ */
 export function stageScalarRange(
   rows: GridRow[],
   columns: GridColumn[],
@@ -136,6 +152,9 @@ export function stageScalarRange(
   return { id, kind: 'cells', source, changes };
 }
 
+/**
+ * Return the stage insert row result.
+ */
 export function stageInsertRow(
   rows: GridRow[],
   columns: GridColumn[],
@@ -174,12 +193,15 @@ export function stageInsertRow(
   };
 }
 
+/**
+ * Update the insert draft.
+ */
 export function updateInsertDraft(
-  draft: Extract<GridEditDraft, { kind: 'insert' }>,
+  draft: Extract<GridEditDraft, { kind: 'insert', }>,
   columns: GridColumn[],
   point: GridPoint,
   attempted: GridCellValue
-): Extract<GridEditDraft, { kind: 'insert' }> {
+): Extract<GridEditDraft, { kind: 'insert', }> {
   if (point.rowId !== draft.row.id) throw new Error('Finish the new row before editing another row');
   const current = draft.changes.find((change) => change.point.columnId === point.columnId);
   const selected = columns.find((column) => column.id === point.columnId);
@@ -204,9 +226,11 @@ export function updateInsertDraft(
   };
 }
 
-/** Clears only selected fields that belong to one retained insert draft. */
+/**
+ * Clears only selected fields that belong to one retained insert draft.
+ */
 export function clearInsertDraftSelection(
-  draft: Extract<GridEditDraft, { kind: 'insert' }>,
+  draft: Extract<GridEditDraft, { kind: 'insert', }>,
   columns: GridColumn[],
   points: GridPoint[]
 ) {
@@ -220,12 +244,14 @@ export function clearInsertDraftSelection(
   ), draft);
 }
 
-/** Reports whether a failed new-row draft contains no user-entered value. */
+/**
+ * Reports whether a failed new-row draft contains no user-entered value.
+ */
 export function insertDraftIsEmpty(
-  draft: Extract<GridEditDraft, { kind: 'insert' }>,
+  draft: Extract<GridEditDraft, { kind: 'insert', }>,
   columns: GridColumn[]
 ) {
-  // Recovered drafts predate the in-tab edit marker, while a correction can
+  //Recovered drafts predate the in-tab edit marker, while a correction can
   // mark only the latest cell. Inspect every field so clearing one cell never
   // discards another recovered value from the same row.
   const columnsById = new Map(columns.map((column) => [column.id, column]));
@@ -239,6 +265,9 @@ export function insertDraftIsEmpty(
   });
 }
 
+/**
+ * Return the stage delete row result.
+ */
 export function stageDeleteRow(
   rows: GridRow[],
   columns: GridColumn[],
@@ -262,6 +291,9 @@ export function stageDeleteRow(
   };
 }
 
+/**
+ * Apply the grid draft.
+ */
 export function applyGridDraft(rows: GridRow[], draft: GridEditDraft): GridRow[] {
   if (draft.kind === 'insert') {
     const next = [...rows];
@@ -281,17 +313,23 @@ export function applyGridDraft(rows: GridRow[], draft: GridEditDraft): GridRow[]
   return rows.map((row) => updates.get(row.id) || row);
 }
 
+/**
+ * Return the draft issues result.
+ */
 export function draftIssues(draft: GridEditDraft): ValidationIssue[] {
   return draft.changes.flatMap((change) => change.issue ? [change.issue] : []);
 }
 
+/**
+ * Return the capability action for draft result.
+ */
 export function capabilityActionForDraft(
   draft: GridEditDraft,
   input: {
-    commandId: string;
-    fileId: string;
-    versions: Record<string, string>;
-    columns: GridColumn[];
+    commandId: string,
+    fileId: string,
+    versions: Record<string, string>,
+    columns: GridColumn[],
   }
 ): CapabilityAction {
   if (draft.kind === 'insert') {
@@ -352,6 +390,9 @@ export function capabilityActionForDraft(
   };
 }
 
+/**
+ * Apply the mutation versions.
+ */
 export function applyMutationVersions(
   versions: Record<string, string>,
   data: unknown,
@@ -359,12 +400,12 @@ export function applyMutationVersions(
 ) {
   const next = { ...versions };
   if (draft?.kind === 'delete') delete next[draft.row.id];
-  if (!data || typeof data !== 'object' || !Array.isArray((data as { rows?: unknown }).rows)) {
+  if (!data || typeof data !== 'object' || !Array.isArray((data as { rows?: unknown, }).rows)) {
     return next;
   }
-  for (const row of (data as { rows: unknown[] }).rows) {
+  for (const row of (data as { rows: unknown[], }).rows) {
     if (!row || typeof row !== 'object') continue;
-    const record = row as { rowId?: unknown; version?: unknown };
+    const record = row as { rowId?: unknown, version?: unknown, };
     if (typeof record.rowId === 'string' && typeof record.version === 'string') {
       next[record.rowId] = record.version;
     }
@@ -372,21 +413,27 @@ export function applyMutationVersions(
   return next;
 }
 
+/**
+ * Return the inserted row identity result.
+ */
 export function insertedRowIdentity(data: unknown) {
   if (!data || typeof data !== 'object') return undefined;
-  const rows = (data as { rows?: unknown }).rows;
+  const rows = (data as { rows?: unknown, }).rows;
   if (!Array.isArray(rows) || !rows[0] || typeof rows[0] !== 'object') return undefined;
-  const id = (rows[0] as { rowId?: unknown }).rowId;
+  const id = (rows[0] as { rowId?: unknown, }).rowId;
   return typeof id === 'string' ? id : undefined;
 }
 
+/**
+ * Return the persistent draft patch result.
+ */
 export function persistentDraftPatch(
   draft: GridEditDraft,
   columns: GridColumn[]
 ): {
-  rowId?: string;
-  rowRank?: string;
-  patch: Array<{ columnId: string; value: TypedCellValue }>;
+  rowId?: string,
+  rowRank?: string,
+  patch: Array<{ columnId: string, value: TypedCellValue, }>,
 } | undefined {
   if (draft.kind === 'delete') return undefined;
   const rowIds = new Set(draft.changes.map((change) => change.point.rowId));
@@ -409,6 +456,9 @@ export function persistentDraftPatch(
   };
 }
 
+/**
+ * Return the grid draft from persistent result.
+ */
 export function gridDraftFromPersistent(
   draft: SafeDraft,
   rows: GridRow[],
@@ -422,7 +472,7 @@ export function gridDraftFromPersistent(
   );
   const fallbackIssue = draft.validation.find((issue) => !issue.columnId);
 
-  // Rebuild every insert field so required-column errors remain exact after
+  //Rebuild every insert field so required-column errors remain exact after
   // reload even though blank required values are not persisted as data.
   if (!draft.rowId) {
     const patchByColumn = new Map(draft.patch.map((entry) => [entry.columnId, entry]));
@@ -495,6 +545,9 @@ export function gridDraftFromPersistent(
   return { id: draft.id, kind: 'cells', source: 'edit', changes };
 }
 
+/**
+ * Return the hidden row rank result.
+ */
 export function hiddenRowRank(logicalRow: number) {
   if (!Number.isSafeInteger(logicalRow) || logicalRow < 1 || logicalRow > 1_000_000) {
     throw new Error('The spreadsheet row is outside the supported range');
@@ -502,6 +555,9 @@ export function hiddenRowRank(logicalRow: number) {
   return (BigInt(logicalRow) * 1_000_000n).toString().padStart(24, '0');
 }
 
+/**
+ * Return the logical row for rank result.
+ */
 export function logicalRowForRank(rank: string) {
   if (!/^[0-9]{24}$/.test(rank)) return undefined;
   const value = BigInt(rank);
@@ -510,6 +566,9 @@ export function logicalRowForRank(rank: string) {
   return Number.isSafeInteger(row) && row >= 1 ? row : undefined;
 }
 
+/**
+ * Return the points for selection result.
+ */
 export function pointsForSelection(
   selection: LogicalGridSelection | null,
   rows: GridRow[],
@@ -544,6 +603,9 @@ export function pointsForSelection(
   return points;
 }
 
+/**
+ * Return the draft change result.
+ */
 function draftChange(
   point: GridPoint,
   before: GridCellValue,
@@ -611,11 +673,16 @@ function draftChange(
   return { point, before, after: attempted, raw };
 }
 
-/** Treats null-like editor output as an empty spreadsheet value. */
+/**
+ * Treats null-like editor output as an empty spreadsheet value.
+ */
 function blankValue(value: string) {
   return value.trim() === '';
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(
   point: GridPoint,
   before: GridCellValue,
@@ -632,6 +699,9 @@ function invalid(
   };
 }
 
+/**
+ * Return the typed value result.
+ */
 function typedValue(column: GridColumn, value: GridCellValue): TypedCellValue {
   if (value === null || value === '') return { type: 'null' };
   const codec = column.storageCodec
@@ -657,17 +727,26 @@ function typedValue(column: GridColumn, value: GridCellValue): TypedCellValue {
   return { type: 'text', value: String(value) };
 }
 
+/**
+ * Return the grid value from typed result.
+ */
 function gridValueFromTyped(value: TypedCellValue): GridCellValue {
   if (value.type === 'null') return null;
   return value.value;
 }
 
+/**
+ * Report the required version condition.
+ */
 function requiredVersion(versions: Record<string, string>, rowId: string) {
   const version = versions[rowId];
   if (!version) throw new Error('Reload this row before saving changes.');
   return version;
 }
 
+/**
+ * Return the column result.
+ */
 function column(columns: GridColumn[], columnId: string) {
   const found = columns.find((candidate) => candidate.id === columnId);
   if (!found) throw new Error('The edited column is unavailable');

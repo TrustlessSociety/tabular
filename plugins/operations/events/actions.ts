@@ -1,23 +1,32 @@
+//client
 import {
   browserCsrfToken,
   rememberBrowserCsrfToken
 } from '../../identity/events/browser-csrf.js';
 
+//The operation browser action contract exported for module callers
 export type OperationBrowserAction =
-  | { type: 'operation.retry'; jobId: string }
-  | { type: 'operation.cancel'; jobId: string }
-  | { type: 'operation.acknowledge'; jobId: string }
-  | { type: 'operation.mark-read'; jobId: string }
-  | { type: 'operations.retention.apply'; retentionDays: number; limit: number };
+  | { type: 'operation.retry', jobId: string, }
+  | { type: 'operation.cancel', jobId: string, }
+  | { type: 'operation.acknowledge', jobId: string, }
+  | { type: 'operation.mark-read', jobId: string, }
+  | { type: 'operations.retention.apply', retentionDays: number, limit: number, };
 
+//The operations browser result contract exported for module callers
 export type OperationsBrowserResult<T> =
-  | { status: 'ok'; data: T }
-  | { status: 'error'; error: { code: string; message: string } };
+  | { status: 'ok', data: T, }
+  | { status: 'error', error: { code: string, message: string, }, };
 
+/**
+ * Load the activity snapshot.
+ */
 export async function loadActivitySnapshot<T>(): Promise<OperationsBrowserResult<T>> {
   return readOperations<T>(new URLSearchParams());
 }
 
+/**
+ * Load the activity operation.
+ */
 export async function loadActivityOperation<T>(jobId: string): Promise<OperationsBrowserResult<T>> {
   return readOperations<T>(new URLSearchParams({ jobId }));
 }
@@ -48,6 +57,9 @@ export async function dispatchOperationAction<T>(
   }
 }
 
+/**
+ * Read the operations.
+ */
 async function readOperations<T>(search: URLSearchParams): Promise<OperationsBrowserResult<T>> {
   try {
     const query = search.size ? `?${search}` : '';
@@ -62,8 +74,11 @@ async function readOperations<T>(search: URLSearchParams): Promise<OperationsBro
   }
 }
 
+/**
+ * Return the operation result result.
+ */
 async function operationResult<T>(response: Response, fallback: string): Promise<OperationsBrowserResult<T>> {
-  let result: OperationsBrowserResult<T> | { error?: { code?: string; message?: string } };
+  let result: OperationsBrowserResult<T> | { error?: { code?: string, message?: string, }, };
   try {
     result = await response.json() as typeof result;
   } catch {
@@ -81,6 +96,9 @@ async function operationResult<T>(response: Response, fallback: string): Promise
   return result as OperationsBrowserResult<T>;
 }
 
+/**
+ * Return the network failure result.
+ */
 function networkFailure(message: string): OperationsBrowserResult<never> {
   return { status: 'error', error: { code: 'network_failure', message } };
 }

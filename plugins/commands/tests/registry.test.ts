@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type {
   CommandContext,
   CommandMenuEntry,
@@ -33,11 +36,13 @@ const BASE_CONTEXT = {
 } satisfies CommandContext;
 
 type EntryDescription = string | {
-  submenu: string;
-  entries: EntryDescription[];
+  submenu: string,
+  entries: EntryDescription[],
 };
 
-/** Converts the public registry into a compact exact-contract description. */
+/**
+ * Converts the public registry into a compact exact-contract description.
+ */
 function describeEntries(entries: readonly CommandMenuEntry[]): EntryDescription[] {
   return entries.map((entry) => {
     if (entry.type === 'separator') return '---';
@@ -275,10 +280,10 @@ test('command state applies deferred, permission, target, draft, and read-only b
   });
 
   const scenarios: Array<{
-    label: string;
-    id: Parameters<typeof commandState>[0];
-    context: Partial<CommandContext>;
-    expected: CommandState;
+    label: string,
+    id: Parameters<typeof commandState>[0],
+    context: Partial<CommandContext>,
+    expected: CommandState,
   }> = [
     {
       label: 'empty undo history',
@@ -405,7 +410,9 @@ test('command state applies deferred, permission, target, draft, and read-only b
 test('displayed command shortcuts route exactly and reject alternate-modifier collisions', () => {
   //Each displayed chord accepts either platform command modifier. Grid-owned
   //events are ignored by Workbench after their target handler prevents default.
-  /** Builds the minimal keyboard event shape consumed by the registry. */
+  /**
+   * Builds the minimal keyboard event shape consumed by the registry.
+   */
   const event = (overrides: Partial<Parameters<typeof shortcutCommand>[0]>) => ({
     key: '',
     metaKey: false,

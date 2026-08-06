@@ -1,10 +1,15 @@
+//client
 import type { CommandContext, CommandId, CommandMenu, CommandState } from './contracts.js';
 
+/**
+ * Return the command result.
+ */
 const command = (id: CommandId, label: string, shortcut?: string, secondary?: string) => ({
   type: 'command' as const, id, label, ...(shortcut ? { shortcut } : {}), ...(secondary ? { secondary } : {})
 });
 const separator = { type: 'separator' as const };
 
+//The command menus value exported for module callers
 export const COMMAND_MENUS: readonly CommandMenu[] = [{
   label: 'File',
   entries: [
@@ -98,6 +103,9 @@ const DEFERRED = new Set<CommandId>([
   'format.merge', 'row.resize',
   'column.move-left', 'column.move-right', 'column.resize'
 ]);
+/**
+ * Return the formatting result.
+ */
 const FORMATTING = (id: CommandId) => id.startsWith('format.');
 const CONFIGURES_SCHEMA = new Set<CommandId>([
   'column.insert-left', 'column.insert-right', 'column.rename', 'column.configure',
@@ -118,6 +126,9 @@ const NEEDS_SELECTION = new Set<CommandId>([
   , 'row.move-up', 'row.move-down'
 ]);
 
+/**
+ * Return the command state result.
+ */
 export function commandState(id: CommandId, context: CommandContext): CommandState {
   if (DEFERRED.has(id)) return { enabled: false, reason: 'Visible for orientation; this behavior is deferred.' };
   if (id === 'history.undo') return context.canUndo && !context.hasDraft
@@ -210,6 +221,9 @@ export function commandState(id: CommandId, context: CommandContext): CommandSta
   return { enabled: true };
 }
 
+/**
+ * Return the shortcut command result.
+ */
 export function shortcutCommand(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey'>) {
   if (!(event.metaKey || event.ctrlKey) || event.altKey) return undefined;
   const key = event.key.toLowerCase();

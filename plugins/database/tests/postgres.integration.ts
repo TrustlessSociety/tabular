@@ -1,17 +1,26 @@
-import assert from 'node:assert/strict';
+//node
 import { createHash } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { Migration } from '../migrations/index.js';
 import { startWeb } from '../../../bootstrap/application.js';
 import { findPostgreSqlObject } from '../helpers/repositories.js';
 import { runMigrations } from '../helpers/migrator.js';
 import { ManagedPostgresPool } from '../helpers/pool.js';
 import { withPostgreSqlTransaction } from '../helpers/transactions.js';
-import { loadMigrations, type Migration } from '../migrations/index.js';
+import { loadMigrations } from '../migrations/index.js';
 
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -28,10 +37,16 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the error from result.
+ */
 function errorFrom(error: unknown, label: string) {
   return error instanceof Error ? error : new Error(label);
 }
 
+/**
+ * Return the migration result.
+ */
 function migration(version: string, name: string, sql: string): Migration {
   return {
     version,
@@ -41,6 +56,9 @@ function migration(version: string, name: string, sql: string): Migration {
   };
 }
 
+/**
+ * Return the transaction result.
+ */
 function transaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -52,6 +70,9 @@ function transaction(pool: ManagedPostgresPool) {
     }, callback);
 }
 
+/**
+ * Return the barrier result.
+ */
 function barrier(parties: number) {
   let arrivals = 0;
   let release!: () => void;
@@ -261,7 +282,7 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
     const memberRows = await withPostgreSqlTransaction(primary, {
       role: 'tabular_task_member',
       allowedRoles: roles
-    }, (database) => database.execute<{ owner_role: string }>(`
+    }, (database) => database.execute<{ owner_role: string, }>(`
       SELECT owner_role FROM tabular.role_records ORDER BY id
     `));
     assert.deepEqual(memberRows.rows.map((row) => row.owner_role), ['tabular_task_member']);
@@ -287,10 +308,10 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
     );
     const cleanState = await withPostgreSqlTransaction(primary, {}, (database) =>
       database.execute<{
-        current_user: string;
-        session_user: string;
-        statement_timeout: string;
-        application_name: string;
+        current_user: string,
+        session_user: string,
+        statement_timeout: string,
+        application_name: string,
       }>(`
         SELECT current_user, session_user,
                current_setting('statement_timeout') AS statement_timeout,
@@ -302,7 +323,7 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
     assert.equal(cleanState.rows[0].application_name, 'tabular-task00002-primary');
 
     const backendBefore = await withPostgreSqlTransaction(primary, {}, async (database) =>
-      (await database.execute<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0].pid
+      (await database.execute<{ pid: number, }>('SELECT pg_backend_pid() AS pid')).rows[0].pid
     );
     await assert.rejects(
       withPostgreSqlTransaction(primary, {}, async (database) => {
@@ -310,16 +331,19 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
       })
     );
     const backendAfter = await withPostgreSqlTransaction(primary, {}, async (database) =>
-      (await database.execute<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0].pid
+      (await database.execute<{ pid: number, }>('SELECT pg_backend_pid() AS pid')).rows[0].pid
     );
     assert.notEqual(backendBefore, backendAfter);
 
     const synchronize = barrier(2);
+    /**
+     * Return the rename result.
+     */
     const rename = async (title: string) => withPostgreSqlTransaction(
       concurrent,
       {},
       async (database) => {
-        const current = await database.execute<{ id: string; version: number }>(`
+        const current = await database.execute<{ id: string, version: number, }>(`
           SELECT id, version FROM tabular.role_records
           WHERE owner_role = 'tabular_task_member'
         `);
@@ -389,8 +413,8 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
       const readiness = await fetch(`${web.origin}/readyz`);
       assert.equal(readiness.status, 200);
       const body = await readiness.json() as {
-        status: string;
-        resources: { checks: { name: string; ready: boolean }[] };
+        status: string,
+        resources: { checks: { name: string, ready: boolean, }[], },
       };
       assert.equal(body.status, 'ready');
       assert.ok(body.resources.checks.some((check) =>
@@ -405,6 +429,9 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
   } catch (error) {
     primaryFailure = error;
   } finally {
+    /**
+     * Return the cleanup result.
+     */
     const cleanup = async (label: string, action: () => Promise<unknown> | undefined) => {
       try {
         await action();

@@ -1,106 +1,123 @@
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 
+//The stored import operation contract exported for module callers
 export type StoredImportOperation = {
-  id: string;
-  command_id: string;
-  request_digest: string;
-  actor_identity_id: string;
-  session_id: string;
-  history_scope_id: string;
-  connection_id: string;
-  database_oid: string | number;
-  requesting_role_oid: string | number;
-  requesting_role_name: string;
-  identity_generation: string | number;
-  mapping_generation: string | number;
-  allowed_role_id: string;
-  role_generation: string | number;
-  schema_id: string;
-  namespace_oid: string | number;
-  schema_name: string;
-  owner_role_oid: string | number;
-  owner_role_name: string;
-  source_kind: 'csv' | 'xlsx' | 'google-sheets';
-  source_name: string;
-  source_media_type: string;
-  source_size: string | number;
-  source_sha256: string | null;
-  source_options: Record<string, unknown>;
-  source_fingerprint: string | null;
-  total_chunks: string | number;
-  received_chunks: string | number;
-  selected_sheet: string | null;
-  headers: unknown[];
-  mapping: unknown[];
-  mapping_fingerprint: string | null;
-  preview: unknown[];
-  warnings: unknown[];
-  row_count: string | number;
-  column_count: string | number;
-  issue_count: string | number;
-  file_display_name: string | null;
-  table_name: string | null;
-  confirmation_hash: string | null;
+  id: string,
+  command_id: string,
+  request_digest: string,
+  actor_identity_id: string,
+  session_id: string,
+  history_scope_id: string,
+  connection_id: string,
+  database_oid: string | number,
+  requesting_role_oid: string | number,
+  requesting_role_name: string,
+  identity_generation: string | number,
+  mapping_generation: string | number,
+  allowed_role_id: string,
+  role_generation: string | number,
+  schema_id: string,
+  namespace_oid: string | number,
+  schema_name: string,
+  owner_role_oid: string | number,
+  owner_role_name: string,
+  source_kind: 'csv' | 'xlsx' | 'google-sheets',
+  source_name: string,
+  source_media_type: string,
+  source_size: string | number,
+  source_sha256: string | null,
+  source_options: Record<string, unknown>,
+  source_fingerprint: string | null,
+  total_chunks: string | number,
+  received_chunks: string | number,
+  selected_sheet: string | null,
+  headers: unknown[],
+  mapping: unknown[],
+  mapping_fingerprint: string | null,
+  preview: unknown[],
+  warnings: unknown[],
+  row_count: string | number,
+  column_count: string | number,
+  issue_count: string | number,
+  file_display_name: string | null,
+  table_name: string | null,
+  confirmation_hash: string | null,
   state: 'initiated' | 'uploading' | 'preview' | 'ready' | 'confirmed'
-    | 'committing' | 'committed' | 'cancelled' | 'failed';
-  result_summary: Record<string, unknown> | null;
-  error_summary: Record<string, unknown> | null;
-  version: string | number;
-  created_at: Date | string;
-  updated_at: Date | string;
-  expires_at: Date | string;
-  confirmed_at: Date | string | null;
-  committed_at: Date | string | null;
-  cancelled_at: Date | string | null;
+    | 'committing' | 'committed' | 'cancelled' | 'failed',
+  result_summary: Record<string, unknown> | null,
+  error_summary: Record<string, unknown> | null,
+  version: string | number,
+  created_at: Date | string,
+  updated_at: Date | string,
+  expires_at: Date | string,
+  confirmed_at: Date | string | null,
+  committed_at: Date | string | null,
+  cancelled_at: Date | string | null,
 };
 
+//The stored import row contract exported for module callers
 export type StoredImportRow = {
-  row_number: string | number;
-  source_values: Array<string | null>;
-  provenance: Record<string, unknown>;
+  row_number: string | number,
+  source_values: Array<string | null>,
+  provenance: Record<string, unknown>,
 };
 
+//The stored Google OAuth state contract exported for module callers
 export type StoredGoogleOAuthState = {
-  state_hash: string;
-  actor_identity_id: string;
-  session_id: string;
-  history_scope_id: string;
-  connection_id: string;
-  return_path: string;
-  verifier_ciphertext: string;
-  verifier_iv: string;
-  verifier_tag: string;
-  expires_at: Date | string;
+  state_hash: string,
+  actor_identity_id: string,
+  session_id: string,
+  history_scope_id: string,
+  connection_id: string,
+  return_path: string,
+  verifier_ciphertext: string,
+  verifier_iv: string,
+  verifier_tag: string,
+  expires_at: Date | string,
 };
 
+//The stored google connection contract exported for module callers
 export type StoredGoogleConnection = {
-  id: string;
-  actor_identity_id: string;
-  session_id: string;
-  history_scope_id: string;
-  connection_id: string;
-  access_ciphertext: string;
-  access_iv: string;
-  access_tag: string;
-  refresh_ciphertext: string | null;
-  refresh_iv: string | null;
-  refresh_tag: string | null;
-  scope: string;
-  token_expires_at: Date | string;
-  revoked_at: Date | string | null;
+  id: string,
+  actor_identity_id: string,
+  session_id: string,
+  history_scope_id: string,
+  connection_id: string,
+  access_ciphertext: string,
+  access_iv: string,
+  access_tag: string,
+  refresh_ciphertext: string | null,
+  refresh_iv: string | null,
+  refresh_tag: string | null,
+  scope: string,
+  token_expires_at: Date | string,
+  revoked_at: Date | string | null,
 };
 
+/**
+ * Provide import export persistence operations.
+ */
 export class ImportExportRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a ImportExportRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async lockCommand(principal: BrowserPrincipal, commandId: string) {
+  /**
+   * Handle the lock command operation.
+   */
+  public async lockCommand(principal: BrowserPrincipal, commandId: string) {
     await this.database.execute(`
       SELECT pg_advisory_xact_lock(hashtextextended('tabular-import:' || ? || ':' || ? || ':' || ?, 0))
     `, [principal.identityId, principal.connectionId, commandId]);
   }
 
-  async byCommand(principal: BrowserPrincipal, commandId: string) {
+  /**
+   * Handle the by command operation.
+   */
+  public async byCommand(principal: BrowserPrincipal, commandId: string) {
     const result = await this.database.execute<StoredImportOperation>(`
       SELECT * FROM tabular.import_operations
        WHERE actor_identity_id = ? AND connection_id = ? AND command_id = ?
@@ -109,14 +126,20 @@ export class ImportExportRepository {
     return result.rows[0];
   }
 
-  async byId(importId: string) {
+  /**
+   * Handle the by id operation.
+   */
+  public async byId(importId: string) {
     const result = await this.database.execute<StoredImportOperation>(`
       SELECT * FROM tabular.import_operations WHERE id = ?
     `, [importId]);
     return result.rows[0];
   }
 
-  async lockOwned(principal: BrowserPrincipal, importId: string) {
+  /**
+   * Handle the lock owned operation.
+   */
+  public async lockOwned(principal: BrowserPrincipal, importId: string) {
     const result = await this.database.execute<StoredImportOperation>(`
       SELECT * FROM tabular.import_operations
        WHERE id = ? AND actor_identity_id = ? AND session_id = ?
@@ -132,19 +155,25 @@ export class ImportExportRepository {
     return result.rows[0];
   }
 
-  async lockForWorker(importId: string) {
+  /**
+   * Handle the lock for worker operation.
+   */
+  public async lockForWorker(importId: string) {
     const result = await this.database.execute<StoredImportOperation>(`
       SELECT * FROM tabular.import_operations WHERE id = ? FOR UPDATE
     `, [importId]);
     return result.rows[0];
   }
 
-  async insertGoogleOAuthState(input: {
-    stateHash: string;
-    principal: BrowserPrincipal;
-    returnPath: string;
-    verifier: { ciphertext: string; iv: string; tag: string };
-    expiresAt: Date;
+  /**
+   * Insert the google OAuth state.
+   */
+  public async insertGoogleOAuthState(input: {
+    stateHash: string,
+    principal: BrowserPrincipal,
+    returnPath: string,
+    verifier: { ciphertext: string, iv: string, tag: string, },
+    expiresAt: Date,
   }) {
     await this.database.execute(`
       INSERT INTO tabular.google_oauth_states (
@@ -168,7 +197,10 @@ export class ImportExportRepository {
     ]);
   }
 
-  async consumeGoogleOAuthState(principal: BrowserPrincipal, stateHash: string) {
+  /**
+   * Handle the consume google OAuth state operation.
+   */
+  public async consumeGoogleOAuthState(principal: BrowserPrincipal, stateHash: string) {
     const result = await this.database.execute<StoredGoogleOAuthState>(`
       SELECT state_hash, actor_identity_id, session_id, history_scope_id, connection_id,
              return_path, encode(verifier_ciphertext, 'base64') AS verifier_ciphertext,
@@ -197,13 +229,16 @@ export class ImportExportRepository {
     return consumed.affectedRows === 1 ? state : undefined;
   }
 
-  async saveGoogleConnection(input: {
-    id: string;
-    principal: BrowserPrincipal;
-    access: { ciphertext: string; iv: string; tag: string };
-    refresh?: { ciphertext: string; iv: string; tag: string };
-    scope: string;
-    expiresAt: Date;
+  /**
+   * Save the google connection.
+   */
+  public async saveGoogleConnection(input: {
+    id: string,
+    principal: BrowserPrincipal,
+    access: { ciphertext: string, iv: string, tag: string, },
+    refresh?: { ciphertext: string, iv: string, tag: string, },
+    scope: string,
+    expiresAt: Date,
   }) {
     await this.database.execute(`
       INSERT INTO tabular.google_connections (
@@ -250,7 +285,10 @@ export class ImportExportRepository {
     ]);
   }
 
-  async googleConnection(principal: BrowserPrincipal) {
+  /**
+   * Handle the google connection operation.
+   */
+  public async googleConnection(principal: BrowserPrincipal) {
     const result = await this.database.execute<StoredGoogleConnection>(`
       SELECT id, actor_identity_id, session_id, history_scope_id, connection_id,
              encode(access_ciphertext, 'base64') AS access_ciphertext,
@@ -274,13 +312,16 @@ export class ImportExportRepository {
     return result.rows[0];
   }
 
-  async updateGoogleConnection(input: {
-    principal: BrowserPrincipal;
-    id: string;
-    access: { ciphertext: string; iv: string; tag: string };
-    refresh?: { ciphertext: string; iv: string; tag: string };
-    scope: string;
-    expiresAt: Date;
+  /**
+   * Update the google connection.
+   */
+  public async updateGoogleConnection(input: {
+    principal: BrowserPrincipal,
+    id: string,
+    access: { ciphertext: string, iv: string, tag: string, },
+    refresh?: { ciphertext: string, iv: string, tag: string, },
+    scope: string,
+    expiresAt: Date,
   }) {
     const result = await this.database.execute(`
       UPDATE tabular.google_connections
@@ -322,7 +363,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async revokeGoogleConnection(principal: BrowserPrincipal, reason: string) {
+  /**
+   * Revoke the google connection.
+   */
+  public async revokeGoogleConnection(principal: BrowserPrincipal, reason: string) {
     const result = await this.database.execute(`
       UPDATE tabular.google_connections
          SET access_ciphertext = NULL, access_iv = NULL, access_tag = NULL,
@@ -340,32 +384,35 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async insert(input: {
-    id: string;
-    commandId: string;
-    requestDigest: string;
-    principal: BrowserPrincipal;
-    databaseOid: string;
-    requestingRoleOid: string;
-    requestingRoleName: string;
-    identityGeneration: number;
-    mappingGeneration: number;
-    allowedRoleId: string;
-    roleGeneration: number;
-    schemaId: string;
-    namespaceOid: string;
-    schemaName: string;
-    ownerRoleOid: string;
-    ownerRoleName: string;
-    fileDisplayName: string;
-    tableName: string;
-    sourceKind: StoredImportOperation['source_kind'];
-    sourceName: string;
-    sourceMediaType: string;
-    sourceSize: number;
-    sourceOptions: Record<string, unknown>;
-    totalChunks: number;
-    expiresAt: Date;
+  /**
+   * Insert and return one staged import operation row.
+   */
+  public async insert(input: {
+    id: string,
+    commandId: string,
+    requestDigest: string,
+    principal: BrowserPrincipal,
+    databaseOid: string,
+    requestingRoleOid: string,
+    requestingRoleName: string,
+    identityGeneration: number,
+    mappingGeneration: number,
+    allowedRoleId: string,
+    roleGeneration: number,
+    schemaId: string,
+    namespaceOid: string,
+    schemaName: string,
+    ownerRoleOid: string,
+    ownerRoleName: string,
+    fileDisplayName: string,
+    tableName: string,
+    sourceKind: StoredImportOperation['source_kind'],
+    sourceName: string,
+    sourceMediaType: string,
+    sourceSize: number,
+    sourceOptions: Record<string, unknown>,
+    totalChunks: number,
+    expiresAt: Date,
   }) {
     await this.database.execute(`
       INSERT INTO tabular.import_operations (
@@ -412,10 +459,13 @@ export class ImportExportRepository {
     ]);
   }
 
-  async chunk(importId: string, chunkIndex: number) {
+  /**
+   * Handle the chunk operation.
+   */
+  public async chunk(importId: string, chunkIndex: number) {
     const result = await this.database.execute<{
-      chunk_sha256: string;
-      byte_count: string | number;
+      chunk_sha256: string,
+      byte_count: string | number,
     }>(`
       SELECT chunk_sha256, byte_count FROM tabular.import_source_chunks
        WHERE import_id = ? AND chunk_index = ?
@@ -423,12 +473,15 @@ export class ImportExportRepository {
     return result.rows[0];
   }
 
-  async insertChunk(input: {
-    importId: string;
-    chunkIndex: number;
-    bytesBase64: string;
-    byteCount: number;
-    sha256: string;
+  /**
+   * Insert the chunk.
+   */
+  public async insertChunk(input: {
+    importId: string,
+    chunkIndex: number,
+    bytesBase64: string,
+    byteCount: number,
+    sha256: string,
   }) {
     const inserted = await this.database.execute(`
       INSERT INTO tabular.import_source_chunks (
@@ -445,7 +498,10 @@ export class ImportExportRepository {
     return inserted.affectedRows;
   }
 
-  async advanceChunk(importId: string, nextCount: number) {
+  /**
+   * Handle the advance chunk operation.
+   */
+  public async advanceChunk(importId: string, nextCount: number) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET received_chunks = ?, state = CASE WHEN ? = total_chunks THEN 'uploading' ELSE 'uploading' END,
@@ -455,12 +511,15 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async chunks(importId: string) {
+  /**
+   * Handle the chunks operation.
+   */
+  public async chunks(importId: string) {
     return (await this.database.execute<{
-      chunk_index: string | number;
-      bytes_base64: string;
-      byte_count: string | number;
-      chunk_sha256: string;
+      chunk_index: string | number,
+      bytes_base64: string,
+      byte_count: string | number,
+      chunk_sha256: string,
     }>(`
       SELECT chunk_index, encode(source_bytes, 'base64') AS bytes_base64,
              byte_count, chunk_sha256
@@ -469,32 +528,41 @@ export class ImportExportRepository {
     `, [importId])).rows;
   }
 
-  async rows(importId: string) {
+  /**
+   * Handle the rows operation.
+   */
+  public async rows(importId: string) {
     return (await this.database.execute<StoredImportRow>(`
       SELECT row_number, source_values, provenance
         FROM tabular.import_rows WHERE import_id = ? ORDER BY row_number
     `, [importId])).rows;
   }
 
-  async issues(importId: string) {
+  /**
+   * Handle the issues operation.
+   */
+  public async issues(importId: string) {
     return (await this.database.execute<{
-      row_number: string | number | null;
-      column_number: string | number | null;
-      code: string;
-      message: string;
-      source_token: string | null;
+      row_number: string | number | null,
+      column_number: string | number | null,
+      code: string,
+      message: string,
+      source_token: string | null,
     }>(`
       SELECT row_number, column_number, code, message, source_token
         FROM tabular.import_row_issues WHERE import_id = ? ORDER BY issue_number
     `, [importId])).rows;
   }
 
-  async replaceIssues(importId: string, issues: Array<{
-    rowNumber?: number;
-    columnNumber?: number;
-    code: string;
-    message: string;
-    sourceToken?: string;
+  /**
+   * Replace the issues.
+   */
+  public async replaceIssues(importId: string, issues: Array<{
+    rowNumber?: number,
+    columnNumber?: number,
+    code: string,
+    message: string,
+    sourceToken?: string,
   }>) {
     await this.database.execute('DELETE FROM tabular.import_row_issues WHERE import_id = ?', [importId]);
     for (let offset = 0; offset < issues.length; offset += 250) {
@@ -516,16 +584,19 @@ export class ImportExportRepository {
     }
   }
 
-  async replaceParsed(input: {
-    importId: string;
-    rows: StoredImportRow[];
+  /**
+   * Replace the parsed.
+   */
+  public async replaceParsed(input: {
+    importId: string,
+    rows: StoredImportRow[],
     issues: Array<{
-      rowNumber?: number;
-      columnNumber?: number;
-      code: string;
-      message: string;
-      sourceToken?: string;
-    }>;
+      rowNumber?: number,
+      columnNumber?: number,
+      code: string,
+      message: string,
+      sourceToken?: string,
+    }>,
   }) {
     await this.database.execute('DELETE FROM tabular.import_row_issues WHERE import_id = ?', [input.importId]);
     await this.database.execute('DELETE FROM tabular.import_rows WHERE import_id = ?', [input.importId]);
@@ -563,22 +634,25 @@ export class ImportExportRepository {
     }
   }
 
-  async savePreview(input: {
-    importId: string;
-    sourceSha256: string;
-    sourceFingerprint: string;
-    selectedSheet?: string;
-    sourceOptions: Record<string, unknown>;
-    headers: unknown[];
-    mapping: unknown[];
-    mappingFingerprint: string;
-    preview: unknown[];
-    warnings: unknown[];
-    rowCount: number;
-    columnCount: number;
-    issueCount: number;
-    fileDisplayName: string;
-    tableName: string;
+  /**
+   * Save the preview.
+   */
+  public async savePreview(input: {
+    importId: string,
+    sourceSha256: string,
+    sourceFingerprint: string,
+    selectedSheet?: string,
+    sourceOptions: Record<string, unknown>,
+    headers: unknown[],
+    mapping: unknown[],
+    mappingFingerprint: string,
+    preview: unknown[],
+    warnings: unknown[],
+    rowCount: number,
+    columnCount: number,
+    issueCount: number,
+    fileDisplayName: string,
+    tableName: string,
   }) {
     const updated = await this.database.execute(`
       UPDATE tabular.import_operations
@@ -610,13 +684,16 @@ export class ImportExportRepository {
     return updated.affectedRows;
   }
 
-  async saveMapping(input: {
-    importId: string;
-    mapping: unknown[];
-    mappingFingerprint: string;
-    issues: number;
-    fileDisplayName: string;
-    tableName: string;
+  /**
+   * Save the mapping.
+   */
+  public async saveMapping(input: {
+    importId: string,
+    mapping: unknown[],
+    mappingFingerprint: string,
+    issues: number,
+    fileDisplayName: string,
+    tableName: string,
   }) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
@@ -637,7 +714,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async setConfirmation(importId: string, hash: string, expiresAt: Date) {
+  /**
+   * Set the confirmation.
+   */
+  public async setConfirmation(importId: string, hash: string, expiresAt: Date) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET confirmation_hash = ?, expires_at = ?, version = version + 1,
@@ -647,7 +727,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async confirm(importId: string) {
+  /**
+   * Handle the confirm operation.
+   */
+  public async confirm(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'confirmed', confirmed_at = clock_timestamp(),
@@ -657,7 +740,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async cancel(importId: string) {
+  /**
+   * Cancel the current value.
+   */
+  public async cancel(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'cancelled', cancelled_at = clock_timestamp(),
@@ -667,17 +753,23 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async purgeStagedImport(importId: string) {
+  /**
+   * Handle the purge staged import operation.
+   */
+  public async purgeStagedImport(importId: string) {
     await this.database.execute('DELETE FROM tabular.import_row_issues WHERE import_id = ?', [importId]);
     await this.database.execute('DELETE FROM tabular.import_rows WHERE import_id = ?', [importId]);
     await this.database.execute('DELETE FROM tabular.import_source_chunks WHERE import_id = ?', [importId]);
   }
 
-  async cleanupExpiredStaging(limit = 100) {
+  /**
+   * Handle the cleanup expired staging operation.
+   */
+  public async cleanupExpiredStaging(limit = 100) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
       throw new Error('Import staging cleanup limit is invalid');
     }
-    const result = await this.database.execute<{ id: string }>(`
+    const result = await this.database.execute<{ id: string, }>(`
       WITH candidates AS MATERIALIZED (
         SELECT operation.id
           FROM tabular.import_operations operation
@@ -739,7 +831,10 @@ export class ImportExportRepository {
     };
   }
 
-  async markCommitting(importId: string) {
+  /**
+   * Mark committing.
+   */
+  public async markCommitting(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'committing', version = version + 1, updated_at = clock_timestamp()
@@ -748,7 +843,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async markFailed(importId: string, error: Record<string, unknown>) {
+  /**
+   * Mark failed.
+   */
+  public async markFailed(importId: string, error: Record<string, unknown>) {
     await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'failed', error_summary = ?::jsonb,
@@ -757,7 +855,10 @@ export class ImportExportRepository {
     `, [JSON.stringify(error), importId]);
   }
 
-  async restoreForOperationRetry(importId: string) {
+  /**
+   * Restore the for operation retry.
+   */
+  public async restoreForOperationRetry(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'confirmed', error_summary = NULL,
@@ -767,7 +868,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async cancelConfirmedOperation(importId: string) {
+  /**
+   * Cancel the confirmed operation.
+   */
+  public async cancelConfirmedOperation(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = 'cancelled', confirmation_hash = NULL,
@@ -779,7 +883,10 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async resetFailed(importId: string) {
+  /**
+   * Reset the failed.
+   */
+  public async resetFailed(importId: string) {
     const result = await this.database.execute(`
       UPDATE tabular.import_operations
          SET state = CASE WHEN issue_count = 0 THEN 'ready' ELSE 'preview' END,
@@ -790,11 +897,14 @@ export class ImportExportRepository {
     return result.affectedRows;
   }
 
-  async markCommitted(input: {
-    operation: StoredImportOperation;
-    targetFileId: string;
-    targetRelationOid: string;
-    result: Record<string, unknown>;
+  /**
+   * Mark committed.
+   */
+  public async markCommitted(input: {
+    operation: StoredImportOperation,
+    targetFileId: string,
+    targetRelationOid: string,
+    result: Record<string, unknown>,
   }) {
     await this.database.execute(`
       INSERT INTO tabular.import_commits (
@@ -829,11 +939,14 @@ export class ImportExportRepository {
   }
 }
 
+/**
+ * Report the safe operation condition.
+ */
 export function safeOperation(row: StoredImportOperation, issues: Array<{
-  rowNumber?: number;
-  columnNumber?: number;
-  code: string;
-  message: string;
+  rowNumber?: number,
+  columnNumber?: number,
+  code: string,
+  message: string,
 }> = []) {
   return {
     id: row.id,

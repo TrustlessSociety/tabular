@@ -1,10 +1,15 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type { PoolClient } from 'pg';
+
+//client
+import type { PostgreSqlPoolOwner } from '../helpers/transactions.js';
 import {
   PostgreSqlTransactionCancelledError,
-  withPostgreSqlTransaction,
-  type PostgreSqlPoolOwner
+  withPostgreSqlTransaction
 } from '../helpers/transactions.js';
 
 test('preflight or BEGIN failure destroys an unverified PostgreSQL client', async () => {
@@ -45,7 +50,7 @@ test('preflight or BEGIN failure destroys an unverified PostgreSQL client', asyn
 test('mapped-role work finalizes under verified base authority in the same transaction', async () => {
   const events: string[] = [];
   const client = {
-    query: async (request: string | { text?: string }) => {
+    query: async (request: string | { text?: string, }) => {
       const query = typeof request === 'string' ? request : request.text || '';
       events.push(query.trim().replace(/\s+/g, ' '));
       if (query.includes('SELECT current_user')) {
@@ -89,7 +94,7 @@ test('mapped-role work finalizes under verified base authority in the same trans
 test('base finalizer failure rolls back mapped-role target work', async () => {
   const events: string[] = [];
   const client = {
-    query: async (request: string | { text?: string }) => {
+    query: async (request: string | { text?: string, }) => {
       const query = typeof request === 'string' ? request : request.text || '';
       events.push(query.trim().replace(/\s+/g, ' '));
       if (query.includes('SELECT current_user')) {
@@ -135,7 +140,7 @@ test('abort cancels backend work and rolls back before releasing a verified clie
   const targetEntered = new Promise<void>((resolve) => { enterTarget = resolve; });
   const client = {
     processID: 123,
-    query: async (request: string | { text?: string }) => {
+    query: async (request: string | { text?: string, }) => {
       const query = typeof request === 'string' ? request : request.text || '';
       events.push(query.trim().replace(/\s+/g, ' '));
       if (query.includes('SELECT current_user')) {

@@ -1,6 +1,11 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
 import { startWeb } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { ManagedPostgresPool } from '../../database/helpers/pool.js';
@@ -12,6 +17,9 @@ import { TestIdentityProvider } from './provider-double.js';
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -28,6 +36,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the transaction result.
+ */
 function transaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -39,6 +50,9 @@ function transaction(pool: ManagedPostgresPool) {
     }, callback);
 }
 
+/**
+ * Return the postgres code result.
+ */
 function postgresCode(code: string) {
   return (error: unknown) => Boolean(
     error && typeof error === 'object' && 'code' in error && error.code === code
@@ -313,8 +327,8 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
     assert.equal(sessionResponse.status, 200);
     assert.match(sessionResponse.headers.get('cache-control') || '', /no-store/);
     const resumedBody = await sessionResponse.json() as {
-      authenticated: boolean;
-      csrfToken: string;
+      authenticated: boolean,
+      csrfToken: string,
     };
     assert.equal(resumedBody.authenticated, true);
     assert.match(resumedBody.csrfToken, /^[A-Za-z0-9_-]{43}$/);
@@ -322,7 +336,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
       headers: { cookie: `tabular_session=${httpSession.cookieToken}` }
     });
     assert.equal(secondTabResponse.status, 200);
-    const secondTabBody = await secondTabResponse.json() as { csrfToken: string };
+    const secondTabBody = await secondTabResponse.json() as { csrfToken: string, };
     assert.notEqual(secondTabBody.csrfToken, resumedBody.csrfToken);
     for (const csrfToken of [resumedBody.csrfToken, secondTabBody.csrfToken]) {
       assert.equal((await application.identity.requireBrowserMutation({
@@ -349,7 +363,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
     assert.match(setCookie, /SameSite=Strict/i);
     assert.match(setCookie, /Priority=High/i);
     assert.doesNotMatch(setCookie, /Domain=|Secure/i);
-    const httpRotationBody = await httpRotated.json() as { csrfToken: string };
+    const httpRotationBody = await httpRotated.json() as { csrfToken: string, };
     assert.match(httpRotationBody.csrfToken, /^[A-Za-z0-9_-]{43}$/);
     const rotatedCookie = setCookie.split(';', 1)[0];
     assert.equal(
@@ -374,7 +388,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
       headers: { cookie: rotatedCookie }
     });
     assert.equal(afterRejectedLogout.status, 200, 'rejected logout must preserve the session');
-    const afterRejectedBody = await afterRejectedLogout.json() as { csrfToken: string };
+    const afterRejectedBody = await afterRejectedLogout.json() as { csrfToken: string, };
     const httpLogout = await fetch(`${application.origin}/auth/logout`, {
       method: 'POST',
       headers: {
@@ -403,7 +417,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
     const visibleRows = await application.identity.authorizedTransaction(
       member.principal,
       'catalog.discover',
-      (database) => database.execute<{ current_user: string; title: string }>(`
+      (database) => database.execute<{ current_user: string, title: string, }>(`
         SELECT current_user, title FROM app_data.records ORDER BY id
       `)
     );
@@ -601,7 +615,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
       async (database) => {
         actionEntered();
         await database.execute('SELECT pg_sleep(0.1)');
-        return database.execute<{ current_user: string }>('SELECT current_user');
+        return database.execute<{ current_user: string, }>('SELECT current_user');
       }
     );
     await entered;
@@ -679,7 +693,7 @@ test('PostgreSQL 18 identity, authority, and caller-filtered catalog boundary', 
     assert.equal(webPool.checkedOutCount, 0);
 
     const state = await application.database.transaction('web', {}, (database) =>
-      database.execute<{ current_user: string; session_user: string }>(`
+      database.execute<{ current_user: string, session_user: string, }>(`
         SELECT current_user, session_user
       `)
     );

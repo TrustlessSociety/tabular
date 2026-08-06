@@ -1,11 +1,14 @@
-import {
-  TabulatorFull,
-  type CellComponent,
-  type ColumnComponent,
-  type ColumnDefinition,
-  type Options,
-  type RowComponent
+//modules
+import type {
+  CellComponent,
+  ColumnComponent,
+  ColumnDefinition,
+  Options,
+  RowComponent
 } from 'tabulator-tables';
+import { TabulatorFull } from 'tabulator-tables';
+
+//client
 import type {
   GridAdapter,
   GridAdapterConfig,
@@ -29,45 +32,61 @@ import {
   spreadsheetRowNumber
 } from './selection.js';
 
-type TableEventListener = (...args: any[]) => void;
+//Tabulator's public event registry exposes heterogeneous positional payloads,
+// so a single listener port cannot narrow them before the event name is known
+type TableEventListener = (...args: unknown[]) => void;
 
+//The tabulator table port contract exported for module callers
 export type TabulatorTablePort = {
-  on(event: string, listener: TableEventListener): void;
-  off(event: string, listener: TableEventListener): void;
-  getRows(activeOnly?: string): RowComponent[];
-  getColumns(): ColumnComponent[];
-  getRow(rowId: string): RowComponent;
-  getColumn(columnId: string): ColumnComponent;
-  moveColumn(from: string, to: string, after: boolean): void;
-  replaceData(rows: GridRow[]): Promise<void>;
-  updateData(rows: GridRow[]): Promise<void>;
-  setColumns(columns: ColumnDefinition[]): void;
-  setSort(sort: Array<{ column: string; dir: 'asc' | 'desc' }>): void;
-  clearSort(): void;
-  setFilter(filters: Array<{ field: string; type: GridFilter['operation']; value: GridCellValue }>): void;
-  clearFilter(includeHeaderFilters: boolean): void;
-  setHeight(height: number | string): void;
-  scrollToRow(rowId: string, position?: 'top' | 'center' | 'bottom' | 'nearest', ifVisible?: boolean): Promise<void>;
-  destroy(): void;
+  on(event: string, listener: TableEventListener): void,
+  off(event: string, listener: TableEventListener): void,
+  getRows(activeOnly?: string): RowComponent[],
+  getColumns(): ColumnComponent[],
+  getRow(rowId: string): RowComponent,
+  getColumn(columnId: string): ColumnComponent,
+  moveColumn(from: string, to: string, after: boolean): void,
+  replaceData(rows: GridRow[]): Promise<void>,
+  updateData(rows: GridRow[]): Promise<void>,
+  setColumns(columns: ColumnDefinition[]): void,
+  setSort(sort: Array<{ column: string, dir: 'asc' | 'desc', }>): void,
+  clearSort(): void,
+  setFilter(filters: Array<{ field: string, type: GridFilter['operation'], value: GridCellValue, }>): void,
+  clearFilter(includeHeaderFilters: boolean): void,
+  setHeight(height: number | string): void,
+  scrollToRow(rowId: string, position?: 'top' | 'center' | 'bottom' | 'nearest', ifVisible?: boolean): Promise<void>,
+  destroy(): void,
 };
 
+//The tabulator table factory contract exported for module callers
 export type TabulatorTableFactory = (
   container: HTMLElement,
   options: Options
 ) => TabulatorTablePort;
 
+/**
+ * Return the default factory result.
+ */
 const defaultFactory: TabulatorTableFactory = (container, options) => (
   new TabulatorFull(container, options) as unknown as TabulatorTablePort
 );
 
+/**
+ * Return the row id result.
+ */
 function rowId(row: RowComponent) {
   return String((row.getData() as GridRow).id);
 }
 
+/**
+ * Return the point for result.
+ */
 function pointFor(cell: CellComponent): GridPoint {
   return { rowId: rowId(cell.getRow()), columnId: cell.getField() };
 }
 
+/**
+ * Return the presentation key result.
+ */
 function presentationKey(point: GridPoint) {
   return JSON.stringify([point.rowId, point.columnId]);
 }
@@ -89,18 +108,23 @@ const BORDER_EDGES: Record<RenderedBorderPlacement, readonly BorderEdge[]> = {
 };
 
 type BorderBackgroundLayer = {
-  image: string;
-  size: string;
-  position: string;
+  image: string,
+  size: string,
+  position: string,
 };
 
-/** Paints cell-edge borders without taking layout space or collapsing non-solid styles. */
+/**
+ * Paints cell-edge borders without taking layout space or collapsing non-solid styles.
+ */
 export function borderBackgroundLayers(
   placement: RenderedBorderPlacement,
   style: RenderedBorderStyle,
   color: string
 ) {
   const layers: BorderBackgroundLayer[] = [];
+  /**
+   * Return the add result.
+   */
   const add = (edge: BorderEdge, position: string, width: number, image: string) => {
     const horizontal = edge === 'top' || edge === 'bottom';
     layers.push({
@@ -109,6 +133,9 @@ export function borderBackgroundLayers(
       position
     });
   };
+  /**
+   * Return the position for result.
+   */
   const positionFor = (edge: BorderEdge) => ({
     top: '0 0',
     right: '100% 0',
@@ -149,21 +176,29 @@ export function borderBackgroundLayers(
   };
 }
 
+/**
+ * Return the previous value for result.
+ */
 function previousValueFor(cell: CellComponent): GridCellValue {
-  const previous = (cell as CellComponent & { getOldValue?: () => unknown }).getOldValue;
+  const previous = (cell as CellComponent & { getOldValue?: () => unknown, }).getOldValue;
   return (typeof previous === 'function' ? previous.call(cell) : cell.getValue()) as GridCellValue;
 }
 
+/**
+ * Return the extends selection result.
+ */
 function extendsSelection(event: UIEvent) {
   return 'shiftKey' in event && Boolean((event as MouseEvent).shiftKey);
 }
 
-/** Distinguishes the coordinate band from the named spreadsheet header cell. */
+/**
+ * Distinguishes the coordinate band from the named spreadsheet header cell.
+ */
 function selectionForHeaderClick(
   columnId: string,
   target: EventTarget | null
 ): LogicalGridSelection | undefined {
-  const element = target as { closest?: (selector: string) => unknown } | null;
+  const element = target as { closest?: (selector: string) => unknown, } | null;
   if (element?.closest?.('input, button, select, textarea')) return undefined;
   if (!target || element?.closest?.('.tabular-column-coordinate')) {
     return { kind: 'column', columnId };
@@ -171,6 +206,9 @@ function selectionForHeaderClick(
   return { kind: 'header', columnId };
 }
 
+/**
+ * Return the header label result.
+ */
 function headerLabel(column: GridColumn) {
   const label = document.createElement('span');
   label.className = 'tabular-column-label';
@@ -184,6 +222,9 @@ function headerLabel(column: GridColumn) {
   return label;
 }
 
+/**
+ * Return the formatter for result.
+ */
 function formatterFor(
   column: GridColumn,
   issueFor: (point: GridPoint) => GridCellIssue | undefined
@@ -198,6 +239,9 @@ function formatterFor(
   };
 }
 
+/**
+ * Return the base formatter for result.
+ */
 function baseFormatterFor(column: GridColumn): ColumnDefinition['formatter'] {
   if (column.kind === 'relation') return (cell) => {
     const row = cell.getRow().getData() as GridRow;
@@ -243,6 +287,9 @@ function baseFormatterFor(column: GridColumn): ColumnDefinition['formatter'] {
   return undefined;
 }
 
+/**
+ * Return the editor for result.
+ */
 function editorFor(column: GridColumn): ColumnDefinition['editor'] {
   if (column.editable === false) return undefined;
   if (column.kind === 'boolean' || column.kind === 'switch') return booleanEditor(column);
@@ -257,6 +304,9 @@ function editorFor(column: GridColumn): ColumnDefinition['editor'] {
   return textEditor(column, column.kind === 'date' ? 'date' : 'text');
 }
 
+/**
+ * Return the text editor result.
+ */
 function textEditor(
   column: GridColumn,
   type: string,
@@ -272,6 +322,9 @@ function textEditor(
     input.value = String(cell.getValue() ?? '')
       .replace(' ', 'T')
       .replace(/(?:Z|[+-]\d{2}(?::\d{2})?)$/, '');
+    /**
+     * Finish the current value.
+     */
     const finish = () => success(input.value);
     input.addEventListener('blur', finish, { once: true });
     input.addEventListener('keydown', (event) => {
@@ -290,6 +343,9 @@ function textEditor(
   };
 }
 
+/**
+ * Return the boolean editor result.
+ */
 function booleanEditor(column: GridColumn): NonNullable<ColumnDefinition['editor']> {
   return (cell, onRendered, success, cancel) => {
     const input = document.createElement('input');
@@ -307,13 +363,18 @@ function booleanEditor(column: GridColumn): NonNullable<ColumnDefinition['editor
   };
 }
 
+/**
+ * Return the exact decimal display result.
+ */
 function exactDecimalDisplay(value: string) {
   const match = value.match(/^(-?)(\d+)(\.\d+)?$/);
   if (!match) return value;
   return `${match[1]}${match[2]!.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${match[3] || ''}`;
 }
 
-/** Formats an exact decimal string to a fixed scale without losing large values. */
+/**
+ * Formats an exact decimal string to a fixed scale without losing large values.
+ */
 function fixedDecimalDisplay(value: string, scale: number) {
   const match = value.match(/^(-?)(\d+)(?:\.(\d+))?$/);
   if (!match) return value;
@@ -330,6 +391,9 @@ function fixedDecimalDisplay(value: string, scale: number) {
     + (scale ? `.${outputFraction}` : '');
 }
 
+/**
+ * Return the presentation number display result.
+ */
 export function presentationNumberDisplay(
   value: GridCellValue | undefined,
   format: GridCellPresentation['numberFormat']
@@ -343,11 +407,14 @@ export function presentationNumberDisplay(
   return Number.isFinite(percentage) ? `${exactDecimalDisplay(String(percentage))}%` : undefined;
 }
 
+/**
+ * Return the link output result.
+ */
 function linkOutput(href: string, label: string) {
   const anchor = document.createElement('a');
   anchor.href = href;
   anchor.textContent = label;
-  // Spreadsheet cells retain ordinary click and double-click selection/editing.
+  //Spreadsheet cells retain ordinary click and double-click selection/editing.
   // A modifier click follows the semantic link without replacing the workbench.
   anchor.target = '_blank';
   anchor.rel = 'noopener noreferrer';
@@ -359,6 +426,9 @@ function linkOutput(href: string, label: string) {
   return anchor;
 }
 
+/**
+ * Report the safe URL condition.
+ */
 function safeUrl(value: string) {
   try {
     const parsed = new URL(value.includes('://') ? value : `https://${value}`);
@@ -368,15 +438,24 @@ function safeUrl(value: string) {
   }
 }
 
+/**
+ * Return the error id result.
+ */
 function errorId(issue: GridCellIssue) {
   const safe = `${issue.rowId}-${issue.columnId}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 180);
   return `grid-error-${safe}`;
 }
 
+/**
+ * Return the row error id result.
+ */
 function rowErrorId(rowId: string) {
   return `grid-row-error-${rowId.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 180)}`;
 }
 
+/**
+ * Return the error output result.
+ */
 function errorOutput(issue: GridCellIssue) {
   const wrapper = document.createElement('span');
   wrapper.className = 'tabular-error-output';
@@ -396,6 +475,9 @@ function errorOutput(issue: GridCellIssue) {
   return wrapper;
 }
 
+/**
+ * Return the definitions result.
+ */
 function definitions(
   columns: GridColumn[],
   issueFor: (point: GridPoint) => GridCellIssue | undefined = () => undefined
@@ -441,46 +523,82 @@ function definitions(
   }));
 }
 
+/**
+ * Adapt tabulator grid behavior to its external boundary.
+ */
 export class TabulatorGridAdapter implements GridAdapter {
+  //The factory state retained by this class instance
   readonly #factory: TabulatorTableFactory;
-  readonly #listeners = new Map<GridAdapterEvent, Set<(payload: any) => void>>();
+  //The event-name-generic storage erases payload types only after `on()` has
+  // checked each listener against the corresponding GridAdapter event contract
+  readonly #listeners = new Map<GridAdapterEvent, Set<(payload: unknown) => void>>();
+  //The selection state retained by this class instance
   readonly #selection = new LogicalSelectionStore();
+  //The issues state retained by this class instance
   readonly #issues = new Map<string, GridCellIssue>();
+  //The presentation state retained by this class instance
   #presentation: Record<string, GridCellPresentation> = {};
+  //The table listeners state retained by this class instance
   readonly #tableListeners: Array<[string, TableEventListener]> = [];
+  //The container state retained by this class instance
   #container?: HTMLElement;
+  //The table state retained by this class instance
   #table?: TabulatorTablePort;
+  //The rows state retained by this class instance
   #rows: GridRow[] = [];
+  //The columns state retained by this class instance
   #columns: GridColumn[] = [];
+  //The active row order state retained by this class instance
   #activeRowOrder: string[] = [];
+  //The active row indexes state retained by this class instance
   #activeRowIndexes = new Map<string, number>();
+  //The column indexes state retained by this class instance
   #columnIndexes = new Map<string, number>();
+  //The last point state retained by this class instance
   #lastPoint?: GridPoint;
+  //The ready state retained by this class instance
   #ready = false;
+  //The scroll element state retained by this class instance
   #scrollElement?: HTMLElement;
+  //The scroll frame state retained by this class instance
   #scrollFrame?: number;
+  //The on viewport scroll state retained by this class instance
   #onViewportScroll?: () => void;
+  //The unsubscribe selection state retained by this class instance
   #unsubscribeSelection?: () => void;
+  //The can move columns state retained by this class instance
   #canMoveColumns = false;
+  //The dragged column id state retained by this class instance
   #draggedColumnId?: string;
+  //The column drag disposers state retained by this class instance
   readonly #columnDragDisposers: Array<() => void> = [];
+  //The column drag timer state retained by this class instance
   #columnDragTimer?: ReturnType<typeof setTimeout>;
+  //The column drag observer state retained by this class instance
   #columnDragObserver?: MutationObserver;
+  //The pointer column drag state retained by this class instance
   #pointerColumnDrag?: {
-    source: string;
-    startX: number;
-    startY: number;
-    target?: string;
-    after?: boolean;
-    moved: boolean;
+    source: string,
+    startX: number,
+    startY: number,
+    target?: string,
+    after?: boolean,
+    moved: boolean,
   };
+  //The column pointer disposer state retained by this class instance
   #columnPointerDisposer?: () => void;
 
-  constructor(factory: TabulatorTableFactory = defaultFactory) {
+  /**
+   * Create a TabulatorGridAdapter instance.
+   */
+  public constructor(factory: TabulatorTableFactory = defaultFactory) {
     this.#factory = factory;
   }
 
-  async mount(container: HTMLElement, config: GridAdapterConfig) {
+  /**
+   * Handle the mount operation.
+   */
+  public async mount(container: HTMLElement, config: GridAdapterConfig) {
     if (this.#table) throw new Error('The grid adapter is already mounted');
     this.#container = container;
     this.#rows = config.rows.map((row) => ({ ...row }));
@@ -530,7 +648,7 @@ export class TabulatorGridAdapter implements GridAdapter {
         selectableRange: false,
         selectableRows: false,
         movableRows: Boolean(config.canMoveRows),
-        // Tabular owns immediate pointer/native movement below. Leaving the
+        //Tabular owns immediate pointer/native movement below. Leaving the
         // delayed Tabulator owner active causes a single human drag to execute
         // twice and produces direction-dependent ordering.
         movableColumns: false,
@@ -567,6 +685,9 @@ export class TabulatorGridAdapter implements GridAdapter {
         && typeof document !== 'undefined'
         && typeof document.addEventListener === 'function'
       ) {
+        /**
+         * Move the current value.
+         */
         const move = (event: MouseEvent) => {
           const drag = this.#pointerColumnDrag;
           if (!drag) return;
@@ -578,6 +699,9 @@ export class TabulatorGridAdapter implements GridAdapter {
           drag.after = drop?.after;
           if (drop) this.#markColumnDrop(drop.target, drop.after);
         };
+        /**
+         * Return the up result.
+         */
         const up = () => {
           const drag = this.#pointerColumnDrag;
           this.#pointerColumnDrag = undefined;
@@ -710,7 +834,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
-  async replaceRows(rows: GridRow[]) {
+  /**
+   * Replace the rows.
+   */
+  public async replaceRows(rows: GridRow[]) {
     const restoreFocus = typeof document !== 'undefined'
       && Boolean(this.#container?.contains(document.activeElement));
     const table = this.#requireTable();
@@ -723,7 +850,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     if (restoreFocus) this.focusActive();
   }
 
-  async updateRows(rows: GridRow[]) {
+  /**
+   * Update the rows.
+   */
+  public async updateRows(rows: GridRow[]) {
     const table = this.#requireTable();
     const updates = new Map(rows.map((row) => [row.id, row]));
     this.#rows = this.#rows.map((row) => updates.has(row.id)
@@ -733,7 +863,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#renderSelection();
   }
 
-  replaceColumns(columns: GridColumn[]) {
+  /**
+   * Replace the columns.
+   */
+  public replaceColumns(columns: GridColumn[]) {
     const restoreFocus = typeof document !== 'undefined'
       && Boolean(this.#container?.contains(document.activeElement));
     const table = this.#requireTable();
@@ -746,7 +879,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     if (restoreFocus) this.focusActive();
   }
 
-  setSort(sort: GridSort[]) {
+  /**
+   * Set the sort.
+   */
+  public setSort(sort: GridSort[]) {
     const table = this.#requireTable();
     if (sort.length === 0) table.clearSort();
     else table.setSort(sort.map((entry) => ({
@@ -757,7 +893,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#renderSelection();
   }
 
-  setFilter(filters: GridFilter[]) {
+  /**
+   * Set the filter.
+   */
+  public setFilter(filters: GridFilter[]) {
     const table = this.#requireTable();
     if (filters.length === 0) table.clearFilter(true);
     else table.setFilter(filters.map((entry) => ({
@@ -769,17 +908,26 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#renderSelection();
   }
 
-  setHeight(height: number | string) {
+  /**
+   * Set the height.
+   */
+  public setHeight(height: number | string) {
     this.#requireTable().setHeight(height);
   }
 
-  setColumnWidth(columnId: string, width: number) {
+  /**
+   * Set the column width.
+   */
+  public setColumnWidth(columnId: string, width: number) {
     this.#requireTable().getColumn(columnId).setWidth(width);
     const column = this.#columns.find((candidate) => candidate.id === columnId);
     if (column) column.width = width;
   }
 
-  setIssues(issues: GridCellIssue[]) {
+  /**
+   * Set the issues.
+   */
+  public setIssues(issues: GridCellIssue[]) {
     this.#issues.clear();
     for (const issue of issues) this.#issues.set(`${issue.rowId}\u0000${issue.columnId}`, issue);
     if (!this.#table) return;
@@ -787,17 +935,26 @@ export class TabulatorGridAdapter implements GridAdapter {
     this.#renderSelection();
   }
 
-  setPresentation(presentation: Record<string, GridCellPresentation>) {
+  /**
+   * Set the presentation.
+   */
+  public setPresentation(presentation: Record<string, GridCellPresentation>) {
     this.#presentation = structuredClone(presentation);
     this.#renderSelection();
   }
 
-  select(selection: LogicalGridSelection) {
+  /**
+   * Select the current value.
+   */
+  public select(selection: LogicalGridSelection) {
     this.#rememberSelectionPoint(selection);
     this.#selection.set(selection);
   }
 
-  navigate(direction: GridNavigationDirection, extend = false) {
+  /**
+   * Handle the navigate operation.
+   */
+  public navigate(direction: GridNavigationDirection, extend = false) {
     const selection = this.#selection.get();
     if (!selection) return false;
     const focus = selection.kind === 'cell' || selection.kind === 'range'
@@ -863,7 +1020,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     return true;
   }
 
-  editActive(initialValue?: string) {
+  /**
+   * Handle the edit active operation.
+   */
+  public editActive(initialValue?: string) {
     const selection = this.#selection.get();
     if (selection?.kind === 'header-row' || selection?.kind === 'header') return false;
     const point = selection && (selection.kind === 'cell' || selection.kind === 'range')
@@ -889,7 +1049,10 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
-  focusActive() {
+  /**
+   * Handle the focus active operation.
+   */
+  public focusActive() {
     const selection = this.#selection.get();
     const point = selection && (selection.kind === 'cell' || selection.kind === 'range')
       ? selection.focus
@@ -928,11 +1091,17 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
-  selection() {
+  /**
+   * Handle the selection operation.
+   */
+  public selection() {
     return this.#selection.get();
   }
 
-  on<Event extends GridAdapterEvent>(
+  /**
+   * Handle the on operation.
+   */
+  public on<Event extends GridAdapterEvent>(
     event: Event,
     listener: (payload: GridAdapterEventMap[Event]) => void
   ) {
@@ -941,11 +1110,17 @@ export class TabulatorGridAdapter implements GridAdapter {
       listeners = new Set();
       this.#listeners.set(event, listeners);
     }
-    listeners.add(listener as (payload: any) => void);
-    return () => listeners?.delete(listener as (payload: any) => void);
+    //The map cannot retain Event's conditional payload type, so this internal
+    // cast is paired with the typed public listener signature above
+    listeners.add(listener as unknown as (payload: unknown) => void);
+    //Removal must use the same erased signature to find that listener identity
+    return () => listeners?.delete(listener as unknown as (payload: unknown) => void);
   }
 
-  destroy() {
+  /**
+   * Handle the destroy operation.
+   */
+  public destroy() {
     this.#columnDragObserver?.disconnect();
     this.#columnDragObserver = undefined;
     this.#columnPointerDisposer?.();
@@ -1000,8 +1175,11 @@ export class TabulatorGridAdapter implements GridAdapter {
       const canDrag = movable.has(columnId);
       element.draggable = canDrag;
       if (canDrag) element.setAttribute('aria-description', 'Drag to reorder column');
+      /**
+       * Return the drag start result.
+       */
       const dragStart = (event: DragEvent) => {
-        // Native drag/drop owns this gesture from here; suppress the mouse
+        //Native drag/drop owns this gesture from here; suppress the mouse
         // fallback so the same release cannot reorder the column twice.
         this.#pointerColumnDrag = undefined;
         this.#draggedColumnId = columnId;
@@ -1009,6 +1187,9 @@ export class TabulatorGridAdapter implements GridAdapter {
         event.dataTransfer?.setData('text/plain', columnId);
         if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
       };
+      /**
+       * Return the mouse down result.
+       */
       const mouseDown = (event: MouseEvent) => {
         if (event.button !== 0) return;
         this.#pointerColumnDrag = {
@@ -1018,6 +1199,9 @@ export class TabulatorGridAdapter implements GridAdapter {
           moved: false
         };
       };
+      /**
+       * Return the drag over result.
+       */
       const dragOver = (event: DragEvent) => {
         if (!this.#draggedColumnId || this.#draggedColumnId === columnId) return;
         event.preventDefault();
@@ -1029,7 +1213,13 @@ export class TabulatorGridAdapter implements GridAdapter {
         this.#markColumnDrop(columnId, after);
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
       };
+      /**
+       * Return the drag leave result.
+       */
       const dragLeave = () => element.classList.remove('tabular-column-drop-target');
+      /**
+       * Return the drop result.
+       */
       const drop = (event: DragEvent) => {
         event.preventDefault();
         const source = this.#draggedColumnId || event.dataTransfer?.getData('text/plain');
@@ -1042,10 +1232,16 @@ export class TabulatorGridAdapter implements GridAdapter {
           : false;
         this.#requireTable().moveColumn(source, columnId, after);
       };
+      /**
+       * Return the click result.
+       */
       const click = (event: MouseEvent) => {
         const next = selectionForHeaderClick(columnId, event.target);
         if (next) this.select(next);
       };
+      /**
+       * Return the drag end result.
+       */
       const dragEnd = () => {
         this.#draggedColumnId = undefined;
         this.#clearColumnDragClasses();
@@ -1075,7 +1271,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
-  /** Resolves one stable drop target from the pointer's horizontal position. */
+  /**
+   * Resolves one stable drop target from the pointer's horizontal position.
+   */
   #columnDropAt(clientX: number, source: string) {
     const candidates = this.#requireTable().getColumns().flatMap((column) => {
       const field = column.getField();
@@ -1096,13 +1294,18 @@ export class TabulatorGridAdapter implements GridAdapter {
     return candidates.sort((left, right) => left.distance - right.distance)[0];
   }
 
-  /** Marks which edge of a header will receive the dragged column. */
+  /**
+   * Marks which edge of a header will receive the dragged column.
+   */
   #markColumnDrop(columnId: string, after: boolean) {
     const element = this.#requireTable().getColumn(columnId).getElement();
     element.classList.add('tabular-column-drop-target');
     element.dataset.tabularDropEdge = after ? 'right' : 'left';
   }
 
+  /**
+   * Handle the internal clear column drag classes operation.
+   */
   #clearColumnDragClasses() {
     for (const column of this.#table?.getColumns() || []) {
       column.getElement().classList.remove(
@@ -1113,26 +1316,46 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
+  /**
+   * Handle the internal clear column dragging operation.
+   */
   #clearColumnDragging() {
     for (const dispose of this.#columnDragDisposers.splice(0)) dispose();
     this.#draggedColumnId = undefined;
   }
 
-  #listen(event: string, listener: TableEventListener) {
+  /**
+   * Handle the internal listen operation.
+   */
+  #listen<Arguments extends unknown[]>(
+    event: string,
+    listener: (...args: Arguments) => void
+  ) {
     const table = this.#requireTable();
-    table.on(event, listener);
-    this.#tableListeners.push([event, listener]);
+    //erase the event-specific tuple only at the Tabulator port boundary
+    const erasedListener = listener as unknown as TableEventListener;
+    table.on(event, erasedListener);
+    this.#tableListeners.push([event, erasedListener]);
   }
 
+  /**
+   * Handle the internal emit operation.
+   */
   #emit<Event extends GridAdapterEvent>(event: Event, payload: GridAdapterEventMap[Event]) {
     for (const listener of this.#listeners.get(event) || []) listener(payload);
   }
 
+  /**
+   * Handle the internal require table operation.
+   */
   #requireTable() {
     if (!this.#table) throw new Error('The grid adapter is not mounted');
     return this.#table;
   }
 
+  /**
+   * Handle the internal reconcile selection operation.
+   */
   #reconcileSelection() {
     const rowIds = new Set(this.#rows.map((row) => row.id));
     const columnIds = new Set(this.#columns.map((column) => column.id));
@@ -1143,6 +1366,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     ) this.#lastPoint = undefined;
   }
 
+  /**
+   * Handle the internal remember selection point operation.
+   */
   #rememberSelectionPoint(selection: LogicalGridSelection) {
     if (selection.kind === 'cell' || selection.kind === 'range') {
       this.#lastPoint = { ...selection.focus };
@@ -1158,6 +1384,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     if (rowId) this.#lastPoint = { rowId, columnId: selection.columnId };
   }
 
+  /**
+   * Handle the internal update aria counts operation.
+   */
   #updateAriaCounts() {
     const rowCount = String(this.#rows.length + 1);
     const columnCount = String(this.#columns.length + 1);
@@ -1168,6 +1397,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     grid?.setAttribute('aria-colcount', columnCount);
   }
 
+  /**
+   * Handle the internal refresh active row order operation.
+   */
   #refreshActiveRowOrder() {
     if (!this.#table) return;
     this.#activeRowOrder = this.#table.getRows('active').map(rowId);
@@ -1176,12 +1408,18 @@ export class TabulatorGridAdapter implements GridAdapter {
     );
   }
 
+  /**
+   * Handle the internal refresh column indexes operation.
+   */
   #refreshColumnIndexes() {
     this.#columnIndexes = new Map(
       this.#columns.map((column, index) => [column.id, index])
     );
   }
 
+  /**
+   * Handle the internal project row element operation.
+   */
   #projectRowElement(
     rowElement: HTMLElement,
     currentRowId: string,
@@ -1306,6 +1544,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
+  /**
+   * Handle the internal render selection operation.
+   */
   #renderSelection() {
     const table = this.#table;
     const container = this.#container;
@@ -1351,7 +1592,7 @@ export class TabulatorGridAdapter implements GridAdapter {
         ), selection);
       }
     } else {
-      // Structural adapter fakes do not mount a DOM tree; production always uses
+      //Structural adapter fakes do not mount a DOM tree; production always uses
       // the bounded mounted-row branch above.
       for (const row of table.getRows('visible')) {
         this.#projectRowElement(row.getElement(), rowId(row), (columnId) => {
@@ -1396,10 +1637,16 @@ export class TabulatorGridAdapter implements GridAdapter {
     });
   }
 
+  /**
+   * Handle the internal issue operation.
+   */
   #issue(point: GridPoint) {
     return this.#issues.get(`${point.rowId}\u0000${point.columnId}`);
   }
 
+  /**
+   * Handle the internal project presentation operation.
+   */
   #projectPresentation(element: HTMLElement, point: GridPoint, rawValue?: GridCellValue) {
     element.classList.remove(
       'tabular-presentation-wrap',
@@ -1467,6 +1714,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     }
   }
 
+  /**
+   * Handle the internal begin header name edit operation.
+   */
   #beginHeaderNameEdit(component: ColumnComponent, column: GridColumn) {
     const host = component.getElement().querySelector<HTMLElement>('.tabular-column-semantic');
     if (!host || host.querySelector('input')) return;
@@ -1477,6 +1727,9 @@ export class TabulatorGridAdapter implements GridAdapter {
     input.setAttribute('aria-label', `Name column ${column.coordinate}`);
     host.replaceChildren(input);
     let finished = false;
+    /**
+     * Close the current value.
+     */
     const close = (commit: boolean) => {
       if (finished) return;
       finished = true;

@@ -1,3 +1,4 @@
+//client
 import type { GridRow } from '../../grid/helpers/contracts.js';
 
 const ROW_RANK_GAP = 1_000_000n;
@@ -15,7 +16,7 @@ export function padSpreadsheetRows(
 ) {
   const length = Math.max(blankRows.length, rows.length);
   const slots = Array<GridRow | undefined>(length).fill(undefined);
-  const ranked: Array<{ row: GridRow; rank: bigint; preferred?: number; order: number }> = [];
+  const ranked: Array<{ row: GridRow, rank: bigint, preferred?: number, order: number, }> = [];
   const ordinary: GridRow[] = [];
 
   rows.forEach((row, order) => {
@@ -67,7 +68,9 @@ export function committedRowIdsInVisibleOrder(
     .map((row) => row.id);
 }
 
-/** Allocates a stable rank between the visible rows around one insertion. */
+/**
+ * Allocates a stable rank between the visible rows around one insertion.
+ */
 export function rankForInsertedRow(
   visibleRows: GridRow[],
   ranks: Record<string, string>,
@@ -115,15 +118,23 @@ export function rankForInsertedRow(
   return candidate.toString().padStart(24, '0');
 }
 
+/**
+ * Return the min rank result.
+ */
 function minRank(left: bigint, right: bigint) {
   return left < right ? left : right;
 }
 
+/**
+ * Return the max rank result.
+ */
 function maxRank(left: bigint, right: bigint) {
   return left > right ? left : right;
 }
 
-/** Decodes ordering plus the nearest bounded spreadsheet slot from a rank. */
+/**
+ * Decodes ordering plus the nearest bounded spreadsheet slot from a rank.
+ */
 function placementFromHiddenRank(rank: string, slotLimit: number) {
   if (!validRank(rank)) return undefined;
   const value = BigInt(rank);
@@ -135,7 +146,9 @@ function placementFromHiddenRank(rank: string, slotLimit: number) {
   };
 }
 
-/** Narrows one optional rank token to the fixed-width PostgreSQL contract. */
+/**
+ * Narrows one optional rank token to the fixed-width PostgreSQL contract.
+ */
 function validRank(rank: string | undefined): rank is string {
   return Boolean(rank && /^[0-9]{24}$/.test(rank));
 }

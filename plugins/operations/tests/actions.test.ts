@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import {
   dispatchOperationAction,
   loadActivityOperation,
@@ -8,7 +11,7 @@ import {
 
 test('browser activity reads use only the authorized collection and opaque job detail routes', async () => {
   const original = globalThis.fetch;
-  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const requests: Array<{ url: string, init?: RequestInit, }> = [];
   globalThis.fetch = (async (input, init) => {
     requests.push({ url: String(input), init });
     return new Response(JSON.stringify({ status: 'ok', data: { items: [] } }), {
@@ -31,7 +34,7 @@ test('browser activity reads use only the authorized collection and opaque job d
 
 test('browser mutations carry no caller, owner, connection, role, or target authority claims', async () => {
   const original = globalThis.fetch;
-  let request: { url: string; init?: RequestInit } | undefined;
+  let request: { url: string, init?: RequestInit, } | undefined;
   globalThis.fetch = (async (input, init) => {
     request = { url: String(input), init };
     return new Response(JSON.stringify({ status: 'ok', data: { id: `job_${'b'.repeat(32)}` } }), {

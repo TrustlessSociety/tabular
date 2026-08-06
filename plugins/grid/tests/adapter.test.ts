@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import type {
   CellComponent,
   ColumnComponent,
@@ -7,13 +10,18 @@ import type {
   Options,
   RowComponent
 } from 'tabulator-tables';
-import type { GridColumn, GridRow } from '../helpers/contracts.js';
+
+//client
+import type {
+  GridColumn,
+  GridRow,
+  LogicalGridSelection
+} from '../helpers/contracts.js';
+import type { TabulatorTableFactory, TabulatorTablePort } from '../helpers/tabulator-adapter.js';
 import {
   borderBackgroundLayers,
   presentationNumberDisplay,
-  TabulatorGridAdapter,
-  type TabulatorTableFactory,
-  type TabulatorTablePort
+  TabulatorGridAdapter
 } from '../helpers/tabulator-adapter.js';
 
 test('presentation number formats render without changing raw values', () => {
@@ -40,11 +48,24 @@ test('border presentation keeps dashed, dotted, and double edge patterns distinc
 });
 
 class FakeClassList {
-  readonly values = new Set<string>();
-  add(...names: string[]) { names.forEach((name) => this.values.add(name)); }
-  remove(...names: string[]) { names.forEach((name) => this.values.delete(name)); }
-  contains(name: string) { return this.values.has(name); }
-  toggle(name: string, force?: boolean) {
+  //The values state retained by this class instance
+  public readonly values = new Set<string>();
+  /**
+   * Handle the add operation.
+   */
+  public add(...names: string[]) { names.forEach((name) => this.values.add(name)); }
+  /**
+   * Remove the current value.
+   */
+  public remove(...names: string[]) { names.forEach((name) => this.values.delete(name)); }
+  /**
+   * Handle the contains operation.
+   */
+  public contains(name: string) { return this.values.has(name); }
+  /**
+   * Handle the toggle operation.
+   */
+  public toggle(name: string, force?: boolean) {
     const next = typeof force === 'boolean' ? force : !this.values.has(name);
     if (next) this.values.add(name); else this.values.delete(name);
     return next;
@@ -52,21 +73,35 @@ class FakeClassList {
 }
 
 class FakeElement {
-  readonly classList = new FakeClassList();
-  readonly dataset: Record<string, string> = {};
-  readonly attributes = new Map<string, string>();
-  tabIndex = -1;
-  focused = 0;
-  isConnected = true;
-  width?: number;
-  readonly styles = new Map<string, string>();
-  readonly listeners = new Map<string, Set<(event: any) => void>>();
-  readonly descendants = new Map<string, FakeElement>();
-  draggable = false;
-  left = 0;
-  readonly style: Record<string, unknown> & {
-    setProperty: (name: string, value: string) => void;
-    removeProperty: (name: string) => string;
+  //The class list state retained by this class instance
+  public readonly classList = new FakeClassList();
+  //The dataset state retained by this class instance
+  public readonly dataset: Record<string, string> = {};
+  //The attributes state retained by this class instance
+  public readonly attributes = new Map<string, string>();
+  //The tab index state retained by this class instance
+  public tabIndex = -1;
+  //The focused state retained by this class instance
+  public focused = 0;
+  //The is connected state retained by this class instance
+  public isConnected = true;
+  //The width state retained by this class instance
+  public width?: number;
+  //The styles state retained by this class instance
+  public readonly styles = new Map<string, string>();
+  //DOM event names carry different native payload shapes, so this structural
+  // fake retains the browser boundary's intentionally heterogeneous events
+  public readonly listeners = new Map<string, Set<(event: unknown) => void>>();
+  //The descendants state retained by this class instance
+  public readonly descendants = new Map<string, FakeElement>();
+  //The draggable state retained by this class instance
+  public draggable = false;
+  //The left state retained by this class instance
+  public left = 0;
+  //The style state retained by this class instance
+  public readonly style: Record<string, unknown> & {
+    setProperty: (name: string, value: string) => void,
+    removeProperty: (name: string) => string,
   } = {
     setProperty: (name: string, value: string) => { this.styles.set(name, value); },
     removeProperty: (name: string) => {
@@ -76,22 +111,58 @@ class FakeElement {
       return '';
     }
   };
-  setAttribute(name: string, value: string) { this.attributes.set(name, value); }
-  removeAttribute(name: string) { this.attributes.delete(name); }
-  addEventListener(name: string, listener: (event: any) => void) {
+  /**
+   * Set the attribute.
+   */
+  public setAttribute(name: string, value: string) { this.attributes.set(name, value); }
+  /**
+   * Remove the attribute.
+   */
+  public removeAttribute(name: string) { this.attributes.delete(name); }
+  /**
+   * Handle the add event listener operation.
+   */
+  public addEventListener(
+    name: string,
+    //The fake mirrors DOM's event-name-dependent payload boundary
+    listener: (event: unknown) => void
+  ) {
     const listeners = this.listeners.get(name) || new Set();
     listeners.add(listener);
     this.listeners.set(name, listeners);
   }
-  removeEventListener(name: string, listener: (event: any) => void) {
+  /**
+   * Remove the event listener.
+   */
+  public removeEventListener(
+    name: string,
+    //The same erased payload signature identifies the registered callback
+    listener: (event: unknown) => void
+  ) {
     this.listeners.get(name)?.delete(listener);
   }
-  dispatch(name: string, event: any = {}) {
+  /**
+   * Dispatch the current value.
+   */
+  public dispatch(
+    name: string,
+    //Each scenario supplies the event shape required by its registered handler
+    event: unknown = {}
+  ) {
     this.listeners.get(name)?.forEach((listener) => listener(event));
   }
-  focus() { this.focused += 1; }
-  closest() { return undefined; }
-  getBoundingClientRect() {
+  /**
+   * Handle the focus operation.
+   */
+  public focus() { this.focused += 1; }
+  /**
+   * Handle the closest operation.
+   */
+  public closest() { return undefined; }
+  /**
+   * Return the bounding client rect.
+   */
+  public getBoundingClientRect() {
     const width = this.width || 120;
     return {
       left: this.left,
@@ -105,36 +176,61 @@ class FakeElement {
       toJSON: () => ({})
     };
   }
-  querySelector(selector: string) { return this.descendants.get(selector); }
-  querySelectorAll() { return [] as unknown as NodeListOf<Element>; }
+  /**
+   * Query the selector.
+   */
+  public querySelector(selector: string) { return this.descendants.get(selector); }
+  /**
+   * Query the selector all.
+   */
+  public querySelectorAll() { return [] as unknown as NodeListOf<Element>; }
 }
 
-type FakeCell = CellComponent & { element: FakeElement };
-type FakeRow = RowComponent & { element: FakeElement; cells: Map<string, FakeCell> };
-type FakeColumn = ColumnComponent & { element: FakeElement };
+type FakeCell = CellComponent & { element: FakeElement, };
+type FakeRow = RowComponent & { element: FakeElement, cells: Map<string, FakeCell>, };
+type FakeColumn = ColumnComponent & { element: FakeElement, };
 
 class FakeTable implements TabulatorTablePort {
-  readonly listeners = new Map<string, Set<(...args: any[]) => void>>();
-  readonly columns = new Map<string, FakeColumn>();
-  readonly rowComponents = new Map<string, FakeRow>();
-  rows: GridRow[];
-  active: GridRow[];
-  visibleStart = 0;
-  visibleLimit = 2;
-  cellAccesses = 0;
-  options: Options;
-  destroyed = false;
-  height: number | string = 0;
-  readonly scrollCalls: string[] = [];
+  //Tabulator events use heterogeneous positional payloads in the real library,
+  // which this structural fake mirrors without narrowing the production port
+  public readonly listeners = new Map<string, Set<(...args: unknown[]) => void>>();
+  //The columns state retained by this class instance
+  public readonly columns = new Map<string, FakeColumn>();
+  //The row components state retained by this class instance
+  public readonly rowComponents = new Map<string, FakeRow>();
+  //The rows state retained by this class instance
+  public rows: GridRow[];
+  //The active state retained by this class instance
+  public active: GridRow[];
+  //The visible start state retained by this class instance
+  public visibleStart = 0;
+  //The visible limit state retained by this class instance
+  public visibleLimit = 2;
+  //The cell accesses state retained by this class instance
+  public cellAccesses = 0;
+  //The options state retained by this class instance
+  public options: Options;
+  //The destroyed state retained by this class instance
+  public destroyed = false;
+  //The height state retained by this class instance
+  public height: number | string = 0;
+  //The scroll calls state retained by this class instance
+  public readonly scrollCalls: string[] = [];
 
-  constructor(options: Options) {
+  /**
+   * Create a FakeTable instance.
+   */
+  public constructor(options: Options) {
     this.options = options;
     this.rows = [...(options.data as GridRow[])];
     this.active = [...this.rows];
     this.installColumns(options.columns || []);
   }
 
-  installColumns(definitions: ColumnDefinition[]) {
+  /**
+   * Install the columns.
+   */
+  public installColumns(definitions: ColumnDefinition[]) {
     this.columns.clear();
     this.rowComponents.clear();
     for (const definition of definitions) {
@@ -155,31 +251,67 @@ class FakeTable implements TabulatorTablePort {
     }
   }
 
-  on(event: string, listener: (...args: any[]) => void) {
+  /**
+   * Handle the on operation.
+   */
+  public on(
+    event: string,
+    //The fake mirrors Tabulator's event-name-dependent positional payloads
+    listener: (...args: unknown[]) => void
+  ) {
     const listeners = this.listeners.get(event) || new Set();
     listeners.add(listener);
     this.listeners.set(event, listeners);
   }
-  off(event: string, listener: (...args: any[]) => void) { this.listeners.get(event)?.delete(listener); }
-  emit(event: string, ...args: any[]) { this.listeners.get(event)?.forEach((listener) => listener(...args)); }
-  getRows(range?: string) {
+  /**
+   * Handle the off operation.
+   */
+  public off(
+    event: string,
+    //The same erased positional signature identifies the registered callback
+    listener: (...args: unknown[]) => void
+  ) { this.listeners.get(event)?.delete(listener); }
+  /**
+   * Handle the emit operation.
+   */
+  public emit(
+    event: string,
+    //Each scenario supplies the positional payload required by that event
+    ...args: unknown[]
+  ) { this.listeners.get(event)?.forEach((listener) => listener(...args)); }
+  /**
+   * Return the rows.
+   */
+  public getRows(range?: string) {
     const data = range === 'visible'
       ? this.active.slice(this.visibleStart, this.visibleStart + this.visibleLimit)
       : this.active;
     return data.map((row) => this.makeRow(row));
   }
-  getColumns() { return [...this.columns.values()]; }
-  getRow(rowId: string) {
+  /**
+   * Return the columns.
+   */
+  public getColumns() { return [...this.columns.values()]; }
+  /**
+   * Return the row.
+   */
+  public getRow(rowId: string) {
     const row = this.active.find((candidate) => candidate.id === rowId);
     if (!row) throw new Error('missing row');
     return this.makeRow(row);
   }
-  getColumn(columnId: string) {
+  /**
+   * Return the column.
+   */
+  public getColumn(columnId: string) {
     const column = this.columns.get(columnId);
     if (!column) throw new Error('missing column');
     return column;
   }
-  moveColumn(from: string, to: string, after: boolean) {
+  /**
+   * Move the column.
+   */
+  public moveColumn(from: string, to: string, after: boolean) {
     const moving = this.columns.get(from);
     const target = this.columns.get(to);
     if (!moving || !target || moving === target) return;
@@ -190,37 +322,64 @@ class FakeTable implements TabulatorTablePort {
     for (const [id, column] of entries) this.columns.set(id, column);
     this.emit('columnMoved', moving);
   }
-  async replaceData(rows: GridRow[]) {
+  /**
+   * Replace the data.
+   */
+  public async replaceData(rows: GridRow[]) {
     this.rows = [...rows];
     this.active = [...rows];
     this.rowComponents.clear();
     this.emit('renderComplete');
   }
-  async updateData(rows: GridRow[]) {
+  /**
+   * Update the data.
+   */
+  public async updateData(rows: GridRow[]) {
     const updates = new Map(rows.map((row) => [row.id, row]));
     this.rows = this.rows.map((row) => ({ ...row, ...updates.get(row.id) }));
     this.active = this.active.map((row) => ({ ...row, ...updates.get(row.id) }));
     this.rowComponents.clear();
     this.emit('renderComplete');
   }
-  setColumns(definitions: ColumnDefinition[]) {
+  /**
+   * Set the columns.
+   */
+  public setColumns(definitions: ColumnDefinition[]) {
     this.options.columns = definitions;
     this.installColumns(definitions);
     this.emit('renderComplete');
   }
-  setSort(sort: Array<{ column: string; dir: 'asc' | 'desc' }>) {
+  /**
+   * Set the sort.
+   */
+  public setSort(sort: Array<{ column: string, dir: 'asc' | 'desc', }>) {
     const first = sort[0];
     if (first) this.active.sort((left, right) => String(left[first.column]).localeCompare(String(right[first.column])) * (first.dir === 'asc' ? 1 : -1));
     this.emit('dataSorted');
   }
-  clearSort() { this.active = [...this.rows]; this.emit('dataSorted'); }
-  setFilter(filters: Array<{ field: string; value: unknown }>) {
+  /**
+   * Clear the sort.
+   */
+  public clearSort() { this.active = [...this.rows]; this.emit('dataSorted'); }
+  /**
+   * Set the filter.
+   */
+  public setFilter(filters: Array<{ field: string, value: unknown, }>) {
     this.active = this.rows.filter((row) => filters.every((filter) => row[filter.field] === filter.value));
     this.emit('dataFiltered');
   }
-  clearFilter() { this.active = [...this.rows]; this.emit('dataFiltered'); }
-  setHeight(height: number | string) { this.height = height; }
-  async scrollToRow(rowId: string) {
+  /**
+   * Clear the filter.
+   */
+  public clearFilter() { this.active = [...this.rows]; this.emit('dataFiltered'); }
+  /**
+   * Set the height.
+   */
+  public setHeight(height: number | string) { this.height = height; }
+  /**
+   * Handle the scroll to row operation.
+   */
+  public async scrollToRow(rowId: string) {
     this.scrollCalls.push(rowId);
     const rowIndex = this.active.findIndex((row) => row.id === rowId);
     if (rowIndex < 0) throw new Error('missing row');
@@ -230,9 +389,15 @@ class FakeTable implements TabulatorTablePort {
     for (const cell of row.cells.values()) cell.element.isConnected = true;
     this.emit('renderComplete');
   }
-  destroy() { this.destroyed = true; }
+  /**
+   * Handle the destroy operation.
+   */
+  public destroy() { this.destroyed = true; }
 
-  makeRow(data: GridRow) {
+  /**
+   * Build the row.
+   */
+  public makeRow(data: GridRow) {
     const existing = this.rowComponents.get(data.id);
     if (existing) return existing;
     const element = new FakeElement();
@@ -276,6 +441,9 @@ const rows: GridRow[] = [
 
 test('row and column movement are mounted only with current authority', async () => {
   const options: Options[] = [];
+  /**
+   * Return the factory result.
+   */
   const factory: TabulatorTableFactory = (_container, config) => {
     options.push(config);
     return new FakeTable(config);
@@ -338,38 +506,56 @@ test('column movement emits the current logical order', async () => {
     value: '',
     effectAllowed: '',
     dropEffect: '',
+    /**
+     * Set the data.
+     */
     setData(_type: string, value: string) { this.value = value; },
+    /**
+     * Return the data.
+     */
     getData() { return this.value; }
   };
   total.element.dispatch('dragstart', { dataTransfer: transfer });
   order.element.dispatch('dragover', {
     clientX: 10,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
   order.element.dispatch('drop', {
     clientX: 10,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
   assert.deepEqual(moved, [[ 'total', 'order', 'status' ]]);
 
-  // Dropping on a header's right half must place the source after it instead
+  //Dropping on a header's right half must place the source after it instead
   // of always stopping one position short.
   total.element.dispatch('dragstart', { dataTransfer: transfer });
   table.columns.get('status')!.element.dispatch('dragover', {
     clientX: 230,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
   table.columns.get('status')!.element.dispatch('drop', {
     clientX: 230,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
   assert.deepEqual(moved.at(-1), [ 'order', 'status', 'total' ]);
 
-  // The direct header listener keeps selection reliable even when a browser's
+  //The direct header listener keeps selection reliable even when a browser's
   // draggable-header implementation suppresses Tabulator's headerClick event.
   order.element.dispatch('click', {});
   assert.deepEqual(adapter.selection(), { kind: 'column', columnId: 'order' });
@@ -404,7 +590,13 @@ test('named columns can use an inserted blank header as an exact drop boundary',
     value: '',
     effectAllowed: '',
     dropEffect: '',
+    /**
+     * Set the data.
+     */
     setData(_type: string, value: string) { this.value = value; },
+    /**
+     * Return the data.
+     */
     getData() { return this.value; }
   };
 
@@ -414,11 +606,17 @@ test('named columns can use an inserted blank header as an exact drop boundary',
   blank.element.dispatch('dragover', {
     clientX: 130,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
   blank.element.dispatch('drop', {
     clientX: 130,
     dataTransfer: transfer,
+    /**
+     * Handle the prevent default operation.
+     */
     preventDefault() {}
   });
 
@@ -428,6 +626,9 @@ test('named columns can use an inserted blank header as an exact drop boundary',
 
 test('adapter owns Tabulator configuration and restores logical selection through view changes', async () => {
   let table: FakeTable | undefined;
+  /**
+   * Return the factory result.
+   */
   const factory: TabulatorTableFactory = (_container, options) => {
     table = new FakeTable(options);
     return table;
@@ -504,7 +705,7 @@ test('adapter owns Tabulator configuration and restores logical selection throug
 test('adapter translates keyboard-safe cell, range, row, column, and edit state without leaking Tabulator components', async () => {
   let table!: FakeTable;
   const adapter = new TabulatorGridAdapter((_container, options) => (table = new FakeTable(options)));
-  const selections: unknown[] = [];
+  const selections: Array<LogicalGridSelection | null> = [];
   const edits: unknown[] = [];
   adapter.on('selection', (payload) => selections.push(payload.selection));
   adapter.on('edit', (payload) => edits.push(payload));
@@ -523,7 +724,7 @@ test('adapter translates keyboard-safe cell, range, row, column, and edit state 
   table.emit('headerClick', {
     target: { closest: (selector: string) => selector === '.tabular-column-coordinate' ? {} : undefined }
   } as unknown as UIEvent, table.getColumn('total'));
-  const rowHeaderClick = (table.options.rowHeader as { cellClick: (event: MouseEvent, cell: CellComponent) => void }).cellClick;
+  const rowHeaderClick = (table.options.rowHeader as { cellClick: (event: MouseEvent, cell: CellComponent) => void, }).cellClick;
   const rowHeader = {
     getField: () => undefined,
     getRow: () => row,
@@ -532,7 +733,7 @@ test('adapter translates keyboard-safe cell, range, row, column, and edit state 
   rowHeaderClick({} as MouseEvent, rowHeader);
   table.emit('cellClick', {} as UIEvent, rowHeader);
   table.emit('cellEdited', status);
-  assert.deepEqual(selections.slice(-5).map((selection: any) => selection.kind), [
+  assert.deepEqual(selections.slice(-5).map((selection) => selection?.kind), [
     'cell', 'range', 'header', 'column', 'row'
   ]);
   assert.equal(row.cells.get('status')?.element.attributes.get('aria-selected'), 'true');
@@ -673,9 +874,9 @@ test('adapter definitions cover all ten accepted field editors and output format
   assert.equal(definitions.get('select')?.editor, 'list');
   const row = table.getRow('field-row') as FakeRow;
   const relationParams = definitions.get('relation')?.editorParams as {
-    filterRemote?: boolean;
-    filterDelay?: number;
-    valuesLookup?: (cell: CellComponent, term: string) => Promise<Record<string, string>>;
+    filterRemote?: boolean,
+    filterDelay?: number,
+    valuesLookup?: (cell: CellComponent, term: string) => Promise<Record<string, string>>,
   };
   assert.equal(relationParams.filterRemote, true);
   assert.equal(relationParams.filterDelay, 250);
@@ -684,6 +885,9 @@ test('adapter definitions cover all ten accepted field editors and output format
   });
   assert.equal(definitions.get('price')?.hozAlign, 'right');
   assert.equal(definitions.get('number')?.hozAlign, 'right');
+  /**
+   * Format the current value.
+   */
   const format = (field: string) => {
     const formatter = definitions.get(field)?.formatter;
     assert.equal(typeof formatter, 'function');

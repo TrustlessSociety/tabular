@@ -1,17 +1,29 @@
+//client
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { StableCatalogSnapshot } from './contracts.js';
 import { discoverCallerCatalog } from './discovery.js';
 import { reconcileCatalog } from './reconciliation.js';
 
+//The catalog service value exported for module callers
 export const CATALOG_SERVICE = 'tabular.catalog';
 
+/**
+ * Provide catalog plugin operations through one service boundary.
+ */
 export class CatalogPluginService {
-  readonly name = CATALOG_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = CATALOG_SERVICE;
 
-  constructor(private readonly identity: IdentityPluginService) {}
+  /**
+   * Create a CatalogPluginService instance.
+   */
+  public constructor(private readonly identity: IdentityPluginService) {}
 
-  async discover(principal: BrowserPrincipal) {
+  /**
+   * Handle the discover operation.
+   */
+  public async discover(principal: BrowserPrincipal) {
     return catalogAuthorizedTransactions.run(() => withCatalogReconciliationRetry(async () => {
       let stable: StableCatalogSnapshot | undefined;
       return this.identity.authorizedTransaction(
@@ -29,10 +41,17 @@ export class CatalogPluginService {
   }
 }
 
+/**
+ * Provide the catalog discovery queue behavior used by this module.
+ */
 export class CatalogDiscoveryQueue {
+  //The tail state retained by this class instance
   #tail = Promise.resolve();
 
-  async run<Result>(operation: () => Promise<Result>) {
+  /**
+   * Run one reconciliation operation after every earlier queued operation.
+   */
+  public async run<Result>(operation: () => Promise<Result>) {
     const previous = this.#tail;
     let release!: () => void;
     this.#tail = new Promise<void>((resolve) => { release = resolve; });
@@ -45,8 +64,12 @@ export class CatalogDiscoveryQueue {
   }
 }
 
+//The catalog authorized transactions value exported for module callers
 export const catalogAuthorizedTransactions = new CatalogDiscoveryQueue();
 
+/**
+ * Return the with catalog reconciliation retry result.
+ */
 export async function withCatalogReconciliationRetry<Result>(
   operation: () => Promise<Result>,
   pause: (milliseconds: number) => Promise<void> = (milliseconds) =>
@@ -63,10 +86,16 @@ export async function withCatalogReconciliationRetry<Result>(
   throw new Error('Catalog reconciliation retry bound was exhausted');
 }
 
+/**
+ * Return the reconciliation retry delay ms result.
+ */
 export function reconciliationRetryDelayMs(attempt: number) {
   return attempt === 1 ? 100 : 250;
 }
 
+/**
+ * Return the retryable reconciliation result.
+ */
 export function retryableReconciliation(error: unknown) {
   const pending: unknown[] = [error];
   const seen = new Set<object>();

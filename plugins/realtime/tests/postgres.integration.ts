@@ -1,6 +1,14 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { GridColumn, GridResource } from '../../grid/helpers/contracts.js';
+import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
 import { startWeb } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { WebCapabilityAdapter } from '../../capability/events/web-adapter.js';
@@ -8,16 +16,16 @@ import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
-import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
-import type { GridColumn, GridResource } from '../../grid/helpers/contracts.js';
-import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
 
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 const rankMetadataId = `col_${'r'.repeat(32)}`;
 const runtimeOutboxLoad = 40;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -34,6 +42,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the transaction result.
+ */
 function transaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -560,7 +571,7 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
       resumedId,
       'snapshot.required'
     );
-    const slowRecord = sseRecord<{ reason: string }>(
+    const slowRecord = sseRecord<{ reason: string, }>(
       slowConsumer.text,
       'snapshot.required',
       true
@@ -580,7 +591,7 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
       `${first.runtime.config.sessions.cookieName}=${ownerSession.cookieToken}`,
       slowRecord.id
     );
-    const reconnectRecord = sseRecord<{ payload: { viewId: string } }>(
+    const reconnectRecord = sseRecord<{ payload: { viewId: string, }, }>(
       reconnected.text,
       'tabular.change',
       true
@@ -682,7 +693,7 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
       'access.revoked'
     );
     assert.equal(
-      sseRecord<{ code: string }>(accessRevoked.text, 'access.revoked').data.code,
+      sseRecord<{ code: string, }>(accessRevoked.text, 'access.revoked').data.code,
       'realtime_access_lost'
     );
     await assert.rejects(
@@ -730,7 +741,7 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
       undefined,
       'snapshot.required'
     );
-    const gapRecord = sseRecord<{ reason: string }>(
+    const gapRecord = sseRecord<{ reason: string, }>(
       gapStream.text,
       'snapshot.required',
       true
@@ -754,6 +765,9 @@ test('PostgreSQL 18 durable SSE, saved views, and shared row order', {
   }
 });
 
+/**
+ * Return the mutation result.
+ */
 async function mutation(
   application: Awaited<ReturnType<typeof startWeb>>,
   cookieToken: string,
@@ -766,10 +780,16 @@ async function mutation(
   });
 }
 
+/**
+ * Return the column result.
+ */
 function column(grid: GridResource, physicalName: string): GridColumn {
   return required(grid.columns.find((candidate) => candidate.label === physicalName));
 }
 
+/**
+ * Return the definition result.
+ */
 function definition(grid: GridResource, formattedColumnId: string): SavedViewDefinition {
   const firstRow = required(grid.rows[0]);
   return {
@@ -789,19 +809,31 @@ function definition(grid: GridResource, formattedColumnId: string): SavedViewDef
   };
 }
 
+/**
+ * Return the application code result.
+ */
 function applicationCode(code: string) {
   return (error: unknown) => error instanceof ApplicationError && error.errorCode === code;
 }
 
+/**
+ * Return the required result.
+ */
 function required<T>(value: T | undefined | null): T {
   assert.ok(value);
   return value;
 }
 
+/**
+ * Read the SSE change.
+ */
 async function readSseChange(url: string, cookie: string, lastEventId: number) {
   return readSseEvent(url, cookie, lastEventId, 'tabular.change');
 }
 
+/**
+ * Read the SSE event.
+ */
 async function readSseEvent(
   url: string,
   cookie: string,
@@ -838,12 +870,21 @@ async function readSseEvent(
   }
 }
 
-function sseRecord<Data>(text: string, event: string, requireId: true): { id: number; data: Data };
+/**
+ * Return the SSE record result.
+ */
+function sseRecord<Data>(text: string, event: string, requireId: true): { id: number, data: Data, };
+/**
+ * Return the SSE record result.
+ */
 function sseRecord<Data>(
   text: string,
   event: string,
   requireId?: false
-): { id: number | undefined; data: Data };
+): { id: number | undefined, data: Data, };
+/**
+ * Return the SSE record result.
+ */
 function sseRecord<Data>(text: string, event: string, requireId = false) {
   const block = text.split('\n\n').find((candidate) =>
     candidate.split('\n').includes(`event: ${event}`));
@@ -857,6 +898,9 @@ function sseRecord<Data>(text: string, event: string, requireId = false) {
   return { id, data: JSON.parse(data) as Data };
 }
 
+/**
+ * Reset the current value.
+ */
 async function reset(admin: pg.Pool) {
   await admin.query('DROP SCHEMA IF EXISTS tabular CASCADE');
   await admin.query('DROP SCHEMA IF EXISTS workspace CASCADE');

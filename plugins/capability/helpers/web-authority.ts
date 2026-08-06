@@ -1,14 +1,12 @@
-import {
-  isBrowserMutationPrincipal,
-  type BrowserMutationPrincipal,
-  type BrowserPrincipal
+//client
+import type {
+  BrowserMutationPrincipal,
+  BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
-import {
-  AuthorizedExecutionContext,
-  type AuthorityPhases,
-  type CapabilityAction
-} from './contracts.js';
+import type { AuthorityPhases, CapabilityAction } from './contracts.js';
+import { isBrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import { AuthorizedExecutionContext } from './contracts.js';
 
 const allowedWebReads = new Set<CapabilityAction['type']>([
   'record.read',
@@ -30,10 +28,17 @@ const allowedWebMutations = new Set<CapabilityAction['type']>([
   'history.redo'
 ]);
 
+/**
+ * Provide the browser authorized execution context behavior used by this module.
+ */
 export class BrowserAuthorizedExecutionContext extends AuthorizedExecutionContext {
-  readonly surface = 'web' as const;
+  //The surface state retained by this class instance
+  public readonly surface = 'web' as const;
 
-  constructor(
+  /**
+   * Create a BrowserAuthorizedExecutionContext instance.
+   */
+  public constructor(
     private readonly identity: IdentityPluginService,
     private readonly principal: BrowserPrincipal | BrowserMutationPrincipal
   ) {
@@ -46,12 +51,18 @@ export class BrowserAuthorizedExecutionContext extends AuthorizedExecutionContex
     });
   }
 
-  allows(action: CapabilityAction) {
+  /**
+   * Handle the allows operation.
+   */
+  public allows(action: CapabilityAction) {
     return allowedWebReads.has(action.type)
       || (isBrowserMutationPrincipal(this.principal) && allowedWebMutations.has(action.type));
   }
 
-  transaction<TargetResult, FinalResult = TargetResult>(
+  /**
+   * Handle the transaction operation.
+   */
+  public transaction<TargetResult, FinalResult = TargetResult>(
     _capability: 'tabular.capability',
     phases: AuthorityPhases<TargetResult, FinalResult>
   ) {

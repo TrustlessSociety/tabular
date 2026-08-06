@@ -1,23 +1,23 @@
+//modules
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+//client
+import type { RealtimeState } from '../../realtime/events/controller.js';
+import type { ActivityFilter, ActivityItem } from '../components/activity-center.js';
+import type { OperationBrowserAction } from '../events/actions.js';
+import type { ActivityPageProps, ActivitySnapshot } from '../pages/contracts.js';
 import { Icon } from '../../ui/components/icon.js';
-import {
-  RealtimeController,
-  type RealtimeState
-} from '../../realtime/events/controller.js';
-import {
-  ActivityCenter,
-  summarizeActivity,
-  type ActivityFilter,
-  type ActivityItem
-} from '../components/activity-center.js';
+import { RealtimeController } from '../../realtime/events/controller.js';
+import { ActivityCenter, summarizeActivity } from '../components/activity-center.js';
 import {
   dispatchOperationAction,
   loadActivityOperation,
-  loadActivitySnapshot,
-  type OperationBrowserAction
+  loadActivitySnapshot
 } from '../events/actions.js';
-import type { ActivityPageProps, ActivitySnapshot } from '../pages/contracts.js';
 
+/**
+ * Render the activity page component.
+ */
 export default function ActivityPage(props: ActivityPageProps) {
   const [snapshot, setSnapshot] = useState(props.snapshot);
   const [filter, setFilter] = useState<ActivityFilter>('all');
@@ -39,6 +39,9 @@ export default function ActivityPage(props: ActivityPageProps) {
   );
   const summary = useMemo(() => summarizeActivity(snapshot.items), [snapshot.items]);
 
+  /**
+   * Replace the item.
+   */
   const replaceItem = (item: ActivityItem) => {
     setSnapshot((current) => ({
       ...current,
@@ -93,6 +96,9 @@ export default function ActivityPage(props: ActivityPageProps) {
 
   useEffect(() => {
     if (!selected) return;
+    /**
+     * Close the on escape.
+     */
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeDetails();
     };
@@ -100,6 +106,9 @@ export default function ActivityPage(props: ActivityPageProps) {
     return () => document.removeEventListener('keydown', closeOnEscape);
   }, [selected]);
 
+  /**
+   * Open the details.
+   */
   const openDetails = async (item: ActivityItem) => {
     selectedTrigger.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -120,13 +129,19 @@ export default function ActivityPage(props: ActivityPageProps) {
     }
   };
 
+  /**
+   * Close the details.
+   */
   const closeDetails = () => {
     setSelectedId(undefined);
     requestAnimationFrame(() => selectedTrigger.current?.focus());
   };
 
+  /**
+   * Return the mutate result.
+   */
   const mutate = async (
-    action: Extract<OperationBrowserAction, { jobId: string }>,
+    action: Extract<OperationBrowserAction, { jobId: string, }>,
     pending: 'retry' | 'cancel' | 'acknowledge'
   ) => {
     setPendingAction(pending);
@@ -146,15 +161,21 @@ export default function ActivityPage(props: ActivityPageProps) {
         : 'Cancellation requested');
   };
 
+  /**
+   * Return the recover result.
+   */
   const recover = async () => {
     setLoading(true);
     await activityRefresh.current();
     setLoading(false);
   };
 
+  /**
+   * Apply the retention.
+   */
   const applyRetention = async () => {
     setRetentionPending(true);
-    const result = await dispatchOperationAction<{ retentionDays: number }>({
+    const result = await dispatchOperationAction<{ retentionDays: number, }>({
       type: 'operations.retention.apply',
       retentionDays,
       limit: 500
@@ -273,12 +294,17 @@ export default function ActivityPage(props: ActivityPageProps) {
   );
 }
 
-/** Creates a compact account mark from the verified server-side display name. */
+/**
+ * Creates a compact account mark from the verified server-side display name.
+ */
 function identityInitials(displayName: string) {
   const words = displayName.trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]?.toLocaleUpperCase()).join('') || '?';
 }
 
+/**
+ * Return the realtime label result.
+ */
 function realtimeLabel(state: RealtimeState) {
   if (state === 'live') return 'Live activity';
   if (state === 'connecting') return 'Connecting';

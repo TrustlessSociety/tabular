@@ -1,7 +1,16 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
+import type { BrowserImportOperation } from '../events/actions.js';
+import type { ImportColumnMapping } from '../helpers/mapping.js';
 import { createApplication } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
@@ -9,20 +18,19 @@ import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
-import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
-import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
-import type { ImportColumnMapping } from '../helpers/mapping.js';
 import {
   GOOGLE_READONLY_SCOPE
 } from '../helpers/google-sheets.js';
 import { ImportExportPluginService } from '../helpers/service.js';
-import type { BrowserImportOperation } from '../events/actions.js';
 import { operationHandler } from '../../operations/helpers/handlers.js';
 import { OperationWorker } from '../../operations/helpers/worker.js';
 
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -388,7 +396,7 @@ test('PostgreSQL 18 staged imports, atomic worker commits, recovery, and authori
         };
       }
     ));
-    const partialJob = (await admin.query<{ id: string }>(`
+    const partialJob = (await admin.query<{ id: string, }>(`
       SELECT id FROM tabular.operation_jobs
        WHERE kind = 'import.commit' AND payload->>'importId' = $1
     `, [partial.id])).rows[0];
@@ -420,7 +428,7 @@ test('PostgreSQL 18 staged imports, atomic worker commits, recovery, and authori
       'succeeded',
       JSON.stringify(recoveredJob)
     );
-    const recovered = (await admin.query<{ result_summary: WorkerResult }>(`
+    const recovered = (await admin.query<{ result_summary: WorkerResult, }>(`
       SELECT result_summary FROM tabular.import_operations WHERE id = $1
     `, [partial.id])).rows[0]?.result_summary;
     assert.equal(recovered?.rowsCommitted, 2, JSON.stringify(recovered));
@@ -585,6 +593,9 @@ test('PostgreSQL 18 staged imports, atomic worker commits, recovery, and authori
   }
 });
 
+/**
+ * Return the stage CSV result.
+ */
 async function stageCsv(
   application: Awaited<ReturnType<typeof createApplication>>,
   principal: BrowserMutationPrincipal,
@@ -600,18 +611,21 @@ async function stageCsv(
 }
 
 type WorkerResult = {
-  importId: string;
-  state: 'committed';
-  fileId: string;
-  fileName: string;
-  tableName: string;
-  folderId: string;
-  folderName: string;
-  qualifiedName: string;
-  rowsCommitted: number;
-  columnsCommitted: number;
+  importId: string,
+  state: 'committed',
+  fileId: string,
+  fileName: string,
+  tableName: string,
+  folderId: string,
+  folderName: string,
+  qualifiedName: string,
+  rowsCommitted: number,
+  columnsCommitted: number,
 };
 
+/**
+ * Create the input.
+ */
 function createInput(folderId: string, source: Buffer, sourceName: string, existingCommandId?: string) {
   return {
     commandId: existingCommandId || commandId(),
@@ -624,6 +638,9 @@ function createInput(folderId: string, source: Buffer, sourceName: string, exist
   };
 }
 
+/**
+ * Return the mutation result.
+ */
 async function mutation(
   application: Awaited<ReturnType<typeof createApplication>>,
   cookieToken: string,
@@ -636,6 +653,9 @@ async function mutation(
   });
 }
 
+/**
+ * Return the transaction result.
+ */
 function transaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -647,6 +667,9 @@ function transaction(pool: ManagedPostgresPool) {
     }, callback);
 }
 
+/**
+ * Return the role URL result.
+ */
 function roleUrl(value: string, role: string, password: string) {
   const url = new URL(value);
   url.username = role;
@@ -654,6 +677,9 @@ function roleUrl(value: string, role: string, password: string) {
   return url.toString();
 }
 
+/**
+ * Return the environment result.
+ */
 function environment(webUrl: string, migratorUrl: string, workerUrl: string) {
   return {
     NODE_ENV: 'test',
@@ -668,20 +694,32 @@ function environment(webUrl: string, migratorUrl: string, workerUrl: string) {
   };
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId() {
   return `cmd_${randomBytes(18).toString('base64url')}`;
 }
 
+/**
+ * Return the application code result.
+ */
 function applicationCode(code: string) {
   return (error: unknown) => error instanceof ApplicationError && error.errorCode === code;
 }
 
+/**
+ * Return the google provider double result.
+ */
 function googleProviderDouble() {
   const state = {
     refreshes: 0,
     googleRequests: 0,
     denyNextGoogleRequest: false
   };
+  /**
+   * Return the fetcher result.
+   */
   const fetcher: typeof fetch = async (input, init) => {
     const url = String(input);
     if (url === 'https://oauth2.googleapis.com/token') {
@@ -732,13 +770,28 @@ function googleProviderDouble() {
   };
   return {
     fetcher,
+    /**
+     * Return the refreshes value.
+     */
     get refreshes() { return state.refreshes; },
+    /**
+     * Return the google requests value.
+     */
     get googleRequests() { return state.googleRequests; },
+    /**
+     * Return the deny next google request value.
+     */
     get denyNextGoogleRequest() { return state.denyNextGoogleRequest; },
+    /**
+     * Set the deny next google request value.
+     */
     set denyNextGoogleRequest(value: boolean) { state.denyNextGoogleRequest = value; }
   };
 }
 
+/**
+ * Return the google spreadsheet result.
+ */
 function googleSpreadsheet() {
   return {
     id: 'sheet_task_00011',
@@ -750,6 +803,9 @@ function googleSpreadsheet() {
   };
 }
 
+/**
+ * Return the JSON response result.
+ */
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -757,6 +813,9 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+/**
+ * Reset the current value.
+ */
 async function reset(admin: InstanceType<typeof Pool>) {
   await admin.query('DROP SCHEMA IF EXISTS tabular CASCADE');
   await admin.query('DROP SCHEMA IF EXISTS workspace CASCADE');

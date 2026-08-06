@@ -1,13 +1,17 @@
+//modules
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Icon } from '../../ui/components/icon.js';
+
+//client
 import type { ImportEntryPageProps } from '../../explorer/helpers/contracts.js';
-import {
-  ImportWizard,
-  type ImportMapping,
-  type ImportSourceKind,
-  type ImportWizardStatus,
-  type ImportWizardStep
+import type {
+  ImportMapping,
+  ImportSourceKind,
+  ImportWizardStatus,
+  ImportWizardStep
 } from '../components/import-wizard.js';
+import type { BrowserImportOperation, GoogleSpreadsheetChoice } from '../events/actions.js';
+import { Icon } from '../../ui/components/icon.js';
+import { ImportWizard } from '../components/import-wizard.js';
 import {
   dispatchImportMutation,
   listGoogleSpreadsheets,
@@ -16,9 +20,7 @@ import {
   loadImportOperation,
   stageGoogleImport,
   startGoogleOAuth,
-  uploadImportSource,
-  type BrowserImportOperation,
-  type GoogleSpreadsheetChoice
+  uploadImportSource
 } from '../events/actions.js';
 
 const STORAGE_OPTIONS = [
@@ -32,6 +34,9 @@ const STORAGE_OPTIONS = [
   ['jsonb', 'JSON']
 ] as const;
 
+/**
+ * Render the import page component.
+ */
 export function ImportPage(props: ImportEntryPageProps) {
   const folder = props.snapshot.folders.find((entry) => entry.slug === props.route.folder)
     || props.snapshot.folders[0]!;
@@ -43,15 +48,15 @@ export function ImportPage(props: ImportEntryPageProps) {
   const [identity, setIdentity] = useState({ fileName: '', tableName: '' });
   const [status, setStatus] = useState<ImportWizardStatus>({ kind: 'ready' });
   const [googleAvailability, setGoogleAvailability] = useState<{
-    disabled: boolean;
-    reason?: string;
+    disabled: boolean,
+    reason?: string,
   }>({ disabled: true, reason: 'Checking Google credentials…' });
   const [googlePicker, setGooglePicker] = useState<{
-    connected: boolean;
-    spreadsheets: GoogleSpreadsheetChoice[];
-    selectedSpreadsheetId?: string;
-    worksheets: string[];
-    selectedWorksheet?: string;
+    connected: boolean,
+    spreadsheets: GoogleSpreadsheetChoice[],
+    selectedSpreadsheetId?: string,
+    worksheets: string[],
+    selectedWorksheet?: string,
   }>({ connected: false, spreadsheets: [], worksheets: [] });
   const pollVersion = useRef(0);
 
@@ -122,6 +127,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     if (!operation || !['confirmed', 'committing'].includes(operation.state)) return;
     const version = ++pollVersion.current;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    /**
+     * Return the poll result.
+     */
     const poll = async () => {
       const result = await loadImportOperation(operation.id);
       if (version !== pollVersion.current) return;
@@ -182,6 +190,9 @@ export function ImportPage(props: ImportEntryPageProps) {
       ? { error: mappingErrors[String(entry.sourceColumn)] } : {})
   })), [mapping, mappingErrors]);
 
+  /**
+   * Return the choose file result.
+   */
   const chooseFile = async (kind: 'csv' | 'xlsx', files: FileList | null) => {
     const file = files?.[0];
     if (!file) return;
@@ -210,6 +221,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     setStatus({ kind: 'ready' });
   };
 
+  /**
+   * Return the accept operation result.
+   */
   const acceptOperation = (next: BrowserImportOperation) => {
     setOperation(next);
     setMapping(next.mapping);
@@ -217,6 +231,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     setMappingErrors(issueMessages(next.issues));
   };
 
+  /**
+   * Save the review.
+   */
   const saveReview = async () => {
     if (!operation) return false;
     setStatus({ kind: 'working', message: 'Validating every mapped value and destination identity…' });
@@ -248,13 +265,16 @@ export function ImportPage(props: ImportEntryPageProps) {
     return true;
   };
 
+  /**
+   * Start the import.
+   */
   const startImport = async () => {
     if (!operation || !await saveReview()) return;
     setStatus({ kind: 'working', message: 'Preparing a short-lived, authority-bound confirmation…' });
     const prepared = await dispatchImportMutation<{
-      importId: string;
-      confirmationToken: string;
-      expiresAt: string;
+      importId: string,
+      confirmationToken: string,
+      expiresAt: string,
     }>({ type: 'import.prepare-confirmation', importId: operation.id }, props.csrfToken);
     if (prepared.status === 'error') {
       setStatus({ kind: 'error', title: 'Import could not be confirmed', message: prepared.error.message });
@@ -279,6 +299,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     });
   };
 
+  /**
+   * Cancel the import.
+   */
   const cancelImport = async () => {
     if (!operation) return;
     const result = await dispatchImportMutation({
@@ -294,6 +317,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     });
   };
 
+  /**
+   * Return the retry result.
+   */
   const retry = async () => {
     if (operation?.state === 'cancelled') {
       setOperation(undefined);
@@ -319,6 +345,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     setStatus({ kind: 'ready' });
   };
 
+  /**
+   * Return the leave import result.
+   */
   const leaveImport = async () => {
     if (operation && ['initiated', 'uploading', 'preview', 'ready'].includes(operation.state)) {
       const result = await dispatchImportMutation({ type: 'import.cancel', importId: operation.id }, props.csrfToken);
@@ -330,6 +359,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     window.location.assign(`/pages/browse.html?folder=${folder.slug}`);
   };
 
+  /**
+   * Connect the google.
+   */
   const connectGoogle = async () => {
     setStatus({ kind: 'working', message: 'Preparing a short-lived read-only Google connection…' });
     const result = await startGoogleOAuth(
@@ -343,6 +375,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     window.location.assign(result.data.authorizationUrl);
   };
 
+  /**
+   * Select the google spreadsheet.
+   */
   const selectGoogleSpreadsheet = async (spreadsheetId: string) => {
     setGooglePicker((current) => {
       const { selectedWorksheet: _selectedWorksheet, ...rest } = current;
@@ -362,6 +397,9 @@ export function ImportPage(props: ImportEntryPageProps) {
     setStatus({ kind: 'ready' });
   };
 
+  /**
+   * Return the stage google result.
+   */
   const stageGoogle = async () => {
     if (!googlePicker.selectedSpreadsheetId || !googlePicker.selectedWorksheet) return;
     setStatus({ kind: 'working', message: 'Reading the latest calculated values and pinning the source revision…' });
@@ -532,16 +570,24 @@ export function ImportPage(props: ImportEntryPageProps) {
   );
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId() {
   return `cmd_import_${Date.now()}_${crypto.randomUUID()}`;
 }
 
-/** Creates a compact account mark from the verified server-side display name. */
+/**
+ * Creates a compact account mark from the verified server-side display name.
+ */
 function identityInitials(displayName: string) {
   const words = displayName.trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]?.toLocaleUpperCase()).join('') || '?';
 }
 
+/**
+ * Report whether the caller can review operation.
+ */
 function canReviewOperation(operation?: BrowserImportOperation) {
   if (!operation || operation.counts.columns < 1) return false;
   if (operation.counts.issues === 0) return true;
@@ -550,12 +596,18 @@ function canReviewOperation(operation?: BrowserImportOperation) {
     && issues.every((issue) => issue.code === 'mapping_conversion_failed');
 }
 
+/**
+ * Return the bytes label result.
+ */
 function bytesLabel(value: number) {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Return the storage label result.
+ */
 function storageLabel(value: BrowserImportOperation['mapping'][number]['storageType']) {
   const sql: Record<typeof value, string> = {
     text: 'text',
@@ -570,6 +622,9 @@ function storageLabel(value: BrowserImportOperation['mapping'][number]['storageT
   return sql[value];
 }
 
+/**
+ * Return the source metadata result.
+ */
 function sourceMetadata(operation: BrowserImportOperation) {
   if (operation.source.kind === 'csv') {
     return `${operation.counts.rows.toLocaleString()} rows · header row detected · ${String(operation.source.options.encoding || 'detected encoding').toUpperCase()}`;
@@ -579,12 +634,18 @@ function sourceMetadata(operation: BrowserImportOperation) {
     : `${operation.counts.rows.toLocaleString()} rows · ${operation.source.selectedSheet || 'selected worksheet'} · latest calculated values`;
 }
 
+/**
+ * Return the exposed error result.
+ */
 function exposedError(value: Record<string, unknown> | undefined, fallback: string) {
   return typeof value?.message === 'string' ? value.message : fallback;
 }
 
+/**
+ * Return the issue messages result.
+ */
 function issueMessages(issues: BrowserImportOperation['issues']) {
-  const grouped: Record<string, { count: number; message: string }> = {};
+  const grouped: Record<string, { count: number, message: string, }> = {};
   for (const issue of issues || []) {
     if (!issue.columnNumber) continue;
     const key = String(issue.columnNumber);

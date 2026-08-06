@@ -1,3 +1,4 @@
+//The realtime state contract exported for module callers
 export type RealtimeState =
   | 'connecting'
   | 'live'
@@ -6,47 +7,69 @@ export type RealtimeState =
   | 'access-lost'
   | 'closed';
 
+//The realtime change contract exported for module callers
 export type RealtimeChange = {
-  cursor: number;
-  fileId?: string;
-  type: string;
-  payload: Record<string, unknown>;
+  cursor: number,
+  fileId?: string,
+  type: string,
+  payload: Record<string, unknown>,
 };
 
 type RealtimeSubscription =
-  | { fileId: string; scope?: never }
-  | { fileId?: never; scope: 'operations' };
+  | { fileId: string, scope?: never, }
+  | { fileId?: never, scope: 'operations', };
 
+//The realtime controller options contract exported for module callers
 export type RealtimeControllerOptions = RealtimeSubscription & {
-  cursor: number;
-  retryMs?: number;
-  maximumRetryMs?: number;
-  stableConnectionMs?: number;
-  onRetryScheduled?: (delayMs: number) => void;
-  onState: (state: RealtimeState, message: string) => void;
-  onChange: (change: RealtimeChange) => void | Promise<void>;
-  onSnapshot: (cursor: number) => void | Promise<void>;
+  cursor: number,
+  retryMs?: number,
+  maximumRetryMs?: number,
+  stableConnectionMs?: number,
+  onRetryScheduled?: (delayMs: number) => void,
+  onState: (state: RealtimeState, message: string) => void,
+  onChange: (change: RealtimeChange) => void | Promise<void>,
+  onSnapshot: (cursor: number) => void | Promise<void>,
 };
 
+/**
+ * Coordinate realtime state and events.
+ */
 export class RealtimeController {
+  //The source state retained by this class instance
   #source?: EventSource;
+  //The cursor state retained by this class instance
   #cursor: number;
+  //The closed state retained by this class instance
   #closed = false;
+  //The generation state retained by this class instance
   #generation = 0;
+  //The retry timer state retained by this class instance
   #retryTimer?: ReturnType<typeof setTimeout>;
+  //The stable timer state retained by this class instance
   #stableTimer?: ReturnType<typeof setTimeout>;
+  //The retry attempt state retained by this class instance
   #retryAttempt = 0;
+  //The processing state retained by this class instance
   #processing = Promise.resolve();
 
-  constructor(private readonly options: RealtimeControllerOptions) {
+  /**
+   * Create a RealtimeController instance.
+   */
+  public constructor(private readonly options: RealtimeControllerOptions) {
     this.#cursor = options.cursor;
   }
 
-  start() {
+  /**
+   * Start the current value.
+   */
+  public start() {
     if (this.#closed || this.#source || this.#retryTimer) return;
     this.#open();
   }
 
+  /**
+   * Handle the internal open operation.
+   */
   #open() {
     if (this.#closed || this.#source) return;
     this.options.onState('connecting', 'Connecting live updates…');
@@ -139,6 +162,9 @@ export class RealtimeController {
     });
   }
 
+  /**
+   * Handle the internal restart operation.
+   */
   #restart(message: string) {
     if (this.#closed) return;
     this.#generation += 1;
@@ -159,17 +185,26 @@ export class RealtimeController {
     }, delay);
   }
 
+  /**
+   * Handle the internal mark healthy operation.
+   */
   #markHealthy() {
     this.#retryAttempt = 0;
     if (this.#stableTimer) clearTimeout(this.#stableTimer);
     this.#stableTimer = undefined;
   }
 
-  cursor() {
+  /**
+   * Handle the cursor operation.
+   */
+  public cursor() {
     return this.#cursor;
   }
 
-  close(report = true) {
+  /**
+   * Close the current value.
+   */
+  public close(report = true) {
     if (this.#closed) return;
     this.#closed = true;
     this.#generation += 1;
@@ -183,6 +218,9 @@ export class RealtimeController {
   }
 }
 
+/**
+ * Parse the cursor.
+ */
 function parseCursor(value: string) {
   const cursor = Number(value);
   return Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0;

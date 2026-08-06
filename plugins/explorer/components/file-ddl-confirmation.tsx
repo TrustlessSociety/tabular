@@ -1,6 +1,12 @@
+//modules
 import { useEffect, useRef, useState } from 'react';
+
+//client
 import { normalizePhysicalName } from '../helpers/model.js';
 
+/**
+ * Render the file create dialog component.
+ */
 export function FileCreateDialog({
   busy,
   error,
@@ -8,11 +14,11 @@ export function FileCreateDialog({
   onCreate,
   onClose
 }: {
-  busy: boolean;
-  error?: string;
-  triggerRef: React.RefObject<HTMLElement | null>;
-  onCreate: (displayName: string) => void;
-  onClose: () => void;
+  busy: boolean,
+  error?: string,
+  triggerRef: React.RefObject<HTMLElement | null>,
+  onCreate: (displayName: string) => void,
+  onClose: () => void,
 }) {
   const dialog = useRef<HTMLElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -21,6 +27,9 @@ export function FileCreateDialog({
 
   useEffect(() => {
     requestAnimationFrame(() => input.current?.focus());
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) {
         event.preventDefault();

@@ -1,3 +1,4 @@
+//client
 import type {
   GridCellPresentation,
   GridColumn,
@@ -5,9 +6,10 @@ import type {
   GridRow,
   LogicalGridSelection
 } from '../../grid/helpers/contracts.js';
-import { GRID_HEADER_ROW_ID } from '../../grid/helpers/contracts.js';
 import type { PresentationPatch } from './contracts.js';
+import { GRID_HEADER_ROW_ID } from '../../grid/helpers/contracts.js';
 
+//The default presentation value exported for module callers
 export const DEFAULT_PRESENTATION: Required<Pick<GridCellPresentation,
   'fontFamily' | 'fontSize' | 'bold' | 'italic' | 'underline' | 'textColor'
   | 'fillColor' | 'horizontal' | 'vertical' | 'wrap' | 'border' | 'borderColor'
@@ -28,10 +30,16 @@ export const DEFAULT_PRESENTATION: Required<Pick<GridCellPresentation,
   numberFormat: 'automatic'
 };
 
+/**
+ * Return the presentation key result.
+ */
 export function presentationKey(point: GridPoint) {
   return JSON.stringify([point.rowId, point.columnId]);
 }
 
+/**
+ * Return the presentation points result.
+ */
 export function presentationPoints(
   selection: LogicalGridSelection | null,
   rows: readonly GridRow[],
@@ -68,6 +76,9 @@ export function presentationPoints(
   return points;
 }
 
+/**
+ * Apply the presentation patch.
+ */
 export function applyPresentationPatch(
   current: Record<string, GridCellPresentation>,
   points: readonly GridPoint[],
@@ -87,6 +98,9 @@ export function applyPresentationPatch(
   return next;
 }
 
+/**
+ * Clear the presentation.
+ */
 export function clearPresentation(
   current: Record<string, GridCellPresentation>,
   points: readonly GridPoint[]
@@ -96,7 +110,9 @@ export function clearPresentation(
   return next;
 }
 
-/** Carries draft-row formatting to the stable row identity returned by PostgreSQL. */
+/**
+ * Carries draft-row formatting to the stable row identity returned by PostgreSQL.
+ */
 export function remapPresentationRow(
   current: Record<string, GridCellPresentation>,
   fromRowId: string,
@@ -118,6 +134,9 @@ export function remapPresentationRow(
   return next;
 }
 
+/**
+ * Return the presentation value result.
+ */
 export function presentationValue<Property extends keyof GridCellPresentation>(
   current: Record<string, GridCellPresentation>,
   points: readonly GridPoint[],
@@ -129,14 +148,20 @@ export function presentationValue<Property extends keyof GridCellPresentation>(
   return values.every((value) => value === values[0]) ? values[0] : 'mixed';
 }
 
+/**
+ * Encode the presentation.
+ */
 export function encodePresentation(current: Record<string, GridCellPresentation>) {
   return JSON.stringify({ version: 1, cells: current });
 }
 
+/**
+ * Decode the presentation.
+ */
 export function decodePresentation(value: string | null) {
   if (!value) return {};
   try {
-    const parsed = JSON.parse(value) as { version?: unknown; cells?: unknown };
+    const parsed = JSON.parse(value) as { version?: unknown, cells?: unknown, };
     if (parsed.version !== 1 || !parsed.cells || typeof parsed.cells !== 'object' || Array.isArray(parsed.cells)) return {};
     return Object.fromEntries(Object.entries(parsed.cells as Record<string, unknown>).flatMap(([key, style]) => (
       key.length <= 700 && style && typeof style === 'object' && !Array.isArray(style)

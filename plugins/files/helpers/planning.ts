@@ -1,7 +1,12 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
+import type {
+  StableCatalogSnapshot,
+  StableColumn,
+  StableObject
+} from '../../catalog/helpers/contracts.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import type { StableCatalogSnapshot, StableColumn, StableObject } from '../../catalog/helpers/contracts.js';
 import type { ExpectedDdlContext, FileDdlAction, FileStorageType } from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 import {
   deriveSafeOwner,
   readExpectedFingerprint,
@@ -13,6 +18,9 @@ import {
   validateColumnDefaultForStorage
 } from './validation.js';
 
+/**
+ * Prepare the file ddl plan.
+ */
 export async function prepareFileDdlPlan(
   database: DatabaseExecutor,
   stable: StableCatalogSnapshot,
@@ -100,8 +108,8 @@ export async function prepareFileDdlPlan(
     }
     if (action.unique === false) {
       const managed = await database.execute<{
-        oid: string | number;
-        name: string;
+        oid: string | number,
+        name: string,
       }>(`
         SELECT constraint_oid AS oid, physical_name::text AS name
           FROM tabular.file_managed_constraints
@@ -110,7 +118,7 @@ export async function prepareFileDdlPlan(
          FOR SHARE
       `, [object.stableId, action.columnId]);
       if (!managed.rows.length) {
-        const live = await database.execute<{ found: boolean }>(`
+        const live = await database.execute<{ found: boolean, }>(`
           SELECT EXISTS (
             SELECT 1
               FROM pg_constraint
@@ -164,7 +172,7 @@ export async function prepareFileDdlPlan(
       targetColumnAttributeNumbers: targetColumns.map((column) => column.attributeNumber)
     });
     const pairs = columns.map(() => '(?::smallint, ?::smallint)').join(', ');
-    const compatible = await database.execute<{ compatible: boolean }>(`
+    const compatible = await database.execute<{ compatible: boolean, }>(`
       SELECT bool_and(source.atttypid = target.atttypid
                   AND source.atttypmod = target.atttypmod
                   AND source.attcollation = target.attcollation) AS compatible
@@ -182,7 +190,7 @@ export async function prepareFileDdlPlan(
       unavailable('Every explicitly mapped relation source must match its target key type and collation');
     }
   } else if (action.type === 'hidden.install') {
-    const owned = await database.execute<{ found: boolean }>(`
+    const owned = await database.execute<{ found: boolean, }>(`
       SELECT EXISTS (
         SELECT 1 FROM tabular.column_metadata
          WHERE object_id = ? AND hidden_purpose = ?
@@ -203,7 +211,7 @@ export async function prepareFileDdlPlan(
       requireColumn(stable, object, columnId, aliases)
     );
     for (const column of columns) {
-      const compatible = await database.execute<{ compatible: boolean }>(`
+      const compatible = await database.execute<{ compatible: boolean, }>(`
         SELECT a.atttypid IN ('text'::regtype, 'varchar'::regtype, 'bpchar'::regtype)
           AS compatible
           FROM pg_attribute a
@@ -219,7 +227,7 @@ export async function prepareFileDdlPlan(
   }
   if (action.type === 'json.promote') {
     const hidden = requireColumn(stable, object, action.hiddenColumnId, aliases);
-    const owned = await database.execute<{ found: boolean }>(`
+    const owned = await database.execute<{ found: boolean, }>(`
       SELECT EXISTS (
         SELECT 1 FROM tabular.column_metadata
          WHERE object_id = ? AND column_id = ?
@@ -227,7 +235,7 @@ export async function prepareFileDdlPlan(
       ) AS found
     `, [object.stableId, hidden.stableId]);
     if (!owned.rows[0]?.found) unavailable('The source JSON field is not Tabular-owned');
-    const logical = await database.execute<{ found: boolean }>(`
+    const logical = await database.execute<{ found: boolean, }>(`
       SELECT EXISTS (
         SELECT 1 FROM tabular.column_metadata
          WHERE object_id = ? AND column_id = ?
@@ -255,12 +263,15 @@ export async function prepareFileDdlPlan(
   return { action, expected, summary: planSummary(action, expected) };
 }
 
+/**
+ * Return the authorize file ddl plan result.
+ */
 export async function authorizeFileDdlPlan(
   database: DatabaseExecutor,
   action: FileDdlAction,
   expected: ExpectedDdlContext
 ) {
-  const role = await database.execute<{ oid: string; name: string }>(`
+  const role = await database.execute<{ oid: string, name: string, }>(`
     SELECT current_user::regrole::oid::text AS oid, current_user::text AS name
   `);
   const current = role.rows[0];
@@ -276,7 +287,7 @@ export async function authorizeFileDdlPlan(
   if (expected.ddlFingerprint && expected.ddlFingerprint !== fingerprint) drift();
   expected.ddlFingerprint = fingerprint;
   if (action.type === 'relation.create') {
-    const targetSchema = await database.execute<{ allowed: boolean }>(`
+    const targetSchema = await database.execute<{ allowed: boolean, }>(`
       SELECT has_schema_privilege(?::oid, c.relnamespace, 'USAGE') AS allowed
         FROM pg_class c
        WHERE c.oid = ?::oid
@@ -284,12 +295,12 @@ export async function authorizeFileDdlPlan(
     if (!targetSchema.rows[0]?.allowed) denied();
     const targetAttributes = expected.targetColumnAttributeNumbers || [];
     for (const attribute of targetAttributes) {
-      const references = await database.execute<{ allowed: boolean }>(`
+      const references = await database.execute<{ allowed: boolean, }>(`
         SELECT has_column_privilege(?::oid, ?::oid, ?::smallint, 'REFERENCES') AS allowed
       `, [owner.oid, expected.targetRelationOid!, attribute]);
       if (!references.rows[0]?.allowed) denied();
     }
-    const eligible = await database.execute<{ key_numbers: string }>(`
+    const eligible = await database.execute<{ key_numbers: string, }>(`
       SELECT i.indkey::text AS key_numbers
         FROM pg_index i
         LEFT JOIN pg_constraint c
@@ -319,6 +330,9 @@ export async function authorizeFileDdlPlan(
   return { roleOid: current.oid, roleName: current.name };
 }
 
+/**
+ * Return the relation name result.
+ */
 async function relationName(
   database: DatabaseExecutor,
   namespaceOid: string,
@@ -337,6 +351,9 @@ async function relationName(
   conflict('No collision-safe PostgreSQL file name is available');
 }
 
+/**
+ * Return the column name result.
+ */
 async function columnName(
   database: DatabaseExecutor,
   relationOid: string,
@@ -355,6 +372,9 @@ async function columnName(
   conflict('No collision-safe PostgreSQL column name is available');
 }
 
+/**
+ * Return the versioned hidden name result.
+ */
 async function versionedHiddenName(database: DatabaseExecutor, relationOid: string, hint: string) {
   for (let version = 1; version <= 32; version += 1) {
     const candidate = `${hint}_v${version}`;
@@ -363,20 +383,32 @@ async function versionedHiddenName(database: DatabaseExecutor, relationOid: stri
   conflict('No collision-safe hidden-field name is available');
 }
 
+/**
+ * Assert the relation name free.
+ */
 async function assertRelationNameFree(database: DatabaseExecutor, namespaceOid: string, name: string) {
   if (await relationExists(database, namespaceOid, name)) conflict('The PostgreSQL file name is occupied');
 }
+/**
+ * Return the relation exists result.
+ */
 async function relationExists(database: DatabaseExecutor, namespaceOid: string, name: string) {
-  const result = await database.execute<{ found: boolean }>(`
+  const result = await database.execute<{ found: boolean, }>(`
     SELECT EXISTS (SELECT 1 FROM pg_class WHERE relnamespace = ?::oid AND relname = ?) AS found
   `, [namespaceOid, name]);
   return Boolean(result.rows[0]?.found);
 }
+/**
+ * Assert the column name free.
+ */
 async function assertColumnNameFree(database: DatabaseExecutor, relationOid: string, name: string) {
   if (await columnExists(database, relationOid, name)) conflict('The PostgreSQL column name is occupied');
 }
+/**
+ * Return the column exists result.
+ */
 async function columnExists(database: DatabaseExecutor, relationOid: string, name: string) {
-  const result = await database.execute<{ found: boolean }>(`
+  const result = await database.execute<{ found: boolean, }>(`
     SELECT EXISTS (
       SELECT 1 FROM pg_attribute
        WHERE attrelid = ?::oid AND attname = ? AND attnum > 0 AND NOT attisdropped
@@ -384,9 +416,15 @@ async function columnExists(database: DatabaseExecutor, relationOid: string, nam
   `, [relationOid, name]);
   return Boolean(result.rows[0]?.found);
 }
+/**
+ * Return the stable object result.
+ */
 function stableObject(stable: StableCatalogSnapshot, fileId: string) {
   return [...stable.objects.values()].find((item) => item.stableId === fileId);
 }
+/**
+ * Return the require column result.
+ */
 function requireColumn(
   stable: StableCatalogSnapshot,
   object: StableObject,
@@ -401,10 +439,13 @@ function requireColumn(
   if (column.state !== 'current') unavailable('The column has unresolved PostgreSQL drift');
   return column as StableColumn;
 }
+/**
+ * Return the column aliases result.
+ */
 async function columnAliases(database: DatabaseExecutor, objectId: string) {
   const result = await database.execute<{
-    column_id: string;
-    catalog_column_id: string;
+    column_id: string,
+    catalog_column_id: string,
   }>(`
     SELECT column_id, catalog_column_id
       FROM tabular.column_metadata
@@ -412,6 +453,9 @@ async function columnAliases(database: DatabaseExecutor, objectId: string) {
   `, [objectId]);
   return new Map(result.rows.map((row) => [row.column_id, row.catalog_column_id]));
 }
+/**
+ * Return the metadata version result.
+ */
 async function metadataVersion(
   database: DatabaseExecutor,
   table: 'file_metadata' | 'column_metadata',
@@ -419,18 +463,21 @@ async function metadataVersion(
   value: string,
   objectId?: string
 ) {
-  const result = await database.execute<{ metadata_version: string | number }>(`
+  const result = await database.execute<{ metadata_version: string | number, }>(`
     SELECT metadata_version FROM tabular.${table}
      WHERE ${key} = ?${objectId ? ' AND object_id = ?' : ''}
   `, objectId ? [value, objectId] : [value]);
   return result.rows[0] ? Number(result.rows[0].metadata_version) : null;
 }
+/**
+ * Return the live storage type result.
+ */
 async function liveStorageType(
   database: DatabaseExecutor,
   relationOid: string,
   attributeNumber: number
 ) {
-  const result = await database.execute<{ storage_type: FileStorageType | null }>(`
+  const result = await database.execute<{ storage_type: FileStorageType | null, }>(`
     SELECT CASE a.atttypid
       WHEN 'text'::regtype THEN 'text'
       WHEN 'int8'::regtype THEN 'bigint'
@@ -451,10 +498,16 @@ async function liveStorageType(
   if (!storageType) unavailable('The current PostgreSQL type does not support structured defaults');
   return storageType;
 }
+/**
+ * Return the suffixed result.
+ */
 function suffixed(value: string, suffix: number) {
   const tail = `_${suffix}`;
   return `${value.slice(0, 63 - tail.length)}${tail}`;
 }
+/**
+ * Return the plan summary result.
+ */
 function planSummary(action: FileDdlAction, expected: ExpectedDdlContext) {
   return {
     actionType: action.type,
@@ -464,15 +517,27 @@ function planSummary(action: FileDdlAction, expected: ExpectedDdlContext) {
     ...('physicalName' in action && action.physicalName ? { physicalName: action.physicalName } : {})
   };
 }
+/**
+ * Return the denied result.
+ */
 function denied(): never {
   throw new ApplicationError('file_ddl_denied', 403, 'The schema change requires owning-role authority');
 }
+/**
+ * Return the unavailable result.
+ */
 function unavailable(message: string): never {
   throw new ApplicationError('file_ddl_unavailable', 409, message);
 }
+/**
+ * Return the conflict result.
+ */
 function conflict(message: string): never {
   throw new ApplicationError('file_ddl_conflict', 409, message);
 }
+/**
+ * Return the drift result.
+ */
 function drift(): never {
   throw new ApplicationError(
     'file_ddl_stale',

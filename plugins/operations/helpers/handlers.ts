@@ -1,3 +1,4 @@
+//client
 import type {
   OperationAuthority,
   OperationHandler,
@@ -5,10 +6,17 @@ import type {
   OperationKind
 } from './contracts.js';
 
+/**
+ * Store and resolve operation handler registrations.
+ */
 export class OperationHandlerRegistry {
+  //The handlers state retained by this class instance
   readonly #handlers = new Map<string, OperationHandlerRegistration>();
 
-  register<Kind extends OperationKind>(registration: OperationHandlerRegistration<Kind>) {
+  /**
+   * Register the current value.
+   */
+  public register<Kind extends OperationKind>(registration: OperationHandlerRegistration<Kind>) {
     if (!Number.isSafeInteger(registration.version) || registration.version < 1) {
       throw new Error('Operation handler version must be a positive integer');
     }
@@ -25,24 +33,36 @@ export class OperationHandlerRegistry {
     return this;
   }
 
-  resolve(kind: OperationKind, authority: OperationAuthority, schemaVersion: number) {
+  /**
+   * Resolve the current value.
+   */
+  public resolve(kind: OperationKind, authority: OperationAuthority, schemaVersion: number) {
     if (!Number.isSafeInteger(schemaVersion) || schemaVersion < 1) return undefined;
     const registration = this.#handlers.get(handlerKey(kind, schemaVersion));
     if (!registration || registration.authority !== authority) return undefined;
     return registration;
   }
 
-  kinds(authority?: OperationAuthority) {
+  /**
+   * Handle the kinds operation.
+   */
+  public kinds(authority?: OperationAuthority) {
     return [...this.#handlers.values()]
       .filter((entry) => !authority || entry.authority === authority)
       .map((entry) => entry.kind);
   }
 }
 
+/**
+ * Return the handler key result.
+ */
 function handlerKey(kind: OperationKind, schemaVersion: number) {
   return `${kind}:${schemaVersion}`;
 }
 
+/**
+ * Return the operation handler result.
+ */
 export function operationHandler<Kind extends OperationKind>(
   kind: Kind,
   authority: OperationAuthority,

@@ -1,5 +1,7 @@
-import type { DatabaseConfig } from '../../../config/database.js';
+//client
 import type { RuntimeResources } from '../../../bootstrap/resources.js';
+import type { DatabaseConfig } from '../../../config/database.js';
+import type { PostgreSqlTransactionOptions } from './transactions.js';
 import { DatabaseExecutor } from './executor.js';
 import { runMigrations, verifyPostgreSqlMigrationState } from './migrator.js';
 import { ManagedPostgresPool } from './pool.js';
@@ -8,37 +10,51 @@ import {
   MigrationRepository,
   readPostgreSqlConnectionScope
 } from './repositories.js';
-import {
-  withPostgreSqlTransaction,
-  type PostgreSqlTransactionOptions
-} from './transactions.js';
+import { withPostgreSqlTransaction } from './transactions.js';
 import { loadMigrations } from '../migrations/index.js';
 
+//The database service value exported for module callers
 export const DATABASE_SERVICE = 'tabular.database';
+//The database scope contract exported for module callers
 export type DatabaseScope = 'web' | 'migrator' | 'worker';
 
+/**
+ * Provide database plugin operations through one service boundary.
+ */
 export class DatabasePluginService {
-  readonly name = DATABASE_SERVICE;
-  readonly repositories = {
+  //The name state retained by this class instance
+  public readonly name = DATABASE_SERVICE;
+  //The repositories state retained by this class instance
+  public readonly repositories = {
     migrations: (database: DatabaseExecutor) => new MigrationRepository(database),
     readConnectionScope: readPostgreSqlConnectionScope,
     findObject: findPostgreSqlObject
   };
+  //The pools state retained by this class instance
   readonly #pools = new Map<DatabaseScope, ManagedPostgresPool>();
 
-  constructor(
-    readonly processKind: DatabaseScope,
+  /**
+   * Create a DatabasePluginService instance.
+   */
+  public constructor(
+    public readonly processKind: DatabaseScope,
     private readonly config: DatabaseConfig,
     private readonly resources: RuntimeResources,
     private readonly shutdownTimeoutMs: number,
     private readonly instanceId: string
   ) {}
 
-  configured(scope: DatabaseScope) {
+  /**
+   * Handle the configured operation.
+   */
+  public configured(scope: DatabaseScope) {
     return Boolean(this.url(scope));
   }
 
-  openPool(scope: DatabaseScope) {
+  /**
+   * Open the pool.
+   */
+  public openPool(scope: DatabaseScope) {
     if (scope !== this.processKind) {
       throw new Error(
         `The ${this.processKind} process cannot open PostgreSQL ${scope} authority`
@@ -63,7 +79,10 @@ export class DatabasePluginService {
     return pool;
   }
 
-  async assertReady(scope: DatabaseScope) {
+  /**
+   * Assert the ready.
+   */
+  public async assertReady(scope: DatabaseScope) {
     const pool = this.openPool(scope);
     if (!await pool.ready()) throw new Error(`PostgreSQL ${scope} pool is not ready`);
     const migrations = await loadMigrations();
@@ -72,7 +91,10 @@ export class DatabasePluginService {
     );
   }
 
-  async ready(scope: DatabaseScope) {
+  /**
+   * Handle the ready operation.
+   */
+  public async ready(scope: DatabaseScope) {
     try {
       await this.assertReady(scope);
       return true;
@@ -81,7 +103,10 @@ export class DatabasePluginService {
     }
   }
 
-  transaction<Result, FinalResult = Result>(
+  /**
+   * Handle the transaction operation.
+   */
+  public transaction<Result, FinalResult = Result>(
     scope: DatabaseScope,
     options: PostgreSqlTransactionOptions<Result, FinalResult>,
     callback: (database: DatabaseExecutor) => Promise<Result>
@@ -89,7 +114,10 @@ export class DatabasePluginService {
     return withPostgreSqlTransaction<Result, FinalResult>(this.openPool(scope), options, callback);
   }
 
-  async migrate() {
+  /**
+   * Handle the migrate operation.
+   */
+  public async migrate() {
     if (this.processKind !== 'migrator') {
       throw new Error('Only the migrator process can apply database migrations');
     }
@@ -107,6 +135,9 @@ export class DatabasePluginService {
     );
   }
 
+  /**
+   * Handle the URL operation.
+   */
   private url(scope: DatabaseScope) {
     if (scope === 'web') return this.config.webUrl;
     if (scope === 'migrator') return this.config.migratorUrl;

@@ -1,5 +1,8 @@
-import PGConnection from '@stackpress/inquire-pg/Connection';
+//modules
 import type { PoolClient } from 'pg';
+import PGConnection from '@stackpress/inquire-pg/Connection';
+
+//client
 import { DatabaseExecutor } from './executor.js';
 import { quoteIdentifier, validateIdentifier } from './identifiers.js';
 
@@ -9,45 +12,57 @@ const allowedSettings = new Set([
   'idle_in_transaction_session_timeout'
 ]);
 
+//The postgre sql transaction options contract exported for module callers
 export type PostgreSqlTransactionOptions<Result = unknown, FinalResult = Result> = {
-  isolation?: 'repeatable read';
-  role?: string;
-  resolveRole?: (database: DatabaseExecutor) => Promise<string | ResolvedPostgreSqlRole>;
-  finalizeBase?: (database: DatabaseExecutor, result: Result) => Promise<FinalResult>;
-  allowedRoles?: ReadonlySet<string>;
+  isolation?: 'repeatable read',
+  role?: string,
+  resolveRole?: (database: DatabaseExecutor) => Promise<string | ResolvedPostgreSqlRole>,
+  finalizeBase?: (database: DatabaseExecutor, result: Result) => Promise<FinalResult>,
+  allowedRoles?: ReadonlySet<string>,
   settings?: Partial<Record<
     'statement_timeout' | 'lock_timeout' | 'idle_in_transaction_session_timeout',
     string
-  >>;
-  signal?: AbortSignal;
+  >>,
+  signal?: AbortSignal,
 };
 
+//The resolved postgre sql role contract exported for module callers
 export type ResolvedPostgreSqlRole = {
-  role: string;
-  verifyAfterSet?: (database: DatabaseExecutor) => Promise<void>;
+  role: string,
+  verifyAfterSet?: (database: DatabaseExecutor) => Promise<void>,
 };
 
+//The postgre sql pool owner contract exported for module callers
 export type PostgreSqlPoolOwner = {
-  checkout(): Promise<PoolClient>;
-  release(client: PoolClient, error?: Error): void;
-  cancel?(client: PoolClient): Promise<void>;
+  checkout(): Promise<PoolClient>,
+  release(client: PoolClient, error?: Error): void,
+  cancel?(client: PoolClient): Promise<void>,
 };
 
+/**
+ * Represent an owned postgre sql transaction cancelled failure.
+ */
 export class PostgreSqlTransactionCancelledError extends Error {
-  constructor(options?: { cause?: unknown }) {
+  /**
+   * Create a PostgreSqlTransactionCancelledError instance.
+   */
+  public constructor(options?: { cause?: unknown, }) {
     super('The PostgreSQL transaction was cancelled', options);
     this.name = 'PostgreSqlTransactionCancelledError';
   }
 }
 
 type SessionState = {
-  current_user: string;
-  session_user: string;
-  statement_timeout: string;
-  lock_timeout: string;
-  idle_in_transaction_session_timeout: string;
+  current_user: string,
+  session_user: string,
+  statement_timeout: string,
+  lock_timeout: string,
+  idle_in_transaction_session_timeout: string,
 };
 
+/**
+ * Return the with postgre SQL transaction result.
+ */
 export async function withPostgreSqlTransaction<Result, FinalResult = Result>(
   pool: PostgreSqlPoolOwner,
   options: PostgreSqlTransactionOptions<Result, FinalResult>,
@@ -68,6 +83,9 @@ export async function withPostgreSqlTransaction<Result, FinalResult = Result>(
   let cancellationRequested = false;
   let cancellationPromise: Promise<void> | undefined;
   let cancellationFailed = false;
+  /**
+   * Return the request cancellation result.
+   */
   const requestCancellation = () => {
     if (committed || cancellationRequested) return;
     cancellationRequested = true;
@@ -81,6 +99,9 @@ export async function withPostgreSqlTransaction<Result, FinalResult = Result>(
         cleanupErrors.push(new Error('PostgreSQL pool does not support backend cancellation'));
       });
   };
+  /**
+   * Return the throw if cancelled result.
+   */
   const throwIfCancelled = () => {
     if (cancellationRequested || options.signal?.aborted) {
       throw new PostgreSqlTransactionCancelledError();
@@ -187,11 +208,17 @@ export async function withPostgreSqlTransaction<Result, FinalResult = Result>(
   return finalResult as FinalResult;
 }
 
+/**
+ * Return the checkout with signal result.
+ */
 function checkoutWithSignal(pool: PostgreSqlPoolOwner, signal?: AbortSignal) {
   if (!signal) return pool.checkout();
   if (signal.aborted) return Promise.reject(new PostgreSqlTransactionCancelledError());
   return new Promise<PoolClient>((resolve, reject) => {
     let settled = false;
+    /**
+     * Handle the abort event.
+     */
     const onAbort = () => {
       if (settled) return;
       settled = true;
@@ -215,12 +242,18 @@ function checkoutWithSignal(pool: PostgreSqlPoolOwner, signal?: AbortSignal) {
   });
 }
 
+/**
+ * Reset the and read state.
+ */
 async function resetAndReadState(database: DatabaseExecutor) {
   await database.execute('RESET ROLE');
   await database.execute('RESET ALL');
   return readState(database);
 }
 
+/**
+ * Read the state.
+ */
 async function readState(database: DatabaseExecutor) {
   const state = await database.execute<SessionState>(`
     SELECT current_user,
@@ -233,12 +266,18 @@ async function readState(database: DatabaseExecutor) {
   return state.rows[0];
 }
 
+/**
+ * Assert the clean state.
+ */
 function assertCleanState(state: SessionState) {
   if (state.current_user !== state.session_user) {
     throw new Error(`Unsafe PostgreSQL role state before transaction: ${state.current_user}`);
   }
 }
 
+/**
+ * Assert the state matches.
+ */
 function assertStateMatches(state: SessionState, baseline: SessionState) {
   assertCleanState(state);
   for (const setting of allowedSettings) {
@@ -248,10 +287,16 @@ function assertStateMatches(state: SessionState, baseline: SessionState) {
   }
 }
 
+/**
+ * Return the as error result.
+ */
 function asError(error: unknown, fallback: string) {
   return error instanceof Error ? error : new Error(fallback);
 }
 
+/**
+ * Validate the postgre SQL role.
+ */
 export function validatePostgreSqlRole(role: string) {
   return validateIdentifier(role, 'PostgreSQL role');
 }

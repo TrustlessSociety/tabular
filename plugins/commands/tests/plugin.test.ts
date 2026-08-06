@@ -1,12 +1,12 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
+import type { CommandsPluginService } from '../helpers/service.js';
 import { createApplication } from '../../../bootstrap/application.js';
 import commandsPlugin from '../plugin.js';
-import {
-  COMMANDS_SERVICE,
-  createCommandsPluginService,
-  type CommandsPluginService
-} from '../helpers/service.js';
+import { COMMANDS_SERVICE, createCommandsPluginService } from '../helpers/service.js';
 
 test('commands plugin registers one stable presentation-only service after UI and grid', async () => {
   //Bootstrap through the public application composition so the test exercises

@@ -1,3 +1,4 @@
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   OperationAuthority,
@@ -6,75 +7,79 @@ import type {
   OperationState
 } from './contracts.js';
 
+//The stored operation row contract exported for module callers
 export type StoredOperationRow = {
-  id: string;
-  connection_id: string;
-  actor_identity_id: string;
-  session_id: string;
-  history_scope_id: string;
-  file_id: string | null;
-  kind: OperationKind;
-  schema_version: string | number;
-  authority_scope: OperationAuthority;
-  idempotency_key: string;
-  request_digest: string;
-  payload: OperationPayload;
-  state: OperationState;
-  progress: string | number;
-  attempts: string | number;
-  max_attempts: string | number;
-  available_at: Date | string;
-  lease_owner: string | null;
-  lease_token: string | null;
-  lease_expires_at: Date | string | null;
-  heartbeat_at: Date | string | null;
-  cancel_requested_at: Date | string | null;
-  irreversible_at: Date | string | null;
-  result_summary: Record<string, unknown> | null;
-  error_summary: Record<string, unknown> | null;
-  diagnostics: Record<string, unknown>;
-  version: string | number;
-  created_at: Date | string;
-  updated_at: Date | string;
-  started_at: Date | string | null;
-  finished_at: Date | string | null;
-  acknowledged_at: Date | string | null;
-  acknowledged_by_identity_id: string | null;
-  retained_until: Date | string;
-  read_at?: Date | string | null;
-  schema_name?: string | null;
-  object_name?: string | null;
+  id: string,
+  connection_id: string,
+  actor_identity_id: string,
+  session_id: string,
+  history_scope_id: string,
+  file_id: string | null,
+  kind: OperationKind,
+  schema_version: string | number,
+  authority_scope: OperationAuthority,
+  idempotency_key: string,
+  request_digest: string,
+  payload: OperationPayload,
+  state: OperationState,
+  progress: string | number,
+  attempts: string | number,
+  max_attempts: string | number,
+  available_at: Date | string,
+  lease_owner: string | null,
+  lease_token: string | null,
+  lease_expires_at: Date | string | null,
+  heartbeat_at: Date | string | null,
+  cancel_requested_at: Date | string | null,
+  irreversible_at: Date | string | null,
+  result_summary: Record<string, unknown> | null,
+  error_summary: Record<string, unknown> | null,
+  diagnostics: Record<string, unknown>,
+  version: string | number,
+  created_at: Date | string,
+  updated_at: Date | string,
+  started_at: Date | string | null,
+  finished_at: Date | string | null,
+  acknowledged_at: Date | string | null,
+  acknowledged_by_identity_id: string | null,
+  retained_until: Date | string,
+  read_at?: Date | string | null,
+  schema_name?: string | null,
+  object_name?: string | null,
 };
 
+//The operation idempotency row contract exported for module callers
 export type OperationIdempotencyRow = {
-  connection_id: string;
-  actor_identity_id: string;
-  idempotency_key: string;
-  kind: OperationKind;
-  schema_version: string | number;
-  request_digest: string;
-  original_job_id: string;
-  active_job_id: string | null;
-  terminal_state: OperationState | null;
-  acknowledged_at: Date | string | null;
-  retired_at: Date | string | null;
+  connection_id: string,
+  actor_identity_id: string,
+  idempotency_key: string,
+  kind: OperationKind,
+  schema_version: string | number,
+  request_digest: string,
+  original_job_id: string,
+  active_job_id: string | null,
+  terminal_state: OperationState | null,
+  acknowledged_at: Date | string | null,
+  retired_at: Date | string | null,
 };
 
+//The stored operation event row contract exported for module callers
 export type StoredOperationEventRow = {
-  sequence: string | number;
-  file_id: string | null;
-  audience_identity_id: string | null;
-  event_type: string;
-  payload: Record<string, unknown>;
-  created_at: Date | string;
+  sequence: string | number,
+  file_id: string | null,
+  audience_identity_id: string | null,
+  event_type: string,
+  payload: Record<string, unknown>,
+  created_at: Date | string,
 };
 
+//The operation file authority target contract exported for module callers
 export type OperationFileAuthorityTarget = {
-  file_id: string;
-  relation_oid: string | number;
-  namespace_oid: string | number;
-  object_state: string;
-  relation_kind: string;
+  file_id: string,
+  relation_oid: string | number,
+  namespace_oid: string | number,
+  object_state: string,
+  relation_kind: string,
 };
 
 const OPERATION_COLUMNS = `
@@ -89,23 +94,32 @@ const OPERATION_COLUMNS = `
   job.acknowledged_by_identity_id, job.retained_until
 `;
 
+/**
+ * Provide operations persistence operations.
+ */
 export class OperationsRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a OperationsRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async enqueue(input: {
-    jobId: string;
-    connectionId: string;
-    actorIdentityId: string;
-    sessionId: string;
-    historyScopeId: string;
-    fileId?: string;
-    kind: OperationKind;
-    authority: OperationAuthority;
-    idempotencyKey: string;
-    requestDigest: string;
-    payload: OperationPayload;
-    maxAttempts: number;
-    retainedUntil: Date;
+  /**
+   * Handle the enqueue operation.
+   */
+  public async enqueue(input: {
+    jobId: string,
+    connectionId: string,
+    actorIdentityId: string,
+    sessionId: string,
+    historyScopeId: string,
+    fileId?: string,
+    kind: OperationKind,
+    authority: OperationAuthority,
+    idempotencyKey: string,
+    requestDigest: string,
+    payload: OperationPayload,
+    maxAttempts: number,
+    retainedUntil: Date,
   }) {
     const ledger = await this.database.execute<OperationIdempotencyRow>(`
       INSERT INTO tabular.operation_idempotency (
@@ -159,7 +173,10 @@ export class OperationsRepository {
     };
   }
 
-  async byId(jobId: string, lock = false) {
+  /**
+   * Handle the by id operation.
+   */
+  public async byId(jobId: string, lock = false) {
     const result = await this.database.execute<StoredOperationRow>(`
       SELECT ${OPERATION_COLUMNS}
         FROM tabular.operation_jobs job
@@ -168,7 +185,10 @@ export class OperationsRepository {
     return result.rows[0];
   }
 
-  async byIdForIdentity(jobId: string, identityId: string) {
+  /**
+   * Handle the by id for identity operation.
+   */
+  public async byIdForIdentity(jobId: string, identityId: string) {
     const result = await this.database.execute<StoredOperationRow>(`
       SELECT ${OPERATION_COLUMNS}, reads.read_at,
              namespace.observed_name AS schema_name,
@@ -183,11 +203,14 @@ export class OperationsRepository {
     return result.rows[0];
   }
 
-  async activity(input: {
-    connectionId: string;
-    identityId: string;
-    states?: OperationState[];
-    limit: number;
+  /**
+   * Handle the activity operation.
+   */
+  public async activity(input: {
+    connectionId: string,
+    identityId: string,
+    states?: OperationState[],
+    limit: number,
   }) {
     const states = input.states || [];
     const result = await this.database.execute<StoredOperationRow>(`
@@ -208,8 +231,10 @@ export class OperationsRepository {
     return result.rows;
   }
 
-  /** Resolves internal file identities under base authority before a member role is set. */
-  async fileAuthorityTargets(fileIds: string[]) {
+  /**
+   * Resolves internal file identities under base authority before a member role is set.
+   */
+  public async fileAuthorityTargets(fileIds: string[]) {
     const ids = [...new Set(fileIds)];
     if (!ids.length) return [];
     const result = await this.database.execute<OperationFileAuthorityTarget>(`
@@ -225,8 +250,11 @@ export class OperationsRepository {
     return result.rows;
   }
 
-  async currentCursor(connectionId: string) {
-    const result = await this.database.execute<{ cursor: string | number }>(`
+  /**
+   * Handle the current cursor operation.
+   */
+  public async currentCursor(connectionId: string) {
+    const result = await this.database.execute<{ cursor: string | number, }>(`
       SELECT next_cursor - 1 AS cursor
         FROM tabular.change_streams
        WHERE connection_id = ?
@@ -234,8 +262,11 @@ export class OperationsRepository {
     return Number(result.rows[0]?.cursor || 0);
   }
 
-  async retentionPolicy(connectionId: string) {
-    const result = await this.database.execute<{ retention_days: string | number }>(`
+  /**
+   * Handle the retention policy operation.
+   */
+  public async retentionPolicy(connectionId: string) {
+    const result = await this.database.execute<{ retention_days: string | number, }>(`
       SELECT retention_days
         FROM tabular.operations_retention_policy
        WHERE connection_id = ?
@@ -243,8 +274,11 @@ export class OperationsRepository {
     return Number(result.rows[0]?.retention_days || 90);
   }
 
-  async setRetentionPolicy(connectionId: string, identityId: string, retentionDays: number) {
-    const result = await this.database.execute<{ retention_days: string | number }>(`
+  /**
+   * Set the retention policy.
+   */
+  public async setRetentionPolicy(connectionId: string, identityId: string, retentionDays: number) {
+    const result = await this.database.execute<{ retention_days: string | number, }>(`
       INSERT INTO tabular.operations_retention_policy (
         connection_id, retention_days, updated_by_identity_id
       ) VALUES (?, ?, ?)
@@ -257,13 +291,16 @@ export class OperationsRepository {
     return Number(required(result.rows[0], 'Retention policy was not returned').retention_days);
   }
 
-  async retentionAdminGrant(input: {
-    identityId: string;
-    sessionId: string;
-    connectionId: string;
-    historyScopeId: string;
+  /**
+   * Handle the retention admin grant operation.
+   */
+  public async retentionAdminGrant(input: {
+    identityId: string,
+    sessionId: string,
+    connectionId: string,
+    historyScopeId: string,
   }) {
-    const result = await this.database.execute<{ allowed: boolean }>(`
+    const result = await this.database.execute<{ allowed: boolean, }>(`
       SELECT role.can_manage_operations_retention AS allowed
         FROM tabular.browser_sessions session
         JOIN tabular.identities identity ON identity.id = session.identity_id
@@ -301,13 +338,16 @@ export class OperationsRepository {
     return Boolean(result.rows[0]?.allowed);
   }
 
-  async claim(input: {
-    authority: OperationAuthority;
-    leaseOwner: string;
-    leaseToken: string;
-    leaseTokenDigest: string;
-    leaseSeconds: number;
-    jobId?: string;
+  /**
+   * Handle the claim operation.
+   */
+  public async claim(input: {
+    authority: OperationAuthority,
+    leaseOwner: string,
+    leaseToken: string,
+    leaseTokenDigest: string,
+    leaseSeconds: number,
+    jobId?: string,
   }) {
     const claimed = await this.database.execute<StoredOperationRow>(`
       WITH candidate AS MATERIALIZED (
@@ -363,7 +403,10 @@ export class OperationsRepository {
     return job;
   }
 
-  async recoverExpired(authority: OperationAuthority, limit: number) {
+  /**
+   * Handle the recover expired operation.
+   */
+  public async recoverExpired(authority: OperationAuthority, limit: number) {
     const result = await this.database.execute<StoredOperationRow>(`
       WITH candidate AS MATERIALIZED (
         SELECT job.id, job.attempts, job.cancel_requested_at
@@ -405,12 +448,15 @@ export class OperationsRepository {
     return result.rows;
   }
 
-  async heartbeat(input: {
-    jobId: string;
-    leaseOwner: string;
-    leaseToken: string;
-    leaseSeconds: number;
-    progress?: number;
+  /**
+   * Handle the heartbeat operation.
+   */
+  public async heartbeat(input: {
+    jobId: string,
+    leaseOwner: string,
+    leaseToken: string,
+    leaseSeconds: number,
+    progress?: number,
   }) {
     const withProgress = typeof input.progress !== 'undefined';
     const values: Array<string | number> = withProgress
@@ -429,7 +475,10 @@ export class OperationsRepository {
     return result.affectedRows === 1;
   }
 
-  async markIrreversible(jobId: string, leaseOwner: string, leaseToken: string) {
+  /**
+   * Mark irreversible.
+   */
+  public async markIrreversible(jobId: string, leaseOwner: string, leaseToken: string) {
     const result = await this.database.execute(`
       UPDATE tabular.operation_jobs
          SET irreversible_at = COALESCE(irreversible_at, clock_timestamp()),
@@ -444,7 +493,10 @@ export class OperationsRepository {
     return result.affectedRows === 1;
   }
 
-  async requestCancellation(jobId: string) {
+  /**
+   * Handle the request cancellation operation.
+   */
+  public async requestCancellation(jobId: string) {
     const result = await this.database.execute<StoredOperationRow>(`
       UPDATE tabular.operation_jobs job
          SET state = CASE WHEN state IN ('queued', 'retrying') THEN 'cancelled' ELSE state END,
@@ -460,18 +512,21 @@ export class OperationsRepository {
     return result.rows[0];
   }
 
-  async finish(input: {
-    jobId: string;
-    leaseOwner: string;
-    leaseToken: string;
-    state: Extract<OperationState, 'succeeded' | 'failed' | 'retrying' | 'cancelled' | 'dead-letter'>;
-    progress: number;
-    availableAt?: Date;
-    availableAfterMs?: number;
-    result?: Record<string, unknown>;
-    resultFileId?: string;
-    error?: Record<string, unknown>;
-    diagnostics: Record<string, unknown>;
+  /**
+   * Finish the current value.
+   */
+  public async finish(input: {
+    jobId: string,
+    leaseOwner: string,
+    leaseToken: string,
+    state: Extract<OperationState, 'succeeded' | 'failed' | 'retrying' | 'cancelled' | 'dead-letter'>,
+    progress: number,
+    availableAt?: Date,
+    availableAfterMs?: number,
+    result?: Record<string, unknown>,
+    resultFileId?: string,
+    error?: Record<string, unknown>,
+    diagnostics: Record<string, unknown>,
   }) {
     const result = await this.database.execute<StoredOperationRow>(`
       UPDATE tabular.operation_jobs job
@@ -534,8 +589,11 @@ export class OperationsRepository {
     return job;
   }
 
-  async markRead(jobId: string, identityId: string) {
-    const result = await this.database.execute<{ read_at: Date | string }>(`
+  /**
+   * Mark read.
+   */
+  public async markRead(jobId: string, identityId: string) {
+    const result = await this.database.execute<{ read_at: Date | string, }>(`
       INSERT INTO tabular.operation_reads (job_id, identity_id, read_at)
       VALUES (?, ?, clock_timestamp())
       ON CONFLICT (job_id, identity_id) DO UPDATE
@@ -545,7 +603,10 @@ export class OperationsRepository {
     return required(result.rows[0], 'Operation read marker was not returned').read_at;
   }
 
-  async acknowledge(jobId: string, identityId: string) {
+  /**
+   * Handle the acknowledge operation.
+   */
+  public async acknowledge(jobId: string, identityId: string) {
     const result = await this.database.execute<StoredOperationRow>(`
       UPDATE tabular.operation_jobs job
          SET acknowledged_at = COALESCE(acknowledged_at, clock_timestamp()),
@@ -560,7 +621,10 @@ export class OperationsRepository {
     return job;
   }
 
-  async retry(jobId: string, additionalAttempts: number) {
+  /**
+   * Handle the retry operation.
+   */
+  public async retry(jobId: string, additionalAttempts: number) {
     const result = await this.database.execute<StoredOperationRow>(`
       UPDATE tabular.operation_jobs job
          SET state = 'queued',
@@ -576,10 +640,13 @@ export class OperationsRepository {
     return result.rows[0];
   }
 
-  async streamState(connectionId: string) {
+  /**
+   * Stream the state.
+   */
+  public async streamState(connectionId: string) {
     const result = await this.database.execute<{
-      retained_from_cursor: string | number;
-      high_water: string | number;
+      retained_from_cursor: string | number,
+      high_water: string | number,
     }>(`
       SELECT retained_from_cursor, next_cursor - 1 AS high_water
         FROM tabular.change_streams
@@ -593,7 +660,10 @@ export class OperationsRepository {
       : { retainedFrom: 1, highWater: 0 };
   }
 
-  async events(connectionId: string, after: number, limit: number) {
+  /**
+   * Handle the events operation.
+   */
+  public async events(connectionId: string, after: number, limit: number) {
     const result = await this.database.execute<StoredOperationEventRow>(`
       SELECT sequence, file_id, audience_identity_id, event_type, payload, created_at
         FROM tabular.outbox_events
@@ -604,14 +674,17 @@ export class OperationsRepository {
     return result.rows;
   }
 
-  async retain(input: { connectionId: string; retentionDays: number; limit: number }) {
+  /**
+   * Handle the retain operation.
+   */
+  public async retain(input: { connectionId: string, retentionDays: number, limit: number, }) {
     const jobs = await this.database.execute<{
-      id: string;
-      connection_id: string;
-      actor_identity_id: string;
-      idempotency_key: string;
-      state: OperationState;
-      acknowledged_at: Date | string | null;
+      id: string,
+      connection_id: string,
+      actor_identity_id: string,
+      idempotency_key: string,
+      state: OperationState,
+      acknowledged_at: Date | string | null,
     }>(`
       WITH candidate AS MATERIALIZED (
         SELECT job.id
@@ -643,7 +716,7 @@ export class OperationsRepository {
       RETURNING job.id, job.connection_id, job.actor_identity_id,
                 job.idempotency_key, job.state, job.acknowledged_at
     `, [input.connectionId, input.retentionDays, input.limit]);
-    const events = await this.database.execute<{ connection_id: string; sequence: string | number }>(`
+    const events = await this.database.execute<{ connection_id: string, sequence: string | number, }>(`
       WITH stream AS MATERIALIZED (
         SELECT retained_from_cursor
           FROM tabular.change_streams
@@ -715,6 +788,9 @@ export class OperationsRepository {
   }
 }
 
+/**
+ * Return the required result.
+ */
 function required<Value>(value: Value | undefined, message: string): Value {
   if (typeof value === 'undefined') throw new Error(message);
   return value;

@@ -1,38 +1,47 @@
+//node
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
+import type { CapabilityPluginService, GridTargetPlan } from '../../capability/helpers/service.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
-import { quoteIdentifier } from '../../database/helpers/identifiers.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import type { ExpectedDdlContext } from '../../files/helpers/contracts.js';
+import type { FilesPluginService } from '../../files/helpers/service.js';
 import type {
   BrowserMutationPrincipal,
   BrowserPrincipal
 } from '../../identity/helpers/contracts.js';
-import { isBrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
-import {
-  IdentityRepository,
-  type SessionAuthorityRow
-} from '../../identity/helpers/repository.js';
+import type { SessionAuthorityRow } from '../../identity/helpers/repository.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
+import type { OperationsPluginService } from '../../operations/helpers/service.js';
+import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
+import type { SavedViewsPluginService } from '../../saved-views/helpers/service.js';
+import type {
+  ParsedImportCell,
+  ParsedImportResult,
+  ParsedImportRow
+} from './contracts.js';
+import type { GoogleOAuthTokens, GoogleSheetValues } from './google-sheets.js';
+import type { ImportColumnMapping, ImportConversionIssue } from './mapping.js';
+import type { StoredGoogleConnection, StoredImportOperation } from './repository.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import { isBrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import { IdentityRepository } from '../../identity/helpers/repository.js';
 import {
   matchesTokenHash,
   opaqueId,
   opaqueToken,
   tokenHash
 } from '../../identity/helpers/security.js';
-import type { CapabilityPluginService, GridTargetPlan } from '../../capability/helpers/service.js';
-import type { FilesPluginService } from '../../files/helpers/service.js';
-import type { SavedViewsPluginService } from '../../saved-views/helpers/service.js';
-import type { OperationsPluginService } from '../../operations/helpers/service.js';
 import { validateDefinition } from '../../saved-views/helpers/validation.js';
-import type { SavedViewDefinition } from '../../saved-views/helpers/contracts.js';
 import {
   authorizeFileDdlPlan,
   prepareFileDdlPlan
 } from '../../files/helpers/planning.js';
-import type { ExpectedDdlContext } from '../../files/helpers/contracts.js';
 import { parseCsv } from './csv.js';
 import { parseXlsx } from './xlsx.js';
 import { inferColumns } from './inference.js';
@@ -43,37 +52,24 @@ import {
   sourceIdentity,
   stagedRows,
   validateMappedRows,
-  validateMapping,
-  type ImportColumnMapping,
-  type ImportConversionIssue
+  validateMapping
 } from './mapping.js';
-import {
-  ImportExportRepository,
-  safeOperation,
-  type StoredGoogleConnection,
-  type StoredImportOperation
-} from './repository.js';
+import { ImportExportRepository, safeOperation } from './repository.js';
 import {
   csvContentDisposition,
   safeCsvFilename,
   serializeAuthorizedCsv
 } from './csv-export.js';
-import type {
-  ParsedImportCell,
-  ParsedImportResult,
-  ParsedImportRow
-} from './contracts.js';
 import { IMPORT_PARSER_VERSION } from './contracts.js';
 import {
   GOOGLE_READONLY_SCOPE,
   GoogleSheetsClient,
   GoogleTokenVault,
   googlePkceChallenge,
-  googleTokenEncryptionKey,
-  type GoogleOAuthTokens,
-  type GoogleSheetValues
+  googleTokenEncryptionKey
 } from './google-sheets.js';
 
+//The import export service value exported for module callers
 export const IMPORT_EXPORT_SERVICE = 'tabular.import-export';
 const SOURCE_BYTES = 8 * 1024 * 1024;
 const SOURCE_CHUNK_BYTES = 256 * 1024;
@@ -81,30 +77,39 @@ const SOURCE_ROWS = 50_001;
 const SOURCE_COLUMNS = 200;
 const SOURCE_ISSUES = 10_000;
 
+//The create import input contract exported for module callers
 export type CreateImportInput = {
-  commandId: string;
-  folderId: string;
-  sourceKind: 'csv' | 'xlsx' | 'google-sheets';
-  sourceName: string;
-  sourceMediaType: string;
-  sourceSize: number;
-  sourceOptions?: Record<string, unknown>;
+  commandId: string,
+  folderId: string,
+  sourceKind: 'csv' | 'xlsx' | 'google-sheets',
+  sourceName: string,
+  sourceMediaType: string,
+  sourceSize: number,
+  sourceOptions?: Record<string, unknown>,
 };
 
+//The csv export request contract exported for module callers
 export type CsvExportRequest = {
-  fileId: string;
-  viewId?: string;
-  expectedViewVersion?: number;
-  columnIds?: string[];
-  sorts?: SavedViewDefinition['sorts'];
-  filters?: SavedViewDefinition['filters'];
-  presentation?: SavedViewDefinition['presentation'];
+  fileId: string,
+  viewId?: string,
+  expectedViewVersion?: number,
+  columnIds?: string[],
+  sorts?: SavedViewDefinition['sorts'],
+  filters?: SavedViewDefinition['filters'],
+  presentation?: SavedViewDefinition['presentation'],
 };
 
+/**
+ * Provide import export plugin operations through one service boundary.
+ */
 export class ImportExportPluginService {
-  readonly name = IMPORT_EXPORT_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = IMPORT_EXPORT_SERVICE;
 
-  constructor(
+  /**
+   * Create a ImportExportPluginService instance.
+   */
+  public constructor(
     private readonly runtime: ApplicationRuntimeService,
     private readonly database: DatabasePluginService,
     private readonly identity: IdentityPluginService,
@@ -116,7 +121,10 @@ export class ImportExportPluginService {
     private readonly googleEnvironment: NodeJS.ProcessEnv = process.env
   ) {}
 
-  googleSheetsAvailability() {
+  /**
+   * Handle the google sheets availability operation.
+   */
+  public googleSheetsAvailability() {
     const required = [
       'TABULAR_GOOGLE_CLIENT_ID',
       'TABULAR_GOOGLE_CLIENT_SECRET',
@@ -144,7 +152,10 @@ export class ImportExportPluginService {
       : { available: true as const, missing: [] as string[] };
   }
 
-  async startGoogleOAuth(principal: BrowserMutationPrincipal, returnPath: string) {
+  /**
+   * Start the google OAuth.
+   */
+  public async startGoogleOAuth(principal: BrowserMutationPrincipal, returnPath: string) {
     requireMutation(principal);
     const configuration = this.googleConfiguration();
     const safeReturnPath = googleReturnPath(returnPath, configuration.publicOrigin);
@@ -182,10 +193,13 @@ export class ImportExportPluginService {
     };
   }
 
-  async completeGoogleOAuth(principal: BrowserPrincipal, input: {
-    state: string;
-    code?: string;
-    error?: string;
+  /**
+   * Handle the complete google OAuth operation.
+   */
+  public async completeGoogleOAuth(principal: BrowserPrincipal, input: {
+    state: string,
+    code?: string,
+    error?: string,
   }) {
     const configuration = this.googleConfiguration();
     let stored: Awaited<ReturnType<ImportExportRepository['consumeGoogleOAuthState']>>;
@@ -226,7 +240,10 @@ export class ImportExportPluginService {
     }
   }
 
-  async listGoogleSpreadsheets(
+  /**
+   * List the google spreadsheets.
+   */
+  public async listGoogleSpreadsheets(
     principal: BrowserMutationPrincipal,
     pageToken?: string
   ) {
@@ -236,7 +253,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async listGoogleWorksheets(
+  /**
+   * List the google worksheets.
+   */
+  public async listGoogleWorksheets(
     principal: BrowserMutationPrincipal,
     spreadsheetId: string
   ) {
@@ -247,11 +267,14 @@ export class ImportExportPluginService {
     }));
   }
 
-  async stageGoogleImport(principal: BrowserMutationPrincipal, input: {
-    commandId: string;
-    folderId: string;
-    spreadsheetId: string;
-    sheetName: string;
+  /**
+   * Handle the stage google import operation.
+   */
+  public async stageGoogleImport(principal: BrowserMutationPrincipal, input: {
+    commandId: string,
+    folderId: string,
+    spreadsheetId: string,
+    sheetName: string,
   }) {
     requireMutation(principal);
     commandId(input.commandId);
@@ -316,7 +339,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async revokeGoogleConnection(principal: BrowserMutationPrincipal) {
+  /**
+   * Revoke the google connection.
+   */
+  public async revokeGoogleConnection(principal: BrowserMutationPrincipal) {
     requireMutation(principal);
     let providerToken: string | undefined;
     try {
@@ -327,6 +353,9 @@ export class ImportExportPluginService {
     return { revoked: true as const };
   }
 
+  /**
+   * Handle the google configuration operation.
+   */
   private googleConfiguration() {
     const publicOrigin = this.runtime.config.environment.publicOrigin;
     const clientId = this.googleEnvironment.TABULAR_GOOGLE_CLIENT_ID;
@@ -353,10 +382,16 @@ export class ImportExportPluginService {
     };
   }
 
+  /**
+   * Handle the google client operation.
+   */
   private googleClient(configuration = this.googleConfiguration()) {
     return new GoogleSheetsClient(configuration.credentials, this.googleFetcher);
   }
 
+  /**
+   * Save the google connection.
+   */
   private async saveGoogleConnection(
     principal: BrowserPrincipal,
     tokens: GoogleOAuthTokens,
@@ -392,6 +427,9 @@ export class ImportExportPluginService {
     );
   }
 
+  /**
+   * Handle the google connection operation.
+   */
   private async googleConnection(principal: BrowserPrincipal) {
     let connection: StoredGoogleConnection | undefined;
     await this.identity.authorizedTransaction(
@@ -414,6 +452,9 @@ export class ImportExportPluginService {
     return connection;
   }
 
+  /**
+   * Update the google connection.
+   */
   private async updateGoogleConnection(
     principal: BrowserPrincipal,
     connection: StoredGoogleConnection,
@@ -448,6 +489,9 @@ export class ImportExportPluginService {
     );
   }
 
+  /**
+   * Mark google connection revoked.
+   */
   private async markGoogleConnectionRevoked(principal: BrowserPrincipal, reason: string) {
     await this.identity.authorizedTransaction(
       principal,
@@ -461,6 +505,9 @@ export class ImportExportPluginService {
     );
   }
 
+  /**
+   * Mark google worker connection revoked.
+   */
   private async markGoogleWorkerConnectionRevoked(
     principal: BrowserPrincipal,
     reason: string
@@ -470,6 +517,9 @@ export class ImportExportPluginService {
     });
   }
 
+  /**
+   * Handle the with google access operation.
+   */
   private async withGoogleAccess<Result>(
     principal: BrowserPrincipal,
     callback: (client: GoogleSheetsClient, accessToken: string) => Promise<Result>
@@ -520,6 +570,9 @@ export class ImportExportPluginService {
     }
   }
 
+  /**
+   * Assert the google source current.
+   */
   private async assertGoogleSourceCurrent(operation: StoredImportOperation) {
     const principal = operationPrincipal(operation);
     const configuration = this.googleConfiguration();
@@ -606,6 +659,9 @@ export class ImportExportPluginService {
     }
   }
 
+  /**
+   * Assert the google worker authority.
+   */
   private async assertGoogleWorkerAuthority(operation: StoredImportOperation) {
     return this.database.transaction('worker', {}, async (database) => {
       const identities = new IdentityRepository(database);
@@ -624,7 +680,10 @@ export class ImportExportPluginService {
     });
   }
 
-  async create(principal: BrowserMutationPrincipal, input: CreateImportInput) {
+  /**
+   * Create one staged import operation under the caller's mutation authority.
+   */
+  public async create(principal: BrowserMutationPrincipal, input: CreateImportInput) {
     requireMutation(principal);
     const validated = validateCreate(input);
     const digest = deterministicFingerprint({ type: 'import.create', ...validated });
@@ -640,7 +699,7 @@ export class ImportExportPluginService {
     let replay: StoredImportOperation | undefined;
     let plan: Awaited<ReturnType<typeof prepareFileDdlPlan>> | undefined;
     let authority: Awaited<ReturnType<typeof currentAuthority>> | undefined;
-    let requester: { roleOid: string; roleName: string } | undefined;
+    let requester: { roleOid: string, roleName: string, } | undefined;
     return this.identity.authorizedTransaction(
       principal,
       'tabular.import-export',
@@ -709,7 +768,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async appendChunk(
+  /**
+   * Handle the append chunk operation.
+   */
+  public async appendChunk(
     principal: BrowserMutationPrincipal,
     importId: string,
     chunkIndex: number,
@@ -773,10 +835,13 @@ export class ImportExportPluginService {
     );
   }
 
-  async finalizeSource(
+  /**
+   * Handle the finalize source operation.
+   */
+  public async finalizeSource(
     principal: BrowserMutationPrincipal,
     importId: string,
-    selection: { sheetName?: string } = {}
+    selection: { sheetName?: string, } = {}
   ) {
     requireMutation(principal);
     validateImportId(importId);
@@ -826,13 +891,16 @@ export class ImportExportPluginService {
     );
   }
 
-  async updateMapping(
+  /**
+   * Update the mapping.
+   */
+  public async updateMapping(
     principal: BrowserMutationPrincipal,
     input: {
-      importId: string;
-      mapping: unknown;
-      fileDisplayName: string;
-      tableName: string;
+      importId: string,
+      mapping: unknown,
+      fileDisplayName: string,
+      tableName: string,
     }
   ) {
     requireMutation(principal);
@@ -897,7 +965,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async prepareConfirmation(principal: BrowserMutationPrincipal, importId: string) {
+  /**
+   * Prepare the confirmation.
+   */
+  public async prepareConfirmation(principal: BrowserMutationPrincipal, importId: string) {
     requireMutation(principal);
     validateImportId(importId);
     const confirmationToken = opaqueToken();
@@ -934,7 +1005,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async confirm(
+  /**
+   * Handle the confirm operation.
+   */
+  public async confirm(
     principal: BrowserMutationPrincipal,
     importId: string,
     confirmationToken: string
@@ -975,7 +1049,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async cancel(principal: BrowserMutationPrincipal, importId: string) {
+  /**
+   * Cancel the current value.
+   */
+  public async cancel(principal: BrowserMutationPrincipal, importId: string) {
     requireMutation(principal);
     validateImportId(importId);
     let operation: StoredImportOperation | undefined;
@@ -1006,7 +1083,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async retry(principal: BrowserMutationPrincipal, importId: string) {
+  /**
+   * Handle the retry operation.
+   */
+  public async retry(principal: BrowserMutationPrincipal, importId: string) {
     requireMutation(principal);
     validateImportId(importId);
     let operation: StoredImportOperation | undefined;
@@ -1035,7 +1115,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async get(principal: BrowserPrincipal, importId: string) {
+  /**
+   * Return one import operation visible to the current principal.
+   */
+  public async get(principal: BrowserPrincipal, importId: string) {
     validateImportId(importId);
     let operation: StoredImportOperation | undefined;
     let issues: ImportConversionIssue[] = [];
@@ -1061,7 +1144,10 @@ export class ImportExportPluginService {
     );
   }
 
-  async cleanupExpiredImports(limit = 100) {
+  /**
+   * Handle the cleanup expired imports operation.
+   */
+  public async cleanupExpiredImports(limit = 100) {
     if (this.runtime.processKind !== 'worker') {
       throw new ApplicationError(
         'import_cleanup_denied',
@@ -1074,11 +1160,14 @@ export class ImportExportPluginService {
     );
   }
 
-  async executeConfirmedImport(
+  /**
+   * Execute the confirmed import.
+   */
+  public async executeConfirmedImport(
     importId: string,
     options: {
-      failpoint?: 'after-table-create' | 'after-row-insert';
-      terminalOnFailure?: boolean;
+      failpoint?: 'after-table-create' | 'after-row-insert',
+      terminalOnFailure?: boolean,
     } = {}
   ) {
     if (this.runtime.processKind !== 'worker') {
@@ -1136,7 +1225,7 @@ export class ImportExportPluginService {
             return {
               role: operation.owner_role_name,
               verifyAfterSet: async (effectiveDatabase: DatabaseExecutor) => {
-                const effective = await effectiveDatabase.execute<{ oid: string; name: string }>(`
+                const effective = await effectiveDatabase.execute<{ oid: string, name: string, }>(`
                   SELECT current_user::regrole::oid::text AS oid, current_user::text AS name
                 `);
                 if (String(effective.rows[0]?.oid) !== String(operation!.owner_role_oid)
@@ -1187,7 +1276,10 @@ export class ImportExportPluginService {
     }
   }
 
-  async exportCsv(principal: BrowserPrincipal, input: CsvExportRequest) {
+  /**
+   * Export the CSV.
+   */
+  public async exportCsv(principal: BrowserPrincipal, input: CsvExportRequest) {
     const description = await this.files.describe(principal, input.fileId);
     const visibleIds = description.columns.filter((column) => !column.hidden).map((column) => column.id);
     let definition: SavedViewDefinition;
@@ -1267,26 +1359,29 @@ export class ImportExportPluginService {
 }
 
 type ParsedStage = {
-  rows: ReturnType<typeof stagedRows>;
-  issues: ImportConversionIssue[];
+  rows: ReturnType<typeof stagedRows>,
+  issues: ImportConversionIssue[],
   preview: {
-    sourceSha256: string;
-    sourceFingerprint: string;
-    selectedSheet?: string;
-    sourceOptions: Record<string, unknown>;
-    headers: unknown[];
-    mapping: unknown[];
-    mappingFingerprint: string;
-    preview: unknown[];
-    warnings: unknown[];
-    rowCount: number;
-    columnCount: number;
-    issueCount: number;
-    fileDisplayName: string;
-    tableName: string;
-  };
+    sourceSha256: string,
+    sourceFingerprint: string,
+    selectedSheet?: string,
+    sourceOptions: Record<string, unknown>,
+    headers: unknown[],
+    mapping: unknown[],
+    mappingFingerprint: string,
+    preview: unknown[],
+    warnings: unknown[],
+    rowCount: number,
+    columnCount: number,
+    issueCount: number,
+    fileDisplayName: string,
+    tableName: string,
+  },
 };
 
+/**
+ * Return the google stage result.
+ */
 function googleStage(
   operation: StoredImportOperation,
   values: GoogleSheetValues
@@ -1371,10 +1466,13 @@ function googleStage(
   };
 }
 
+/**
+ * Parse the stage.
+ */
 async function parseStage(
   operation: StoredImportOperation,
   chunksBase64: string[],
-  selection: { sheetName?: string }
+  selection: { sheetName?: string, }
 ): Promise<ParsedStage> {
   const stream = Readable.from(chunksBase64.map((chunk) => Buffer.from(chunk, 'base64')));
   const limits = {
@@ -1479,20 +1577,32 @@ async function parseStage(
   };
 }
 
+/**
+ * Return the selected sheet result.
+ */
 function selectedSheet(result: ParsedImportResult, requested?: string) {
   if (requested) return result.sheets.find((sheet) => sheet.name === requested);
   return result.sheets[0];
 }
 
+/**
+ * Return the CSV delimiter result.
+ */
 function csvDelimiter(value: unknown): ',' | ';' | '\t' | '|' | 'auto' {
   return value === ',' || value === ';' || value === '\t' || value === '|' ? value : 'auto';
 }
 
+/**
+ * Return the google state hash result.
+ */
 function googleStateHash(value: string) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(value)) googleOAuthDenied();
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
+/**
+ * Return the google associated data result.
+ */
 function googleAssociatedData(principal: BrowserPrincipal, secret: string) {
   return [
     'tabular-google-v1',
@@ -1504,6 +1614,9 @@ function googleAssociatedData(principal: BrowserPrincipal, secret: string) {
   ].join(':');
 }
 
+/**
+ * Return the operation principal result.
+ */
 function operationPrincipal(operation: StoredImportOperation): BrowserPrincipal {
   const expiresAt = new Date(operation.expires_at);
   return {
@@ -1517,6 +1630,9 @@ function operationPrincipal(operation: StoredImportOperation): BrowserPrincipal 
   };
 }
 
+/**
+ * Return the google return path result.
+ */
 function googleReturnPath(value: string, publicOrigin: string) {
   if (typeof value !== 'string' || value.length < 18 || value.length > 500
     || /[\u0000-\u001f\u007f]/.test(value)) invalid('Google return path is invalid');
@@ -1532,7 +1648,10 @@ function googleReturnPath(value: string, publicOrigin: string) {
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function parsedRows(rows: Array<{ row_number: string | number; source_values: Array<string | null> }>): ParsedImportRow[] {
+/**
+ * Return the parsed rows result.
+ */
+function parsedRows(rows: Array<{ row_number: string | number, source_values: Array<string | null>, }>): ParsedImportRow[] {
   return rows.map((row) => ({
     rowNumber: Number(row.row_number),
     cells: row.source_values.map((value): ParsedImportCell => value === null
@@ -1541,15 +1660,18 @@ function parsedRows(rows: Array<{ row_number: string | number; source_values: Ar
   }));
 }
 
+/**
+ * Return the finalize imported metadata result.
+ */
 async function finalizeImportedMetadata(
   database: DatabaseExecutor,
   operation: StoredImportOperation,
   effect: {
-    relationOid: string;
-    rowCount: number;
-    columnCount: number;
-    hiddenColumn: string;
-    primaryConstraint: string;
+    relationOid: string,
+    rowCount: number,
+    columnCount: number,
+    hiddenColumn: string,
+    primaryConstraint: string,
   }
 ) {
   const stable = await reconcileCatalog(database, operation.connection_id);
@@ -1636,6 +1758,9 @@ async function finalizeImportedMetadata(
   };
 }
 
+/**
+ * Return the metadata axes result.
+ */
 function metadataAxes(type: ImportColumnMapping['storageType']) {
   if (type === 'numeric' || type === 'bigint') return { field: 'number', format: 'number' };
   if (type === 'boolean') return { field: 'checkbox', format: 'yes-no' };
@@ -1646,10 +1771,13 @@ function metadataAxes(type: ImportColumnMapping['storageType']) {
   return { field: 'text', format: 'plain-text' };
 }
 
+/**
+ * Assert the destination.
+ */
 async function assertDestination(database: DatabaseExecutor, operation: StoredImportOperation) {
   const result = await database.execute<{
-    valid: boolean;
-    occupied: boolean;
+    valid: boolean,
+    occupied: boolean,
   }>(`
     SELECT n.oid = ?::oid AND n.nspname = ?
            AND has_schema_privilege(current_user, n.oid, 'CREATE') AS valid,
@@ -1662,12 +1790,15 @@ async function assertDestination(database: DatabaseExecutor, operation: StoredIm
   if (result.rows[0].occupied) conflict('The confirmed PostgreSQL table name is occupied');
 }
 
+/**
+ * Return the current authority result.
+ */
 async function currentAuthority(database: DatabaseExecutor, principal: BrowserPrincipal) {
   const result = await database.execute<{
-    identity_generation: string | number;
-    mapping_generation: string | number;
-    allowed_role_id: string;
-    role_generation: string | number;
+    identity_generation: string | number,
+    mapping_generation: string | number,
+    allowed_role_id: string,
+    role_generation: string | number,
   }>(`
     SELECT i.identity_generation, m.mapping_generation,
            r.id AS allowed_role_id, r.role_generation
@@ -1689,8 +1820,11 @@ async function currentAuthority(database: DatabaseExecutor, principal: BrowserPr
   };
 }
 
+/**
+ * Assert the same authority.
+ */
 async function assertSameAuthority(database: DatabaseExecutor, operation: StoredImportOperation) {
-  const result = await database.execute<{ valid: boolean }>(`
+  const result = await database.execute<{ valid: boolean, }>(`
     SELECT i.status = 'active'
        AND i.identity_generation = ?
        AND m.enabled AND m.mapping_generation = ?
@@ -1720,6 +1854,9 @@ async function assertSameAuthority(database: DatabaseExecutor, operation: Stored
   if (!result.rows[0]?.valid) confirmationDenied();
 }
 
+/**
+ * Assert the import target.
+ */
 async function assertImportTarget(
   database: DatabaseExecutor,
   operation: StoredImportOperation,
@@ -1747,7 +1884,7 @@ async function assertImportTarget(
   if (requester.roleOid !== String(operation.requesting_role_oid)
     || requester.roleName !== operation.requesting_role_name) confirmationDenied();
   if (checkName) {
-    const occupied = await database.execute<{ occupied: boolean }>(`
+    const occupied = await database.execute<{ occupied: boolean, }>(`
       SELECT EXISTS (
         SELECT 1 FROM pg_class WHERE relnamespace = ?::oid AND relname = ?
       ) AS occupied
@@ -1756,6 +1893,9 @@ async function assertImportTarget(
   }
 }
 
+/**
+ * Assert the worker authority.
+ */
 async function assertWorkerAuthority(
   database: DatabaseExecutor,
   operation: StoredImportOperation,
@@ -1763,15 +1903,15 @@ async function assertWorkerAuthority(
 ) {
   if (checkRows) await assertSameAuthority(database, operation);
   const result = await database.execute<{
-    database_oid: string | number;
-    owner_oid: string | number;
-    owner_name: string;
-    requester_oid: string | number;
-    requester_name: string;
-    requester_usable: boolean;
-    worker_can_set: boolean;
-    owner_safe: boolean;
-    requester_safe: boolean;
+    database_oid: string | number,
+    owner_oid: string | number,
+    owner_name: string,
+    requester_oid: string | number,
+    requester_name: string,
+    requester_usable: boolean,
+    worker_can_set: boolean,
+    owner_safe: boolean,
+    requester_safe: boolean,
   }>(`
     SELECT d.oid AS database_oid,
            owner.oid AS owner_oid, owner.rolname::text AS owner_name,
@@ -1805,6 +1945,9 @@ async function assertWorkerAuthority(
   }
 }
 
+/**
+ * Assert the locked authority.
+ */
 function assertLockedAuthority(row: SessionAuthorityRow | undefined, operation: StoredImportOperation) {
   if (!row
     || row.session_id !== operation.session_id
@@ -1830,6 +1973,9 @@ function assertLockedAuthority(row: SessionAuthorityRow | undefined, operation: 
     || new Date(operation.expires_at).getTime() <= Date.now()) confirmationDenied();
 }
 
+/**
+ * Validate the create.
+ */
 function validateCreate(input: CreateImportInput) {
   if (!input || typeof input !== 'object'
     || Object.keys(input).some((key) => ![
@@ -1874,6 +2020,9 @@ function validateCreate(input: CreateImportInput) {
   return { ...input, sourceOptions: structuredClone(input.sourceOptions || {}) };
 }
 
+/**
+ * Validate the file identity.
+ */
 function validateFileIdentity(fileDisplayName: string, tableName: string) {
   if (typeof fileDisplayName !== 'string' || fileDisplayName !== fileDisplayName.trim()
     || fileDisplayName.length < 1 || fileDisplayName.length > 200
@@ -1883,6 +2032,9 @@ function validateFileIdentity(fileDisplayName: string, tableName: string) {
   }
 }
 
+/**
+ * Report the safe worker error condition.
+ */
 function safeWorkerError(error: unknown) {
   if (error instanceof ApplicationError) {
     return { code: error.errorCode, message: error.message, retryable: true };
@@ -1895,43 +2047,70 @@ function safeWorkerError(error: unknown) {
 }
 
 class ImportReplay extends Error {
-  constructor(readonly result: Record<string, unknown>) {
+  /**
+   * Create a ImportReplay instance.
+   */
+  public constructor(public readonly result: Record<string, unknown>) {
     super('Committed import replay');
   }
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId(value: string) {
   if (typeof value !== 'string' || !/^cmd_[A-Za-z0-9_-]{8,96}$/.test(value)) {
     invalid('Import command identity is invalid');
   }
 }
 
+/**
+ * Validate the import id.
+ */
 function validateImportId(value: string) {
   if (typeof value !== 'string' || !/^imp_[A-Za-z0-9_-]{32,64}$/.test(value)) unavailable();
 }
 
+/**
+ * Return the require mutation result.
+ */
 function requireMutation(principal: BrowserPrincipal): asserts principal is BrowserMutationPrincipal {
   if (!isBrowserMutationPrincipal(principal)) {
     throw new ApplicationError('capability_denied', 403, 'A verified browser mutation is required');
   }
 }
 
+/**
+ * Report whether the record condition holds.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('import_invalid', 400, message);
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ApplicationError('import_unavailable', 404, 'The import or destination is unavailable');
 }
 
+/**
+ * Return the conflict result.
+ */
 function conflict(message: string): never {
   throw new ApplicationError('import_conflict', 409, message);
 }
 
+/**
+ * Return the idempotency conflict result.
+ */
 function idempotencyConflict(): never {
   throw new ApplicationError(
     'import_idempotency_conflict',
@@ -1940,14 +2119,23 @@ function idempotencyConflict(): never {
   );
 }
 
+/**
+ * Return the expired result.
+ */
 function expired(): never {
   throw new ApplicationError('import_expired', 409, 'The staged import expired; choose the source again');
 }
 
+/**
+ * Return the confirmation denied result.
+ */
 function confirmationDenied(): never {
   throw new ApplicationError('import_confirmation_denied', 403, 'The import confirmation is invalid');
 }
 
+/**
+ * Return the google OAuth denied result.
+ */
 function googleOAuthDenied(): never {
   throw new ApplicationError(
     'google_oauth_denied',

@@ -1,3 +1,4 @@
+//client
 import type { CapabilityAction } from '../../capability/helpers/action-contracts.js';
 import type {
   ConfirmedFileDdl,
@@ -5,30 +6,40 @@ import type {
   PlannedFileDdl
 } from '../../files/helpers/contracts.js';
 import type { FileDescription } from '../../files/helpers/contracts.js';
-import type { GridCellValue, GridRelationLookupResult, GridResource } from '../helpers/contracts.js';
+import type {
+  GridCellValue,
+  GridRelationLookupResult,
+  GridResource
+} from '../helpers/contracts.js';
 import {
   browserCsrfToken,
   rememberBrowserCsrfToken
 } from '../../identity/events/browser-csrf.js';
 
+//The grid read response contract exported for module callers
 export type GridReadResponse =
-  | { status: 'ok'; data: GridResource }
-  | { status: 'unavailable'; reason: string }
-  | { status: 'error'; error: { code: string; message: string } };
+  | { status: 'ok', data: GridResource, }
+  | { status: 'unavailable', reason: string, }
+  | { status: 'error', error: { code: string, message: string, }, };
 
+//The grid capability response contract exported for module callers
 export type GridCapabilityResponse =
-  | { status: 'ok'; data: unknown }
+  | { status: 'ok', data: unknown, }
   | {
-    status: 'error';
-    error: { code: string; message: string; retryable: boolean; issues?: unknown[] };
+    status: 'error',
+    error: { code: string, message: string, retryable: boolean, issues?: unknown[], },
   };
 
+//The grid read request contract exported for module callers
 export type GridReadRequest = {
-  viewId?: string;
-  expectedViewVersion?: number;
-  sort?: { columnId: string; direction: 'asc' | 'desc' };
+  viewId?: string,
+  expectedViewVersion?: number,
+  sort?: { columnId: string, direction: 'asc' | 'desc', },
 };
 
+/**
+ * Load the grid resource.
+ */
 export async function loadGridResource(
   folder: string,
   table: string,
@@ -58,6 +69,9 @@ export async function loadGridResource(
   }
 }
 
+/**
+ * Load the file description.
+ */
 export async function loadFileDescription(fileId: string) {
   try {
     const response = await fetch(`/events/files?${new URLSearchParams({ fileId })}`, {
@@ -66,9 +80,9 @@ export async function loadFileDescription(fileId: string) {
     });
     rememberBrowserCsrfToken(response.headers.get('x-tabular-csrf'));
     const result = await response.json() as {
-      status?: 'ok';
-      data?: FileDescription;
-      error?: { message?: string };
+      status?: 'ok',
+      data?: FileDescription,
+      error?: { message?: string, },
     };
     return response.ok && result.status === 'ok' && result.data
       ? { ok: true as const, data: result.data }
@@ -78,6 +92,9 @@ export async function loadFileDescription(fileId: string) {
   }
 }
 
+/**
+ * Load the relation options.
+ */
 export async function loadRelationOptions(
   fileId: string,
   columnId: string,
@@ -93,10 +110,10 @@ export async function loadRelationOptions(
     });
     rememberBrowserCsrfToken(response.headers.get('x-tabular-csrf'));
     const result = await response.json() as {
-      status?: 'ok';
-      data?: GridRelationLookupResult;
-      reason?: string;
-      error?: { message?: string };
+      status?: 'ok',
+      data?: GridRelationLookupResult,
+      reason?: string,
+      error?: { message?: string, },
     };
     return response.ok && result.status === 'ok' && result.data
       ? { ok: true as const, data: result.data }
@@ -106,6 +123,9 @@ export async function loadRelationOptions(
   }
 }
 
+/**
+ * Dispatch the grid capability.
+ */
 export async function dispatchGridCapability(
   action: CapabilityAction,
   csrfToken: string
@@ -113,44 +133,56 @@ export async function dispatchGridCapability(
   return postGridEvent({ kind: 'capability', action }, csrfToken) as Promise<GridCapabilityResponse>;
 }
 
+/**
+ * Return the plan grid ddl result.
+ */
 export async function planGridDdl(
   action: FileDdlAction,
   csrfToken: string
-): Promise<{ status: 'ok'; data: PlannedFileDdl } | GridEventFailure> {
+): Promise<{ status: 'ok', data: PlannedFileDdl, } | GridEventFailure> {
   return postGridEvent({ kind: 'ddl.plan', action }, csrfToken) as Promise<
-    { status: 'ok'; data: PlannedFileDdl } | GridEventFailure
+    { status: 'ok', data: PlannedFileDdl, } | GridEventFailure
   >;
 }
 
+/**
+ * Return the confirm grid ddl result.
+ */
 export async function confirmGridDdl(
   requestId: string,
   confirmationToken: string,
   csrfToken: string
-): Promise<{ status: 'ok'; data: ConfirmedFileDdl } | GridEventFailure> {
+): Promise<{ status: 'ok', data: ConfirmedFileDdl, } | GridEventFailure> {
   return postGridEvent({
     kind: 'ddl.confirm', requestId, confirmationToken
-  }, csrfToken) as Promise<{ status: 'ok'; data: ConfirmedFileDdl } | GridEventFailure>;
+  }, csrfToken) as Promise<{ status: 'ok', data: ConfirmedFileDdl, } | GridEventFailure>;
 }
 
+/**
+ * Create the unstructured grid column.
+ */
 export async function createUnstructuredGridColumn(
   fileId: string,
   count: number,
   csrfToken: string
-): Promise<{ status: 'ok'; data: Array<{ id: string; fileId: string }> } | GridEventFailure> {
+): Promise<{ status: 'ok', data: Array<{ id: string, fileId: string, }>, } | GridEventFailure> {
   return postGridEvent({
     kind: 'unstructured.column.create',
     fileId,
     count
   }, csrfToken) as Promise<
-    { status: 'ok'; data: Array<{ id: string; fileId: string }> } | GridEventFailure
+    { status: 'ok', data: Array<{ id: string, fileId: string, }>, } | GridEventFailure
   >;
 }
 
 type GridEventFailure = {
-  status: 'error';
-  error: { code: string; message: string; retryable?: boolean; issues?: unknown[] };
+  status: 'error',
+  error: { code: string, message: string, retryable?: boolean, issues?: unknown[], },
 };
 
+/**
+ * Return the post grid event result.
+ */
 async function postGridEvent(event: Record<string, unknown>, csrfToken: string) {
   try {
     const response = await fetch('/events/grid', {

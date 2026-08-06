@@ -1,8 +1,13 @@
+//modules
 import type { Response } from '@stackpress/ingest/http';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
 import { versionPublicArtifactReferences } from './assets.js';
 
-/** Renders the shared signed-out shell without granting a product session. */
+/**
+ * Renders the shared signed-out shell without granting a product session.
+ */
 export async function renderAuthenticationRequired(
   response: Response,
   _runtime: ApplicationRuntimeService
@@ -11,7 +16,9 @@ export async function renderAuthenticationRequired(
   response.redirect('/auth/login', 303);
 }
 
-/** Renders one feature-owned page through the shared Reactus application shell. */
+/**
+ * Renders one feature-owned page through the shared Reactus application shell.
+ */
 export async function renderProductPage(
   response: Response,
   runtime: ApplicationRuntimeService,

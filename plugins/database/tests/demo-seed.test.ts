@@ -11,7 +11,7 @@ import { createPGliteTestDatabase } from './helpers/pglite.js';
 test('local demo seed installs idempotent Operations and Finance data plus metadata', async () => {
   const local = await createPGliteTestDatabase();
   try {
-    // Migrate the ordinary control schema before invoking the production seed helper.
+    //Migrate the ordinary control schema before invoking the production seed helper.
     await runMigrations(local.transaction, await loadMigrations(), { advisoryLock: false });
     const first = await local.transaction((database) =>
       seedLocalDemo(database, undefined, 'demo_test')
@@ -26,7 +26,7 @@ test('local demo seed installs idempotent Operations and Finance data plus metad
     assert.equal(first.insertedRows, 12);
     assert.equal(first.metadataRecords, 31);
 
-    // A reviewer edit remains canonical when the local seed is run again.
+    //A reviewer edit remains canonical when the local seed is run again.
     await local.database.execute(`
       UPDATE operations.customer_orders
          SET notes = 'Preserved reviewer edit'
@@ -38,12 +38,12 @@ test('local demo seed installs idempotent Operations and Finance data plus metad
     assert.equal(second.insertedRows, 0);
     assert.equal(second.metadataRecords, 0);
 
-    // The catalog/file/column records bind to the real peer-schema objects.
+    //The catalog/file/column records bind to the real peer-schema objects.
     const proof = await local.database.execute<{
-      files: number;
-      columns: number;
-      preserved: string;
-      cross_schema_foreign_keys: number;
+      files: number,
+      columns: number,
+      preserved: string,
+      cross_schema_foreign_keys: number,
     }>(`
       SELECT (SELECT count(*)::integer FROM tabular.file_metadata) AS files,
              (SELECT count(*)::integer FROM tabular.column_metadata) AS columns,

@@ -1,10 +1,13 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { SseConfig } from '../../../config/sse.js';
-import { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { DatabaseExecutor } from '../../database/helpers/executor.js';
 import { RealtimePluginService } from '../helpers/service.js';
 
 const fileId = `obj_${'f'.repeat(32)}`;
@@ -23,14 +26,23 @@ const config: SseConfig = {
   clientQueueLimit: 2, connectionLimit: 10, pollMs: 2
 };
 
+/**
+ * Return the identity with result.
+ */
 function identityWith(rows: unknown[][]) {
   let call = 0;
   const database = new DatabaseExecutor({
+    /**
+     * Handle the raw operation.
+     */
     async raw<Row>() {
       return { rows: (rows[call++] || []) as Row[] };
     }
   });
   const identity = {
+    /**
+     * Report the authorized transaction condition.
+     */
     async authorizedTransaction(
       current: BrowserPrincipal,
       _capability: string,
@@ -184,6 +196,9 @@ test('file streams name invisible cursor advancement so explicit reconnect can r
 test('realtime service owns operations streams for one graceful shutdown path', async () => {
   const service = new RealtimePluginService({} as IdentityPluginService, config);
   const stream = service.openOperations(principal, {
+    /**
+     * Read the events.
+     */
     async readEvents(_principal, after) {
       return {
         events: after ? [] : [{
@@ -210,6 +225,9 @@ test('realtime service owns operations streams for one graceful shutdown path', 
   assert.match(await shutdown, /server is restarting/i);
 });
 
+/**
+ * Collect the until.
+ */
 async function collectUntil(
   stream: NodeJS.ReadableStream,
   complete: (text: string) => boolean
@@ -217,6 +235,9 @@ async function collectUntil(
   let text = '';
   return new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error(`Timed out with ${text}`)), 500);
+    /**
+     * Handle the data event.
+     */
     const onData = (chunk: Buffer | string) => {
       text += chunk.toString();
       if (!complete(text)) return;

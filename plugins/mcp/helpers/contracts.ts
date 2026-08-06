@@ -1,12 +1,17 @@
+//client
 import type { CapabilityAction } from '../../capability/helpers/contracts.js';
 import { McpAuthorizedExecutionContext } from '../../capability/helpers/contracts.js';
 
 const verifiedMcpPrincipalBrand: unique symbol = Symbol('verified-mcp-principal');
 
+//The mcp service value exported for module callers
 export const MCP_SERVICE = 'tabular.mcp';
+//The mcp contract version value exported for module callers
 export const MCP_CONTRACT_VERSION = '1.0.0' as const;
+//The mcp frontend resource template value exported for module callers
 export const MCP_FRONTEND_RESOURCE_TEMPLATE = 'tabular://frontend-contract/v1/{fileId}';
 
+//The mcp capability actions value exported for module callers
 export const MCP_CAPABILITY_ACTIONS = {
   tabular_record_read: 'record.read',
   tabular_record_patch: 'record.patch',
@@ -24,35 +29,47 @@ export const MCP_CAPABILITY_ACTIONS = {
   tabular_history_redo: 'history.redo'
 } as const satisfies Record<string, CapabilityAction['type']>;
 
+//The mcp capability tool name contract exported for module callers
 export type McpCapabilityToolName = keyof typeof MCP_CAPABILITY_ACTIONS;
+//The mcp tool name contract exported for module callers
 export type McpToolName =
   | 'get_frontend_contract'
   | 'tabular_list_files'
   | 'tabular_records_query'
   | McpCapabilityToolName;
 
+//The mcp transport request contract exported for module callers
 export type McpTransportRequest =
-  | { kind: 'tool'; name: McpToolName }
-  | { kind: 'resource'; uri: string };
+  | { kind: 'tool', name: McpToolName, }
+  | { kind: 'resource', uri: string, };
 
+//The verified mcp principal contract exported for module callers
 export type VerifiedMcpPrincipal = {
-  readonly identityId: string;
-  readonly sessionId: string;
-  readonly historyScopeId: string;
-  readonly connectionId: string;
-  readonly expiresAt: Date;
+  readonly identityId: string,
+  readonly sessionId: string,
+  readonly historyScopeId: string,
+  readonly connectionId: string,
+  readonly expiresAt: Date,
   readonly scopes: {
-    readonly tools: readonly McpToolName[];
-    readonly resources: readonly 'tabular_frontend_contract'[];
-  };
-  readonly [verifiedMcpPrincipalBrand]: true;
+    readonly tools: readonly McpToolName[],
+    readonly resources: readonly 'tabular_frontend_contract'[],
+  },
+  readonly [verifiedMcpPrincipalBrand]: true,
 };
 
-/** Provider-neutral credential verification seam. Only a trusted installed
- * adapter can brand the principal accepted by the MCP service. */
+/**
+ * Provider-neutral credential verification seam. Only a trusted installed
+ * adapter can brand the principal accepted by the MCP service.
+ */
 export abstract class McpCredentialVerifier<Credential> {
-  abstract verify(credential: Credential): Promise<VerifiedMcpPrincipal>;
+  /**
+   * Verify the current value.
+   */
+  public abstract verify(credential: Credential): Promise<VerifiedMcpPrincipal>;
 
+  /**
+   * Report the verified principal condition.
+   */
   protected verifiedPrincipal(input: Omit<
     VerifiedMcpPrincipal,
     typeof verifiedMcpPrincipalBrand
@@ -94,6 +111,9 @@ export abstract class McpCredentialVerifier<Credential> {
   }
 }
 
+/**
+ * Assert the verified MCP principal.
+ */
 export function assertVerifiedMcpPrincipal(
   value: VerifiedMcpPrincipal
 ): asserts value is VerifiedMcpPrincipal {
@@ -108,128 +128,139 @@ export function assertVerifiedMcpPrincipal(
  * kernel applies its action policy and PostgreSQL effective-role boundary.
  */
 export abstract class GovernedMcpExecutionContext extends McpAuthorizedExecutionContext {
-  abstract allowsMcp(request: McpTransportRequest): boolean;
+  /**
+   * Report the allows MCP condition.
+   */
+  public abstract allowsMcp(request: McpTransportRequest): boolean;
 }
 
+//The mcp tool call contract exported for module callers
 export type McpToolCall = {
-  name: McpToolName;
-  arguments: Record<string, unknown>;
+  name: McpToolName,
+  arguments: Record<string, unknown>,
 };
 
+//The mcp call options contract exported for module callers
 export type McpCallOptions = {
-  signal?: AbortSignal;
-  timeoutMs?: number;
+  signal?: AbortSignal,
+  timeoutMs?: number,
 };
 
+//The mcp safe error contract exported for module callers
 export type McpSafeError = {
-  category: string;
-  description: string;
-  canRetry: boolean;
-  issues?: Array<{ columnId?: string; code: string; message: string }>;
+  category: string,
+  description: string,
+  canRetry: boolean,
+  issues?: Array<{ columnId?: string, code: string, message: string, }>,
 };
 
+//The mcp tool response contract exported for module callers
 export type McpToolResponse =
   | {
-    isError: false;
-    content: [{ type: 'text'; text: string }];
-    structuredContent: { result: unknown };
+    isError: false,
+    content: [{ type: 'text', text: string, }],
+    structuredContent: { result: unknown, },
   }
   | {
-    isError: true;
-    content: [{ type: 'text'; text: string }];
-    structuredContent: { error: McpSafeError };
+    isError: true,
+    content: [{ type: 'text', text: string, }],
+    structuredContent: { error: McpSafeError, },
   };
 
+//The mcp resource response contract exported for module callers
 export type McpResourceResponse =
   | {
-    isError: false;
-    contents: [{ uri: string; mimeType: 'application/json'; text: string }];
-    structuredContent: { resource: McpFrontendContract };
+    isError: false,
+    contents: [{ uri: string, mimeType: 'application/json', text: string, }],
+    structuredContent: { resource: McpFrontendContract, },
   }
   | {
-    isError: true;
-    contents: [];
-    structuredContent: { error: McpSafeError };
+    isError: true,
+    contents: [],
+    structuredContent: { error: McpSafeError, },
   };
 
+//The mcp frontend contract contract exported for module callers
 export type McpFrontendContract = {
-  contractVersion: typeof MCP_CONTRACT_VERSION;
-  fileId: string;
-  schemaVersion: string;
+  contractVersion: typeof MCP_CONTRACT_VERSION,
+  fileId: string,
+  schemaVersion: string,
   columns: Array<{
-    columnId: string;
-    label: string;
+    columnId: string,
+    label: string,
     valueType: 'text' | 'integer' | 'decimal' | 'boolean' | 'date'
-      | 'time' | 'timestamp' | 'json';
-    fieldKind: string;
-    formatKind: string;
-    fieldConfig: Record<string, unknown>;
-    formatConfig: Record<string, unknown>;
-    editable: boolean;
-    key: boolean;
-    generated: boolean;
-  }>;
+      | 'time' | 'timestamp' | 'json',
+    fieldKind: string,
+    formatKind: string,
+    fieldConfig: Record<string, unknown>,
+    formatConfig: Record<string, unknown>,
+    editable: boolean,
+    key: boolean,
+    generated: boolean,
+  }>,
   query: {
-    filterOperators: ['=', '!=', 'like', '<', '<=', '>', '>='];
-    sortDirections: ['asc', 'desc'];
-    maximumRows: 100;
-  };
-  savedViewSchemaVersion: 1;
+    filterOperators: ['=', '!=', 'like', '<', '<=', '>', '>='],
+    sortDirections: ['asc', 'desc'],
+    maximumRows: 100,
+  },
+  savedViewSchemaVersion: 1,
   bounds: {
-    maximumReadColumns: 200;
-    maximumQueryColumns: 200;
-    maximumQueryCells: 10_000;
-    maximumPatchCells: 1_000;
-    maximumRangeCells: 10_000;
-    maximumHistoryEntries: 100;
-  };
-  operations: McpToolName[];
+    maximumReadColumns: 200,
+    maximumQueryColumns: 200,
+    maximumQueryCells: 10_000,
+    maximumPatchCells: 1_000,
+    maximumRangeCells: 10_000,
+    maximumHistoryEntries: 100,
+  },
+  operations: McpToolName[],
   concurrency: {
-    expectedVersion: true;
-    silentOverwrite: false;
+    expectedVersion: true,
+    silentOverwrite: false,
     requiredFields: {
-      recordPatch: ['expectedVersion'];
-      recordDelete: ['expectedVersion'];
-      rangePatchRows: ['expectedVersion'];
-      draftUpdate: ['expectedDraftVersion'];
-      draftDelete: ['expectedDraftVersion'];
-      draftPromote: ['expectedDraftVersion'];
-    };
+      recordPatch: ['expectedVersion'],
+      recordDelete: ['expectedVersion'],
+      rangePatchRows: ['expectedVersion'],
+      draftUpdate: ['expectedDraftVersion'],
+      draftDelete: ['expectedDraftVersion'],
+      draftPromote: ['expectedDraftVersion'],
+    },
     conditionalRequiredFields: {
-      draftPromoteExistingRow: ['expectedRowVersion'];
-    };
-  };
-  arbitrarySql: false;
-  arbitraryDdl: false;
+      draftPromoteExistingRow: ['expectedRowVersion'],
+    },
+  },
+  arbitrarySql: false,
+  arbitraryDdl: false,
 };
 
+//The mcp json schema contract exported for module callers
 export type McpJsonSchema = {
-  type?: string;
-  description?: string;
-  pattern?: string;
-  format?: string;
-  minimum?: number;
-  maximum?: number;
-  minItems?: number;
-  maxItems?: number;
-  uniqueItems?: boolean;
-  enum?: readonly unknown[];
-  properties?: Record<string, McpJsonSchema>;
-  required?: readonly string[];
-  additionalProperties?: boolean;
-  items?: McpJsonSchema;
-  oneOf?: readonly McpJsonSchema[];
+  type?: string,
+  description?: string,
+  pattern?: string,
+  format?: string,
+  minimum?: number,
+  maximum?: number,
+  minItems?: number,
+  maxItems?: number,
+  uniqueItems?: boolean,
+  enum?: readonly unknown[],
+  properties?: Record<string, McpJsonSchema>,
+  required?: readonly string[],
+  additionalProperties?: boolean,
+  items?: McpJsonSchema,
+  oneOf?: readonly McpJsonSchema[],
 };
 
+//The mcp tool definition contract exported for module callers
 export type McpToolDefinition = {
-  name: McpToolName;
-  description: string;
-  inputSchema: McpJsonSchema;
+  name: McpToolName,
+  description: string,
+  inputSchema: McpJsonSchema,
   annotations: {
-    readOnlyHint: boolean;
-    destructiveHint: boolean;
-    idempotentHint: boolean;
-  };
+    readOnlyHint: boolean,
+    destructiveHint: boolean,
+    idempotentHint: boolean,
+  },
 };
 
 const fileId = text('^obj_[A-Za-z0-9_-]{32,64}$');
@@ -251,6 +282,7 @@ const typedValue: McpJsonSchema = {
 const patch = array(object({ columnId, value: typedValue }, ['columnId', 'value']), 1, 1_000);
 const optionalPatch = array(object({ columnId, value: typedValue }, ['columnId', 'value']), 0, 1_000);
 
+//The mcp tool definitions value exported for module callers
 export const MCP_TOOL_DEFINITIONS: readonly McpToolDefinition[] = [
   tool('get_frontend_contract', 'Read the authorized, versioned frontend contract for one file.',
     object({ contractVersion: integer(1, 1), fileId }, ['contractVersion', 'fileId']), true, false, true),
@@ -320,6 +352,7 @@ export const MCP_TOOL_DEFINITIONS: readonly McpToolDefinition[] = [
     object({ commandId, fileId }, ['commandId']), false, false, true)
 ] as const;
 
+//The mcp resource templates value exported for module callers
 export const MCP_RESOURCE_TEMPLATES = [{
   uriTemplate: MCP_FRONTEND_RESOURCE_TEMPLATE,
   name: 'tabular_frontend_contract',
@@ -331,6 +364,9 @@ const mcpToolNames = new Set<McpToolName>(
   MCP_TOOL_DEFINITIONS.map((definition) => definition.name)
 );
 
+/**
+ * Return the tool result.
+ */
 function tool(
   name: McpToolName,
   description: string,
@@ -347,22 +383,37 @@ function tool(
   };
 }
 
+/**
+ * Return the object result.
+ */
 function object(properties: Record<string, McpJsonSchema>, required: string[]): McpJsonSchema {
   return { type: 'object', properties, required, additionalProperties: false };
 }
 
+/**
+ * Return the text result.
+ */
 function text(pattern: string): McpJsonSchema {
   return { type: 'string', pattern };
 }
 
+/**
+ * Return the integer result.
+ */
 function integer(minimum: number, maximum?: number): McpJsonSchema {
   return { type: 'integer', minimum, ...(maximum ? { maximum } : {}) };
 }
 
+/**
+ * Return the enumeration result.
+ */
 function enumeration(values: readonly unknown[]): McpJsonSchema {
   return { enum: values };
 }
 
+/**
+ * Return the array result.
+ */
 function array(
   items: McpJsonSchema,
   minItems: number,

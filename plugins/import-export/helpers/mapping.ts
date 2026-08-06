@@ -1,34 +1,40 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
 import type {
   ColumnInference,
   InferredStorageType,
   ParsedImportCell,
   ParsedImportRow
 } from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 import { normalizedPhysicalName, physicalIdentifier } from '../../files/helpers/validation.js';
 import { deterministicFingerprint } from './fingerprint.js';
 
+//The import column mapping contract exported for module callers
 export type ImportColumnMapping = {
-  sourceColumn: number;
-  sourceName: string;
-  displayName: string;
-  physicalName: string;
-  storageType: InferredStorageType;
-  include: boolean;
+  sourceColumn: number,
+  sourceName: string,
+  displayName: string,
+  physicalName: string,
+  storageType: InferredStorageType,
+  include: boolean,
 };
 
+//The import conversion issue contract exported for module callers
 export type ImportConversionIssue = {
-  rowNumber?: number;
-  columnNumber?: number;
-  code: string;
-  message: string;
-  sourceToken?: string;
+  rowNumber?: number,
+  columnNumber?: number,
+  code: string,
+  message: string,
+  sourceToken?: string,
 };
 
 const STORAGE_TYPES = new Set<InferredStorageType>([
   'text', 'bigint', 'numeric', 'boolean', 'date', 'time', 'timestamptz', 'jsonb'
 ]);
 
+/**
+ * Return the default mapping result.
+ */
 export function defaultMapping(
   header: ParsedImportRow,
   inference: ColumnInference[]
@@ -48,6 +54,9 @@ export function defaultMapping(
   });
 }
 
+/**
+ * Validate the mapping.
+ */
 export function validateMapping(
   value: unknown,
   columnCount: number
@@ -88,6 +97,9 @@ export function validateMapping(
   return mapped;
 }
 
+/**
+ * Validate the mapped rows.
+ */
 export function validateMappedRows(
   rows: ParsedImportRow[],
   mapping: ImportColumnMapping[],
@@ -114,6 +126,9 @@ export function validateMappedRows(
   return issues;
 }
 
+/**
+ * Return the staged rows result.
+ */
 export function stagedRows(rows: ParsedImportRow[]) {
   return rows.map((row) => ({
     row_number: row.rowNumber,
@@ -122,14 +137,17 @@ export function stagedRows(rows: ParsedImportRow[]) {
   }));
 }
 
+/**
+ * Return the mapping fingerprint result.
+ */
 export function mappingFingerprint(input: {
-  sourceFingerprint: string;
-  schemaId: string;
-  fileDisplayName: string;
-  tableName: string;
-  mapping: ImportColumnMapping[];
-  selectedSheet?: string;
-  sourceOptions: Record<string, unknown>;
+  sourceFingerprint: string,
+  schemaId: string,
+  fileDisplayName: string,
+  tableName: string,
+  mapping: ImportColumnMapping[],
+  selectedSheet?: string,
+  sourceOptions: Record<string, unknown>,
 }) {
   return deterministicFingerprint({
     contract: 'tabular-import-mapping-v1',
@@ -138,6 +156,9 @@ export function mappingFingerprint(input: {
   });
 }
 
+/**
+ * Return the source identity result.
+ */
 export function sourceIdentity(sourceName: string) {
   const withoutExtension = sourceName.replace(/\.(?:csv|xlsx)$/i, '').trim() || 'Imported values';
   const fileDisplayName = withoutExtension.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -147,12 +168,18 @@ export function sourceIdentity(sourceName: string) {
   };
 }
 
+/**
+ * Return the header name result.
+ */
 function headerName(cell: ParsedImportCell, index: number) {
   const value = cell.type === 'empty' ? '' : cell.sourceToken.trim();
   const safe = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
   return (safe || `Column ${index + 1}`).slice(0, 200);
 }
 
+/**
+ * Report the unique physical condition.
+ */
 function uniquePhysical(value: string, used: Set<string>) {
   const base = normalizedPhysicalName(value);
   let candidate = base;
@@ -166,6 +193,9 @@ function uniquePhysical(value: string, used: Set<string>) {
   return candidate;
 }
 
+/**
+ * Return the conversion error result.
+ */
 function conversionError(type: InferredStorageType, token: string | null) {
   if (token === null) return undefined;
   if (type === 'text') return token.includes('\u0000') ? 'Text values cannot contain NUL' : undefined;
@@ -209,12 +239,18 @@ function conversionError(type: InferredStorageType, token: string | null) {
   }
 }
 
+/**
+ * Return the label result.
+ */
 function label(value: unknown, name: string) {
   if (typeof value !== 'string' || value !== value.trim() || value.length < 1 || value.length > 200
     || /[\u0000-\u001f\u007f]/.test(value)) invalid(`${name} is invalid`);
   return value;
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('import_mapping_invalid', 400, message);
 }

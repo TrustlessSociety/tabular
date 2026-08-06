@@ -1,3 +1,4 @@
+//client
 import type {
   CreateSavedViewInput,
   MoveRowInput,
@@ -13,6 +14,9 @@ const VIEW_ID = /^view_[A-Za-z0-9_-]{32,64}$/;
 const COMMAND_ID = /^cmd_[A-Za-z0-9_-]{8,96}$/;
 const COLORS = /^(?:transparent|#[0-9a-fA-F]{6})$/;
 
+/**
+ * Validate the saved view action.
+ */
 export function validateSavedViewAction(input: unknown): SavedViewAction {
   const action = object(input, 'Saved-view action');
   const type = text(action.type, 'action type', 80);
@@ -45,6 +49,9 @@ export function validateSavedViewAction(input: unknown): SavedViewAction {
   throw new Error('Saved-view action type is unsupported');
 }
 
+/**
+ * Validate the create.
+ */
 export function validateCreate(input: Record<string, unknown>): CreateSavedViewInput {
   return {
     fileId: fileId(input.fileId),
@@ -54,6 +61,9 @@ export function validateCreate(input: Record<string, unknown>): CreateSavedViewI
   };
 }
 
+/**
+ * Validate the update.
+ */
 export function validateUpdate(input: Record<string, unknown>): UpdateSavedViewInput {
   return {
     viewId: pattern(input.viewId, VIEW_ID, 'view ID'),
@@ -64,6 +74,9 @@ export function validateUpdate(input: Record<string, unknown>): UpdateSavedViewI
   };
 }
 
+/**
+ * Validate the duplicate.
+ */
 export function validateDuplicate(input: Record<string, unknown>) {
   return {
     viewId: pattern(input.viewId, VIEW_ID, 'view ID'),
@@ -72,6 +85,9 @@ export function validateDuplicate(input: Record<string, unknown>) {
   };
 }
 
+/**
+ * Validate the delete.
+ */
 export function validateDelete(input: Record<string, unknown>) {
   return {
     viewId: pattern(input.viewId, VIEW_ID, 'view ID'),
@@ -79,6 +95,9 @@ export function validateDelete(input: Record<string, unknown>) {
   };
 }
 
+/**
+ * Validate the move.
+ */
 export function validateMove(input: Record<string, unknown>): MoveRowInput {
   const beforeRowId = optionalPattern(input.beforeRowId, ROW_ID, 'before row ID');
   const afterRowId = optionalPattern(input.afterRowId, ROW_ID, 'after row ID');
@@ -96,6 +115,9 @@ export function validateMove(input: Record<string, unknown>): MoveRowInput {
   };
 }
 
+/**
+ * Validate the definition.
+ */
 export function validateDefinition(input: unknown): SavedViewDefinition {
   const value = object(input, 'Saved-view definition');
   exact(value, [
@@ -212,6 +234,9 @@ export function validateDefinition(input: unknown): SavedViewDefinition {
   };
 }
 
+/**
+ * Return the saved view slug result.
+ */
 export function savedViewSlug(nameValue: string, id: string) {
   const base = nameValue.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -220,25 +245,40 @@ export function savedViewSlug(nameValue: string, id: string) {
   return `${base}-${suffix}`;
 }
 
+/**
+ * Return the file id result.
+ */
 function fileId(value: unknown) {
   return pattern(value, /^obj_[A-Za-z0-9_-]{32,64}$/, 'file ID');
 }
 
+/**
+ * Return the name result.
+ */
 function name(value: unknown) {
   return text(value, 'view name', 120);
 }
 
+/**
+ * Return the access result.
+ */
 function access(value: unknown): SavedViewAccess {
   if (value !== 'private' && value !== 'shared') throw new Error('Saved-view access is invalid');
   return value;
 }
 
+/**
+ * Return the column ids result.
+ */
 function columnIds(value: unknown, label: string) {
   const entries = array(value, label, 256).map((entry) => pattern(entry, COLUMN_ID, `${label} ID`));
   if (new Set(entries).size !== entries.length) throw new Error(`Saved-view ${label} contains duplicates`);
   return entries;
 }
 
+/**
+ * Return the object result.
+ */
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
@@ -246,11 +286,17 @@ function object(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/**
+ * Return the array result.
+ */
 function array(value: unknown, label: string, maximum: number) {
   if (!Array.isArray(value) || value.length > maximum) throw new Error(`Saved-view ${label} is invalid`);
   return value;
 }
 
+/**
+ * Return the text result.
+ */
 function text(value: unknown, label: string, maximum: number) {
   if (typeof value !== 'string' || value !== value.trim() || !value.length
     || value.length > maximum || /[\u0000-\u001f\u007f]/.test(value)) {
@@ -259,33 +305,51 @@ function text(value: unknown, label: string, maximum: number) {
   return value;
 }
 
+/**
+ * Return the pattern result.
+ */
 function pattern(value: unknown, expression: RegExp, label: string) {
   const output = text(value, label, 300);
   if (!expression.test(output)) throw new Error(`Saved-view ${label} is invalid`);
   return output;
 }
 
+/**
+ * Return the optional pattern result.
+ */
 function optionalPattern(value: unknown, expression: RegExp, label: string) {
   return value === undefined ? undefined : pattern(value, expression, label);
 }
 
+/**
+ * Return the positive result.
+ */
 function positive(value: unknown, label: string) {
   if (!Number.isSafeInteger(value) || Number(value) < 1) throw new Error(`Saved-view ${label} is invalid`);
   return Number(value);
 }
 
+/**
+ * Return the enum value result.
+ */
 function enumValue(value: unknown, allowed: readonly unknown[], label: string) {
   if (value !== undefined && !allowed.includes(value)) {
     throw new Error(`Saved-view ${label} is invalid`);
   }
 }
 
+/**
+ * Return the boolean value result.
+ */
 function booleanValue(value: unknown, label: string) {
   if (value !== undefined && typeof value !== 'boolean') {
     throw new Error(`Saved-view ${label} is invalid`);
   }
 }
 
+/**
+ * Return the exact result.
+ */
 function exact(
   value: Record<string, unknown>,
   allowed: string[],

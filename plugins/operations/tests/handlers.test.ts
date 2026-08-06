@@ -1,7 +1,13 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { OperationHandlerRegistry, operationHandler } from '../helpers/handlers.js';
 
+/**
+ * Return the handler result.
+ */
 const handler = async () => ({ state: 'ok' });
 
 test('operation handler dispatch fails closed on authority and schema version', () => {

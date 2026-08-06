@@ -1,8 +1,13 @@
+//node
 import path from 'node:path';
+
+//modules
 import type { Response } from '@stackpress/ingest/http';
-import { publicArtifact, verifyArtifactFile } from '../../../bootstrap/artifacts.js';
+
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
 import type { ArtifactManifest } from '../../../bootstrap/artifacts.js';
+import { publicArtifact, verifyArtifactFile } from '../../../bootstrap/artifacts.js';
 
 const CONTENT_TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -13,6 +18,9 @@ const CONTENT_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2'
 };
 
+/**
+ * Return the serve public artifact result.
+ */
 export async function servePublicArtifact(
   route: string,
   response: Response,
@@ -34,6 +42,9 @@ export async function servePublicArtifact(
   response.set(CONTENT_TYPES[path.extname(verified.destination)] || 'application/octet-stream', body);
 }
 
+/**
+ * Return the version public artifact references result.
+ */
 export function versionPublicArtifactReferences(html: string, manifest: ArtifactManifest) {
   return manifest.artifacts.reduce((versioned, artifact) => {
     if (!artifact.publicRoute) return versioned;

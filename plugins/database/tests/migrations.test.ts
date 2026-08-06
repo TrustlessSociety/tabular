@@ -1,11 +1,18 @@
-import assert from 'node:assert/strict';
+//node
 import { createHash } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
+import type { Migration } from '../migrations/index.js';
 import { createPGliteTestDatabase } from './helpers/pglite.js';
 import { runMigrations } from '../helpers/migrator.js';
 import { MigrationRepository } from '../helpers/repositories.js';
-import { loadMigrations, type Migration } from '../migrations/index.js';
+import { loadMigrations } from '../migrations/index.js';
 
+/**
+ * Return the migration result.
+ */
 function migration(version: string, name: string, sql: string): Migration {
   return {
     version,
@@ -52,7 +59,7 @@ test('PGlite-labeled failed DDL leaves neither schema change nor version record'
       ], { advisoryLock: false }),
       /function_that_does_not_exist/
     );
-    const relation = await local.database.execute<{ exists: boolean }>(`
+    const relation = await local.database.execute<{ exists: boolean, }>(`
       SELECT EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'tabular' AND table_name = 'should_rollback'

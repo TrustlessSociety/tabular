@@ -1,11 +1,13 @@
+//node
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 
+//The migration contract exported for module callers
 export type Migration = {
-  version: string;
-  name: string;
-  checksum: string;
-  sql: string;
+  version: string,
+  name: string,
+  checksum: string,
+  sql: string,
 };
 
 const migrationFiles = [
@@ -46,6 +48,9 @@ const migrationFiles = [
   }
 ] as const;
 
+/**
+ * Load the migrations.
+ */
 export async function loadMigrations(): Promise<Migration[]> {
   const migrations = await Promise.all(migrationFiles.map(async (migration) => {
     const sql = await fs.readFile(new URL(migration.file, import.meta.url), 'utf8');

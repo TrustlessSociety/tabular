@@ -1,94 +1,98 @@
+//node
 import { createHash } from 'node:crypto';
+
+//modules
 import type { Value } from '@stackpress/inquire/types';
-import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+
+//client
 import type {
   StableCatalogSnapshot,
   StableColumn,
   StableObject,
   StableSchema
 } from '../../catalog/helpers/contracts.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import {
-  ActionFault,
-  CapabilityResultBudgetExceededError,
-  type CapabilityTargetAdapter,
-  type CellPatch,
-  type PreparedTarget,
-  type TargetMutationEffect,
-  type TargetMutationRow,
-  type TypedCellValue,
-  type ValidationIssue
+import type { DatabaseExecutor } from '../../database/helpers/executor.js';
+import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
+import type {
+  CapabilityTargetAdapter,
+  CellPatch,
+  PreparedTarget,
+  TargetMutationEffect,
+  TargetMutationRow,
+  TypedCellValue,
+  ValidationIssue
 } from './contracts.js';
 import type {
   PostgreSqlBrowseResult,
   PostgreSqlColumnCodec
 } from './postgresql-target.js';
-import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
 import type { GridQueryInput } from './service.js';
+import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+import { ActionFault, CapabilityResultBudgetExceededError } from './contracts.js';
 
 type LiveColumn = {
-  attribute_number: number;
-  name: string;
-  type_name: string;
-  formatted_type: string;
-  nullable: boolean;
-  identity_kind: string;
-  generated_kind: string;
-  has_default: boolean;
+  attribute_number: number,
+  name: string,
+  type_name: string,
+  formatted_type: string,
+  nullable: boolean,
+  identity_kind: string,
+  generated_kind: string,
+  has_default: boolean,
 };
 
 type NativeColumn = {
-  columnId: string;
-  columnName: string;
-  attributeNumber: number;
-  codec: PostgreSqlColumnCodec;
-  collatable: boolean;
-  key: boolean;
-  editable: boolean;
-  generated: boolean;
-  serverDefault: boolean;
+  columnId: string,
+  columnName: string,
+  attributeNumber: number,
+  codec: PostgreSqlColumnCodec,
+  collatable: boolean,
+  key: boolean,
+  editable: boolean,
+  generated: boolean,
+  serverDefault: boolean,
 };
 
 type UnstructuredColumn = {
-  columnId: string;
-  codec: PostgreSqlColumnCodec;
+  columnId: string,
+  codec: PostgreSqlColumnCodec,
 };
 
 type NativeDefinition = {
-  relationOid: string;
-  schemaName: string;
-  tableName: string;
-  qualifiedName: string;
-  tableReference: string;
-  keyColumns: NativeColumn[];
-  columns: NativeColumn[];
-  storedColumns: NativeColumn[];
-  rankColumn?: NativeColumn;
-  jsonColumn?: NativeColumn;
-  unstructuredColumns: UnstructuredColumn[];
-  versionColumnAlias: string;
-  columnsById: Map<string, NativeColumn>;
-  unstructuredById: Map<string, UnstructuredColumn>;
-  preparedLiveColumns: LiveColumn[];
+  relationOid: string,
+  schemaName: string,
+  tableName: string,
+  qualifiedName: string,
+  tableReference: string,
+  keyColumns: NativeColumn[],
+  columns: NativeColumn[],
+  storedColumns: NativeColumn[],
+  rankColumn?: NativeColumn,
+  jsonColumn?: NativeColumn,
+  unstructuredColumns: UnstructuredColumn[],
+  versionColumnAlias: string,
+  columnsById: Map<string, NativeColumn>,
+  unstructuredById: Map<string, UnstructuredColumn>,
+  preparedLiveColumns: LiveColumn[],
 };
 
-type NativeState = { definition: NativeDefinition };
+type NativeState = { definition: NativeDefinition, };
 type DatabaseRow = Record<string, unknown>;
 type NativeColumnPrivilege = {
-  attribute_number: number;
-  can_select: boolean;
-  can_update: boolean;
-  can_insert: boolean;
+  attribute_number: number,
+  can_select: boolean,
+  can_update: boolean,
+  can_insert: boolean,
 };
 type AuthorizedReadMode = 'current-grid' | 'authorized-query';
 type AuthorizedReadInput = {
-  columnIds: string[];
-  sorts: GridSort[];
-  filters: GridFilter[];
-  limit: number;
-  mode: AuthorizedReadMode;
-  includeSentinel: boolean;
+  columnIds: string[],
+  sorts: GridSort[],
+  filters: GridFilter[],
+  limit: number,
+  mode: AuthorizedReadMode,
+  includeSentinel: boolean,
 };
 
 const RANK_WIDTH = 24;
@@ -101,9 +105,13 @@ const MAX_RANK = (10n ** BigInt(RANK_WIDTH)) - 1n;
  * composite keys as one opaque stable row identity.
  */
 export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
-  readonly name = 'catalog-postgresql-targets';
+  //The name state retained by this class instance
+  public readonly name = 'catalog-postgresql-targets';
 
-  async prepare(database: DatabaseExecutor, fileId: string, connectionId?: string) {
+  /**
+   * Prepare the current value.
+   */
+  public async prepare(database: DatabaseExecutor, fileId: string, connectionId?: string) {
     if (!connectionId) return undefined;
     const snapshot = await reconcileCatalog(database, connectionId);
     const object = stableObject(snapshot, fileId);
@@ -127,7 +135,7 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     for (const column of live) {
       const stable = stableByNumber.get(column.attribute_number)!;
       const codec = codecFor(column.type_name);
-      // Lossless delete/undo requires every stored, non-generated value to be
+      //Lossless delete/undo requires every stored, non-generated value to be
       // representable. Identity columns need a separate owner-approved lane.
       if (!codec || column.identity_kind) return undefined;
       allColumns.push({
@@ -193,7 +201,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     return { fileId, schemaVersion, state: { definition } satisfies NativeState };
   }
 
-  async validatePatch(target: PreparedTarget, patch: CellPatch[]): Promise<ValidationIssue[]> {
+  /**
+   * Validate the patch.
+   */
+  public async validatePatch(target: PreparedTarget, patch: CellPatch[]): Promise<ValidationIssue[]> {
     const definition = nativeState(target).definition;
     const issues: ValidationIssue[] = [];
     for (const entry of patch) {
@@ -228,10 +239,13 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     return issues;
   }
 
-  async authorize(database: DatabaseExecutor, target: PreparedTarget, _operation: 'read' | 'mutate') {
+  /**
+   * Handle the authorize operation.
+   */
+  public async authorize(database: DatabaseExecutor, target: PreparedTarget, _operation: 'read' | 'mutate') {
     const definition = nativeState(target).definition;
     await database.execute(`SELECT 1 FROM ${definition.tableReference} WHERE false`);
-    const identity = await database.execute<{ relation_oid: string | null }>(`
+    const identity = await database.execute<{ relation_oid: string | null, }>(`
       SELECT to_regclass(?)::oid::text AS relation_oid
     `, [`${definition.schemaName}.${definition.tableName}`]);
     if (identity.rows[0]?.relation_oid !== definition.relationOid) unavailable();
@@ -243,7 +257,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     )) schemaChanged();
   }
 
-  async describe(database: DatabaseExecutor, target: PreparedTarget) {
+  /**
+   * Describe the current value.
+   */
+  public async describe(database: DatabaseExecutor, target: PreparedTarget) {
     await this.authorize(database, target, 'read');
     const definition = nativeState(target).definition;
     const privileges = await columnPrivileges(database, definition.relationOid);
@@ -287,7 +304,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     };
   }
 
-  async browse(
+  /**
+   * Handle the browse operation.
+   */
+  public async browse(
     database: DatabaseExecutor,
     target: PreparedTarget,
     limit = 1_000
@@ -383,7 +403,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     };
   }
 
-  async query(
+  /**
+   * Query the current value.
+   */
+  public async query(
     database: DatabaseExecutor,
     target: PreparedTarget,
     input: GridQueryInput
@@ -450,7 +473,7 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
       )
       : compiled.query;
     if (input.maximumResultBytes) {
-      const measured = await database.execute<{ bytes: string }>(`
+      const measured = await database.execute<{ bytes: string, }>(`
         SELECT COALESCE(sum(octet_length(row_to_json(bounded_row)::text) + 1), 0)::text AS bytes
           FROM (${readQuery}) AS bounded_row
       `, compiled.values);
@@ -514,10 +537,13 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     };
   }
 
-  async moveRow(
+  /**
+   * Move the row.
+   */
+  public async moveRow(
     database: DatabaseExecutor,
     target: PreparedTarget,
-    input: { rowId: string; beforeRowId?: string; afterRowId?: string }
+    input: { rowId: string, beforeRowId?: string, afterRowId?: string, }
   ) {
     await this.authorize(database, target, 'mutate');
     const definition = nativeState(target).definition;
@@ -587,7 +613,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     return { fileId: target.fileId, rebalanced };
   }
 
-  async read(
+  /**
+   * Read the current value.
+   */
+  public async read(
     database: DatabaseExecutor,
     target: PreparedTarget,
     rowId: string,
@@ -642,7 +671,10 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     };
   }
 
-  async mutate(
+  /**
+   * Handle the mutate operation.
+   */
+  public async mutate(
     database: DatabaseExecutor,
     target: PreparedTarget,
     rows: TargetMutationRow[]
@@ -674,6 +706,9 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     return effect;
   }
 
+  /**
+   * Apply one authorized catalog-backed row update with optimistic locking.
+   */
   private async update(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -713,7 +748,7 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     const visible = definition.columns.filter((column) =>
       privileges.get(column.attributeNumber)?.can_select
     );
-    // Hidden generated row keys are identity, not spreadsheet columns. Keep
+    //Hidden generated row keys are identity, not spreadsheet columns. Keep
     // them in the locked projection so version tokens are computed against the
     // same stable row ID that browse/query returned to the caller.
     const projected = uniqueColumns([
@@ -811,6 +846,9 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     }
   }
 
+  /**
+   * Insert one authorized catalog-backed row and capture its stable identity.
+   */
   private async insert(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -917,6 +955,9 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     }
   }
 
+  /**
+   * Delete one authorized catalog-backed row while retaining reversal values.
+   */
   private async delete(
     database: DatabaseExecutor,
     target: PreparedTarget,
@@ -974,6 +1015,9 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
     }
   }
 
+  /**
+   * Handle the lock row operation.
+   */
   private async lockRow(
     database: DatabaseExecutor,
     definition: NativeDefinition,
@@ -993,6 +1037,9 @@ export class CatalogPostgreSqlTargetAdapter implements CapabilityTargetAdapter {
   }
 }
 
+/**
+ * Assert the bounded read.
+ */
 async function assertBoundedRead(
   database: DatabaseExecutor,
   query: string,
@@ -1005,7 +1052,7 @@ async function assertBoundedRead(
     || maximumResultBytes > 1_048_576) {
     throw new Error('Capability result budget is invalid');
   }
-  const measured = await database.execute<{ bytes: string }>(`
+  const measured = await database.execute<{ bytes: string, }>(`
     SELECT COALESCE(sum(octet_length(row_to_json(bounded_row)::text) + 1), 0)::text AS bytes
       FROM (${query}) AS bounded_row
   `, values);
@@ -1014,6 +1061,9 @@ async function assertBoundedRead(
   }
 }
 
+/**
+ * Read the live columns.
+ */
 async function readLiveColumns(database: DatabaseExecutor, relationOid: string) {
   const result = await database.execute<LiveColumn>(`
     SELECT a.attnum AS attribute_number, a.attname AS name,
@@ -1035,10 +1085,13 @@ async function readLiveColumns(database: DatabaseExecutor, relationOid: string) 
   }));
 }
 
+/**
+ * Return the hidden columns result.
+ */
 async function hiddenColumns(database: DatabaseExecutor, fileId: string) {
   const result = await database.execute<{
-    attribute_number: string | number;
-    hidden_purpose: string;
+    attribute_number: string | number,
+    hidden_purpose: string,
   }>(`
     SELECT c.attribute_number, m.hidden_purpose
       FROM tabular.column_metadata m
@@ -1052,8 +1105,11 @@ async function hiddenColumns(database: DatabaseExecutor, fileId: string) {
   ]));
 }
 
+/**
+ * Read the unstructured columns.
+ */
 async function readUnstructuredColumns(database: DatabaseExecutor, fileId: string) {
-  const result = await database.execute<{ column_id: string }>(`
+  const result = await database.execute<{ column_id: string, }>(`
     SELECT column_id
       FROM tabular.column_metadata
      WHERE object_id = ? AND storage_kind = 'unstructured-json' AND NOT hidden
@@ -1065,15 +1121,18 @@ async function readUnstructuredColumns(database: DatabaseExecutor, fileId: strin
   }));
 }
 
+/**
+ * Return the eligible key result.
+ */
 async function eligibleKey(
   database: DatabaseExecutor,
   relationOid: string,
   live: LiveColumn[]
 ) {
   const keys = await database.execute<{
-    primary_key: boolean;
-    key_numbers: string;
-    key_count: string | number;
+    primary_key: boolean,
+    key_numbers: string,
+    key_count: string | number,
   }>(`
     SELECT i.indisprimary AS primary_key, i.indkey::text AS key_numbers,
            i.indnkeyatts AS key_count
@@ -1098,6 +1157,9 @@ async function eligibleKey(
   return undefined;
 }
 
+/**
+ * Return the codec for result.
+ */
 function codecFor(typeName: string): PostgreSqlColumnCodec | undefined {
   if (['text', 'varchar', 'bpchar', 'uuid', 'name'].includes(typeName)) return 'text';
   if (['int2', 'int4', 'int8'].includes(typeName)) return 'integer';
@@ -1110,6 +1172,9 @@ function codecFor(typeName: string): PostgreSqlColumnCodec | undefined {
   return undefined;
 }
 
+/**
+ * Return the projection result.
+ */
 function projection(
   definition: NativeDefinition,
   columns: NativeColumn[],
@@ -1135,7 +1200,9 @@ function projection(
   ].join(', ');
 }
 
-/** Compiles every catalog-backed grid/export read through one allowlisted path. */
+/**
+ * Compiles every catalog-backed grid/export read through one allowlisted path.
+ */
 function compileAuthorizedRead(
   definition: NativeDefinition,
   permitted: Map<string, NativeColumn>,
@@ -1143,13 +1210,13 @@ function compileAuthorizedRead(
   rank: NativeColumn | undefined,
   input: AuthorizedReadInput
 ) {
-  // Resolve the requested projection exclusively from columns already proven
+  //Resolve the requested projection exclusively from columns already proven
   // selectable for this PostgreSQL role.
   const columns = input.columnIds.map((columnId) => permitted.get(columnId));
   if (columns.some((column) => !column)) unavailable();
   const selected = columns as NativeColumn[];
 
-  // Validate all user-shaped clauses before composing SQL, and bind values
+  //Validate all user-shaped clauses before composing SQL, and bind values
   // independently from the allowlisted physical identifiers.
   const sorts = validatedSorts(input.sorts, permitted);
   const { clauses, values } = validatedFilters(input.filters, permitted);
@@ -1177,7 +1244,9 @@ function compileAuthorizedRead(
   };
 }
 
-/** Preserves the established rank/key ordering of the default current grid. */
+/**
+ * Preserves the established rank/key ordering of the default current grid.
+ */
 function currentGridOrder(definition: NativeDefinition, rank: NativeColumn | undefined) {
   return [
     ...(rank ? [`${quoteIdentifier(rank.columnName)} COLLATE "C" NULLS LAST`] : []),
@@ -1185,6 +1254,9 @@ function currentGridOrder(definition: NativeDefinition, rank: NativeColumn | und
   ].join(', ');
 }
 
+/**
+ * Return the validated sorts result.
+ */
 function validatedSorts(
   sorts: GridSort[],
   permitted: Map<string, NativeColumn>
@@ -1203,6 +1275,9 @@ function validatedSorts(
   });
 }
 
+/**
+ * Return the validated filters result.
+ */
 function validatedFilters(
   filters: GridFilter[],
   permitted: Map<string, NativeColumn>
@@ -1232,6 +1307,9 @@ function validatedFilters(
   return { clauses, values };
 }
 
+/**
+ * Filter the value.
+ */
 function filterValue(codec: PostgreSqlColumnCodec, value: Exclude<GridFilter['value'], null>): Value {
   if (codec === 'boolean') {
     if (typeof value !== 'boolean') validationRejected('Boolean filters require a boolean');
@@ -1257,9 +1335,12 @@ function filterValue(codec: PostgreSqlColumnCodec, value: Exclude<GridFilter['va
   return value;
 }
 
+/**
+ * Query the order.
+ */
 function queryOrder(
   definition: NativeDefinition,
-  sorts: Array<{ column: NativeColumn; direction: 'asc' | 'desc' }>,
+  sorts: Array<{ column: NativeColumn, direction: 'asc' | 'desc', }>,
   rank: NativeColumn | undefined
 ) {
   const ordered = new Set(sorts.map((sort) => sort.column.columnId));
@@ -1280,12 +1361,18 @@ function queryOrder(
   return clauses.join(', ');
 }
 
+/**
+ * Return the key predicate result.
+ */
 function keyPredicate(definition: NativeDefinition) {
   return definition.keyColumns.map((column) =>
     `${quoteIdentifier(column.columnName)} IS NOT DISTINCT FROM ?`
   ).join(' AND ');
 }
 
+/**
+ * Return the append rank result.
+ */
 async function appendRank(
   database: DatabaseExecutor,
   target: PreparedTarget,
@@ -1326,6 +1413,9 @@ async function appendRank(
   return rankText(BigInt(ordered.length + 1) * RANK_GAP);
 }
 
+/**
+ * Return the requested rank result.
+ */
 async function requestedRank(
   database: DatabaseExecutor,
   target: PreparedTarget,
@@ -1374,6 +1464,9 @@ async function requestedRank(
   return rankText(requestedValue);
 }
 
+/**
+ * Update the rank.
+ */
 async function updateRank(
   database: DatabaseExecutor,
   definition: NativeDefinition,
@@ -1389,6 +1482,9 @@ async function updateRank(
   if (updated.affectedRows !== 1) changed();
 }
 
+/**
+ * Return the rank value result.
+ */
 function rankValue(value: unknown) {
   if (typeof value !== 'string' || !new RegExp(`^[0-9]{${RANK_WIDTH}}$`).test(value)) {
     return undefined;
@@ -1396,11 +1492,17 @@ function rankValue(value: unknown) {
   return BigInt(value);
 }
 
+/**
+ * Return the rank text result.
+ */
 function rankText(value: bigint) {
   if (value <= 0n || value >= MAX_RANK) changed();
   return value.toString().padStart(RANK_WIDTH, '0');
 }
 
+/**
+ * Report the safe row condition.
+ */
 function safeRow(
   target: PreparedTarget,
   definition: NativeDefinition,
@@ -1419,6 +1521,9 @@ function safeRow(
   };
 }
 
+/**
+ * Return the unstructured cells result.
+ */
 function unstructuredCells(definition: NativeDefinition, row: DatabaseRow): CellPatch[] {
   if (!definition.jsonColumn) return [];
   const values = jsonObject(row[definition.jsonColumn.columnName]);
@@ -1430,6 +1535,9 @@ function unstructuredCells(definition: NativeDefinition, row: DatabaseRow): Cell
   }));
 }
 
+/**
+ * Return the JSON object result.
+ */
 function jsonObject(value: unknown): Record<string, unknown> {
   try {
     const parsed = typeof value === 'string' ? JSON.parse(value) : value;
@@ -1441,6 +1549,9 @@ function jsonObject(value: unknown): Record<string, unknown> {
   }
 }
 
+/**
+ * Apply the unstructured patch.
+ */
 function applyUnstructuredPatch(
   source: Record<string, unknown>,
   patch: CellPatch[]
@@ -1453,12 +1564,18 @@ function applyUnstructuredPatch(
   return next;
 }
 
+/**
+ * Return the typed unstructured value result.
+ */
 function typedUnstructuredValue(value: unknown): TypedCellValue {
   return value === null || typeof value === 'undefined'
     ? { type: 'null' }
     : { type: 'text', value: String(value) };
 }
 
+/**
+ * Return the column privileges result.
+ */
 async function columnPrivileges(database: DatabaseExecutor, relationOid: string) {
   const result = await database.execute<NativeColumnPrivilege>(`
     SELECT a.attnum AS attribute_number,
@@ -1476,17 +1593,23 @@ async function columnPrivileges(database: DatabaseExecutor, relationOid: string)
   }]));
 }
 
+/**
+ * Report whether the current value has table privilege.
+ */
 async function hasTablePrivilege(
   database: DatabaseExecutor,
   relationOid: string,
   privilege: 'SELECT' | 'INSERT' | 'DELETE'
 ) {
-  const result = await database.execute<{ allowed: boolean }>(`
+  const result = await database.execute<{ allowed: boolean, }>(`
     SELECT has_table_privilege(current_user, ?::oid, ?) AS allowed
   `, [relationOid, privilege]);
   return Boolean(result.rows[0]?.allowed);
 }
 
+/**
+ * Encode the row id.
+ */
 function encodeRowId(definition: NativeDefinition, row: DatabaseRow) {
   const values = definition.keyColumns.map((column) =>
     typedDatabaseValue(column.codec, row[column.columnName])
@@ -1496,6 +1619,9 @@ function encodeRowId(definition: NativeDefinition, row: DatabaseRow) {
   return encoded;
 }
 
+/**
+ * Decode the row id.
+ */
 function decodeRowId(definition: NativeDefinition, rowId: string): Value[] {
   try {
     if (!rowId.startsWith('row_')) throw new Error('invalid');
@@ -1511,6 +1637,9 @@ function decodeRowId(definition: NativeDefinition, rowId: string): Value[] {
   }
 }
 
+/**
+ * Return the row version result.
+ */
 function rowVersion(target: PreparedTarget, rowId: string, row: DatabaseRow) {
   const xmin = String(row[nativeState(target).definition.versionColumnAlias] || '');
   if (!/^[0-9]+$/.test(xmin)) throw new Error('PostgreSQL row version was unavailable');
@@ -1519,6 +1648,9 @@ function rowVersion(target: PreparedTarget, rowId: string, row: DatabaseRow) {
     .digest('base64url')}`;
 }
 
+/**
+ * Return the visible row version result.
+ */
 function visibleRowVersion(
   target: PreparedTarget,
   rowId: string,
@@ -1539,6 +1671,9 @@ function visibleRowVersion(
     .digest('base64url')}`;
 }
 
+/**
+ * Return the visible version projection result.
+ */
 function visibleVersionProjection(
   definition: NativeDefinition,
   columns: NativeColumn[]
@@ -1551,6 +1686,9 @@ function visibleVersionProjection(
   ) AS ${quoteIdentifier(definition.versionColumnAlias)}`;
 }
 
+/**
+ * Return the version columns result.
+ */
 function versionColumns(definition: NativeDefinition, visible: NativeColumn[]) {
   return uniqueColumns([
     ...visible,
@@ -1558,6 +1696,9 @@ function versionColumns(definition: NativeDefinition, visible: NativeColumn[]) {
   ]);
 }
 
+/**
+ * Return the unused version column alias result.
+ */
 function unusedVersionColumnAlias(live: LiveColumn[]) {
   const used = new Set(live.map((column) => column.name));
   for (let index = 0; index <= live.length; index += 1) {
@@ -1567,6 +1708,9 @@ function unusedVersionColumnAlias(live: LiveColumn[]) {
   throw new Error('A collision-free internal version alias was unavailable');
 }
 
+/**
+ * Return the version for row result.
+ */
 function versionForRow(
   target: PreparedTarget,
   definition: NativeDefinition,
@@ -1580,24 +1724,36 @@ function versionForRow(
     : visibleRowVersion(target, rowId, row, columns);
 }
 
+/**
+ * Return the system version result.
+ */
 function systemVersion(definition: NativeDefinition, tableSelect: boolean) {
-  // The owned rank column is presentation state. Its updates must not create
+  //The owned rank column is presentation state. Its updates must not create
   // false data-edit conflicts, so ordered tables version caller-visible values.
   return tableSelect && !definition.rankColumn;
 }
 
+/**
+ * Return the row incarnation result.
+ */
 function rowIncarnation(target: PreparedTarget, rowId: string) {
   return `inc_${createHash('sha256')
     .update(JSON.stringify([target.fileId, target.schemaVersion, rowId]))
     .digest('base64url')}`;
 }
 
+/**
+ * Return the tombstone version result.
+ */
 function tombstoneVersion(target: PreparedTarget, rowId: string) {
   return `ver_${createHash('sha256')
     .update(`${target.fileId}:${target.schemaVersion}:${rowId}:absent`)
     .digest('base64url')}`;
 }
 
+/**
+ * Return the typed database value result.
+ */
 function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): TypedCellValue {
   if (value === null || typeof value === 'undefined') return { type: 'null' };
   if (codec === 'text') return { type: 'text', value: String(value) };
@@ -1616,11 +1772,17 @@ function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): Typed
   return { type: 'json', value: typeof value === 'string' ? value : JSON.stringify(value) };
 }
 
+/**
+ * Return the database value result.
+ */
 function databaseValue(value: TypedCellValue): Value {
   if (value.type === 'null') return null;
   return value.value;
 }
 
+/**
+ * Assert the preconditions.
+ */
 function assertPreconditions(
   definition: NativeDefinition,
   row: DatabaseRow,
@@ -1641,26 +1803,44 @@ function assertPreconditions(
   }
 }
 
+/**
+ * Return the ordered patch result.
+ */
 function orderedPatch(patch: CellPatch[]) {
   return [...patch].sort((left, right) => left.columnId.localeCompare(right.columnId));
 }
 
+/**
+ * Report the unique columns condition.
+ */
 function uniqueColumns(columns: NativeColumn[]) {
   return [...new Map(columns.map((column) => [column.columnId, column])).values()];
 }
 
+/**
+ * Return the stable object result.
+ */
 function stableObject(snapshot: StableCatalogSnapshot, fileId: string): StableObject | undefined {
   return [...snapshot.objects.values()].find((object) => object.stableId === fileId);
 }
 
+/**
+ * Return the stable schema result.
+ */
 function stableSchema(snapshot: StableCatalogSnapshot, schemaId: string): StableSchema | undefined {
   return [...snapshot.schemas.values()].find((schema) => schema.stableId === schemaId);
 }
 
+/**
+ * Return the native state result.
+ */
 function nativeState(target: PreparedTarget) {
   return target.state as NativeState;
 }
 
+/**
+ * Return the unavailable result.
+ */
 function unavailable(): never {
   throw new ActionFault({
     code: 'not_found',
@@ -1669,6 +1849,9 @@ function unavailable(): never {
   });
 }
 
+/**
+ * Return the changed result.
+ */
 function changed(): never {
   throw new ActionFault({
     code: 'conflict',
@@ -1677,6 +1860,9 @@ function changed(): never {
   });
 }
 
+/**
+ * Return the schema changed result.
+ */
 function schemaChanged(): never {
   throw new ActionFault({
     code: 'schema_changed',
@@ -1686,6 +1872,9 @@ function schemaChanged(): never {
   });
 }
 
+/**
+ * Return the validation rejected result.
+ */
 function validationRejected(message: string): never {
   throw new ActionFault({
     code: 'validation_failed',
@@ -1695,6 +1884,9 @@ function validationRejected(message: string): never {
   });
 }
 
+/**
+ * Return the denied result.
+ */
 function denied(): never {
   throw new ActionFault({
     code: 'capability_denied',

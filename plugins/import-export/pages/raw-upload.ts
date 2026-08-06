@@ -1,22 +1,28 @@
+//node
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash } from 'node:crypto';
+import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
 import type { RawHttpHandlerRegistry } from '../../../bootstrap/raw-handlers.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { ImportExportPluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 const CHUNK_BYTES = 256 * 1024;
 
+//The import source raw route value exported for module callers
 export const IMPORT_SOURCE_RAW_ROUTE = 'POST /events/import-source';
 
-/** Registers the streaming upload with the generic pre-Ingest raw handler seam. */
+/**
+ * Registers the streaming upload with the generic pre-Ingest raw handler seam.
+ */
 export function registerRawImportSourceHandler(
   registry: RawHttpHandlerRegistry,
   identity: IdentityPluginService,
@@ -34,6 +40,9 @@ export function registerRawImportSourceHandler(
   });
 }
 
+/**
+ * Return the receive import source result.
+ */
 export async function receiveImportSource(
   request: IncomingMessage,
   response: ServerResponse,
@@ -63,6 +72,9 @@ export async function receiveImportSource(
     await pipeline(
       request,
       new Transform({
+        /**
+         * Transform the current value.
+         */
         transform(chunk: Buffer | string, encoding, callback) {
           const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding);
           received += bytes.byteLength;
@@ -107,6 +119,9 @@ export async function receiveImportSource(
   }
 }
 
+/**
+ * Return the send operation result.
+ */
 function sendOperation(response: ServerResponse, operation: unknown, status: number) {
   response.statusCode = status;
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -114,6 +129,9 @@ function sendOperation(response: ServerResponse, operation: unknown, status: num
   response.end(JSON.stringify({ status: 'ok', data: operation }));
 }
 
+/**
+ * Assert the magic.
+ */
 async function assertMagic(sourcePath: string, kind: 'csv' | 'xlsx', size: number) {
   if (kind === 'csv' || size === 0) return;
   const handle = await fsPromises.open(sourcePath, 'r');
@@ -128,6 +146,9 @@ async function assertMagic(sourcePath: string, kind: 'csv' | 'xlsx', size: numbe
   }
 }
 
+/**
+ * Return the content length header result.
+ */
 function contentLengthHeader(value: string | undefined) {
   if (!value || !/^[0-9]{1,10}$/.test(value)) {
     throw new ApplicationError('length_required', 411, 'Import source requires Content-Length');
@@ -139,11 +160,17 @@ function contentLengthHeader(value: string | undefined) {
   return parsed;
 }
 
+/**
+ * Return the single header result.
+ */
 function singleHeader(value: string | string[] | undefined) {
   if (Array.isArray(value)) invalid('Repeated import request header is invalid');
   return value || '';
 }
 
+/**
+ * Return the cookie value result.
+ */
 function cookieValue(header: string, name: string) {
   for (const pair of header.split(';')) {
     const index = pair.indexOf('=');
@@ -153,10 +180,16 @@ function cookieValue(header: string, name: string) {
   return undefined;
 }
 
+/**
+ * Return the exact query result.
+ */
 function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   if ([...parameters.keys()].some((key) => !allowed.includes(key))) invalid('Import source query is invalid');
 }
 
+/**
+ * Return the parameter result.
+ */
 function parameter(url: URL, key: string, maximum: number, spaces = false) {
   const value = url.searchParams.get(key);
   if (!value || value.length > maximum || /[\u0000-\u001f\u007f]/.test(value)
@@ -164,6 +197,9 @@ function parameter(url: URL, key: string, maximum: number, spaces = false) {
   return value;
 }
 
+/**
+ * Return the invalid result.
+ */
 function invalid(message: string): never {
   throw new ApplicationError('invalid_import_source', 400, message);
 }

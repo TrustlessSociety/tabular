@@ -1,22 +1,27 @@
+//node
 import { TextDecoder } from 'node:util';
-import {
-  IMPORT_PARSER_VERSION,
-  ImportParserError,
-  type CsvDelimiter,
-  type CsvEncoding,
-  type CsvParserOptions,
-  type ImportByteInput,
-  type ImportParserIssue,
-  type ImportParserLimits,
-  type ParsedImportCell,
-  type ParsedImportResult,
-  type ParsedImportRow
+
+//client
+import type {
+  CsvDelimiter,
+  CsvEncoding,
+  CsvParserOptions,
+  ImportByteInput,
+  ImportParserIssue,
+  ImportParserLimits,
+  ParsedImportCell,
+  ParsedImportResult,
+  ParsedImportRow
 } from './contracts.js';
+import { IMPORT_PARSER_VERSION, ImportParserError } from './contracts.js';
 import { importFingerprint, SourceFingerprint } from './fingerprint.js';
 import { requireWithinLimit, validateCsvOptions } from './validation.js';
 
 const DELIMITER_PRIORITY: CsvDelimiter[] = [',', '\t', ';', '|'];
 
+/**
+ * Parse the CSV.
+ */
 export async function parseCsv(
   input: ImportByteInput,
   options: CsvParserOptions = {}
@@ -30,6 +35,9 @@ export async function parseCsv(
   let detector: DelimiterDetector | undefined;
   let probe = '';
 
+  /**
+   * Return the accept text result.
+   */
   const acceptText = (text: string) => {
     if (!text) return;
     if (parser) {
@@ -131,29 +139,51 @@ export async function parseCsv(
 }
 
 class CsvMachine {
-  readonly rows: ParsedImportRow[] = [];
-  readonly issues: ImportParserIssue[] = [];
+  //The rows state retained by this class instance
+  public readonly rows: ParsedImportRow[] = [];
+  //The issues state retained by this class instance
+  public readonly issues: ImportParserIssue[] = [];
+  //The limits state retained by this class instance
   readonly #limits: ImportParserLimits;
+  //The row state retained by this class instance
   #row: ParsedImportCell[] = [];
+  //The field state retained by this class instance
   #field = '';
+  //The field started state retained by this class instance
   #fieldStarted = false;
+  //The row started state retained by this class instance
   #rowStarted = false;
+  //The in quotes state retained by this class instance
   #inQuotes = false;
+  //The after quote state retained by this class instance
   #afterQuote = false;
+  //The skip lf state retained by this class instance
   #skipLf = false;
+  //The expected width state retained by this class instance
   #expectedWidth?: number;
+  //The cell count state retained by this class instance
   #cellCount = 0;
+  //The column count state retained by this class instance
   #columnCount = 0;
 
-  constructor(readonly delimiter: CsvDelimiter, limits: ImportParserLimits) {
+  /**
+   * Create a CsvMachine instance.
+   */
+  public constructor(public readonly delimiter: CsvDelimiter, limits: ImportParserLimits) {
     this.#limits = limits;
   }
 
-  write(text: string) {
+  /**
+   * Write the current value.
+   */
+  public write(text: string) {
     for (const character of text) this.#writeCharacter(character);
   }
 
-  finish() {
+  /**
+   * Finish the current value.
+   */
+  public finish() {
     if (this.#inQuotes) {
       this.#issue({
         code: 'csv_unclosed_quote',
@@ -177,6 +207,9 @@ class CsvMachine {
     };
   }
 
+  /**
+   * Handle the internal write character operation.
+   */
   #writeCharacter(character: string) {
     if (this.#skipLf) {
       this.#skipLf = false;
@@ -238,6 +271,9 @@ class CsvMachine {
     }
   }
 
+  /**
+   * Handle the internal append operation.
+   */
   #append(character: string) {
     this.#field += character;
     this.#fieldStarted = true;
@@ -250,6 +286,9 @@ class CsvMachine {
     );
   }
 
+  /**
+   * Handle the internal finish field operation.
+   */
   #finishField() {
     this.#row.push({ type: 'text', value: this.#field, sourceToken: this.#field });
     requireWithinLimit(
@@ -263,6 +302,9 @@ class CsvMachine {
     this.#afterQuote = false;
   }
 
+  /**
+   * Handle the internal finish row operation.
+   */
   #finishRow() {
     this.#finishField();
     const rowNumber = this.rows.length + 1;
@@ -297,6 +339,9 @@ class CsvMachine {
     this.#afterQuote = false;
   }
 
+  /**
+   * Handle the internal issue operation.
+   */
   #issue(issue: ImportParserIssue) {
     this.issues.push(issue);
     requireWithinLimit(
@@ -309,10 +354,15 @@ class CsvMachine {
 }
 
 class DelimiterDetector {
+  //The in quotes state retained by this class instance
   #inQuotes = false;
+  //The after quote state retained by this class instance
   #afterQuote = false;
 
-  write(text: string) {
+  /**
+   * Write the current value.
+   */
+  public write(text: string) {
     for (const character of text) {
       if (this.#inQuotes) {
         if (character === '"') {
@@ -338,6 +388,9 @@ class DelimiterDetector {
   }
 }
 
+/**
+ * Return the detect delimiter result.
+ */
 function detectDelimiter(firstRecord: string): CsvDelimiter {
   const counts = new Map(DELIMITER_PRIORITY.map((delimiter) => [delimiter, 0]));
   let inQuotes = false;
@@ -362,7 +415,10 @@ function detectDelimiter(firstRecord: string): CsvDelimiter {
   )[0]![0];
 }
 
-function detectEncoding(prefix: Buffer): { encoding: CsvEncoding; offset: number } {
+/**
+ * Return the detect encoding result.
+ */
+function detectEncoding(prefix: Buffer): { encoding: CsvEncoding, offset: number, } {
   if (prefix[0] === 0xff && prefix[1] === 0xfe) return { encoding: 'utf-16le', offset: 2 };
   if (prefix[0] === 0xfe && prefix[1] === 0xff) {
     throw new ImportParserError('unsupported_encoding', 'UTF-16BE CSV is unsupported');
@@ -373,6 +429,9 @@ function detectEncoding(prefix: Buffer): { encoding: CsvEncoding; offset: number
   return { encoding: 'utf-8', offset: 0 };
 }
 
+/**
+ * Return the byte chunks result.
+ */
 async function* byteChunks(input: ImportByteInput): AsyncGenerator<Buffer> {
   if (Buffer.isBuffer(input) || input instanceof Uint8Array) {
     yield Buffer.from(input);

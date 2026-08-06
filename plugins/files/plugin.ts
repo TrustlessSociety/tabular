@@ -1,26 +1,25 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import {
-  RUNTIME_SERVICE,
-  type ApplicationRuntimeService
-} from '../../bootstrap/application.js';
-import {
-  DATABASE_SERVICE,
-  type DatabasePluginService
-} from '../database/helpers/service.js';
-import {
-  IDENTITY_SERVICE,
-  type IdentityPluginService
-} from '../identity/helpers/service.js';
+//client
+import type { ApplicationRuntimeService, ApplicationServer } from '../../bootstrap/application.js';
+import type { DatabasePluginService } from '../database/helpers/service.js';
+import type { IdentityPluginService } from '../identity/helpers/service.js';
+import type { OperationsPluginService } from '../operations/helpers/service.js';
+import { RUNTIME_SERVICE } from '../../bootstrap/application.js';
+import { DATABASE_SERVICE } from '../database/helpers/service.js';
+import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
 import { CATALOG_SERVICE } from '../catalog/helpers/service.js';
 import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
-import {
-  OPERATIONS_SERVICE,
-  type OperationsPluginService
-} from '../operations/helpers/service.js';
+import { OPERATIONS_SERVICE } from '../operations/helpers/service.js';
 import { FILES_SERVICE, FilesPluginService } from './helpers/service.js';
 import { registerFilesRoutes } from './pages/routes.js';
 
-export default function filesPlugin(server: HttpServer<any, any>) {
+/**
+ * Register the files plugin with the application server.
+ */
+export default function filesPlugin(
+  //Stackpress discovers the service map dynamically, so this registration
+  // boundary cannot name a complete static service map yet
+  server: ApplicationServer
+) {
   if (server.plugins.has(FILES_SERVICE)) {
     throw new Error(`Service already registered: ${FILES_SERVICE}`);
   }

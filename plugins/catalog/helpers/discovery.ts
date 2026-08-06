@@ -1,4 +1,7 @@
+//node
 import { createHash } from 'node:crypto';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   CallerCatalog,
@@ -8,18 +11,21 @@ import type {
   StableCatalogSnapshot
 } from './contracts.js';
 
+/**
+ * Return the discover caller catalog result.
+ */
 export async function discoverCallerCatalog(
   database: DatabaseExecutor,
   stable: StableCatalogSnapshot
 ): Promise<CallerCatalog> {
-  const databaseAccess = await database.execute<{ allowed: boolean }>(`
+  const databaseAccess = await database.execute<{ allowed: boolean, }>(`
     SELECT has_database_privilege(current_user, CAST(? AS oid), 'CONNECT') AS allowed
   `, [stable.databaseOid]);
   if (!databaseAccess.rows[0]?.allowed) {
     return { connections: [], databases: [], schemas: [] };
   }
   const [visibleSchemas, visibleObjects, visibleColumns] = await Promise.all([
-    database.execute<{ namespace_oid: string | number; name: string }>(`
+    database.execute<{ namespace_oid: string | number, name: string, }>(`
       SELECT n.oid AS namespace_oid, n.nspname AS name
         FROM pg_namespace n
        WHERE n.nspname <> 'tabular'
@@ -29,9 +35,9 @@ export async function discoverCallerCatalog(
        ORDER BY n.nspname, n.oid
     `),
     database.execute<{
-      relation_oid: string | number;
-      namespace_oid: string | number;
-      name: string;
+      relation_oid: string | number,
+      namespace_oid: string | number,
+      name: string,
     }>(`
       SELECT c.oid AS relation_oid, n.oid AS namespace_oid, c.relname AS name
         FROM pg_class c
@@ -49,11 +55,11 @@ export async function discoverCallerCatalog(
        ORDER BY n.nspname, c.relname, c.oid
     `),
     database.execute<{
-      relation_oid: string | number;
-      attribute_number: number;
-      name: string;
-      formatted_type: string;
-      nullable: boolean;
+      relation_oid: string | number,
+      attribute_number: number,
+      name: string,
+      formatted_type: string,
+      nullable: boolean,
     }>(`
       SELECT a.attrelid AS relation_oid,
              a.attnum AS attribute_number,
@@ -131,6 +137,9 @@ export async function discoverCallerCatalog(
   };
 }
 
+/**
+ * Return the stable database id result.
+ */
 function stableDatabaseId(connectionId: string, databaseOid: string) {
   const hash = createHash('sha256')
     .update(`${connectionId}\u0000${databaseOid}`)

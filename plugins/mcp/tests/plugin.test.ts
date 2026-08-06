@@ -1,12 +1,22 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { HttpServer } from '@stackpress/ingest/types';
-import { RUNTIME_SERVICE, type ApplicationRuntimeService } from '../../../bootstrap/application.js';
+
+//client
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
+import { RUNTIME_SERVICE } from '../../../bootstrap/application.js';
 import { CAPABILITY_SERVICE } from '../../capability/helpers/service.js';
 import { DATABASE_SERVICE } from '../../database/helpers/service.js';
 import { MCP_SERVICE } from '../helpers/contracts.js';
 import { McpPluginService } from '../helpers/service.js';
 import mcpPlugin from '../plugin.js';
+
+//The structural plugin test double supplies dynamic config and service maps,
+// so it cannot name the complete Stackpress server generics
+type DynamicServerDouble = ApplicationServer;
 
 test('MCP plugin registers one backend-only service after runtime, database, and capability', () => {
   const runtime = { pluginOrder: [] } as unknown as ApplicationRuntimeService;
@@ -30,10 +40,13 @@ test('MCP plugin fails closed when an authority dependency is absent', () => {
   assert.throws(() => mcpPlugin(server), /must register before/);
 });
 
+/**
+ * Return the server double result.
+ */
 function serverDouble(services: Map<string, unknown>) {
   return {
     plugins: services,
     plugin: (name: string) => services.get(name),
     register: (name: string, service: unknown) => services.set(name, service)
-  } as unknown as HttpServer<any, any>;
+  } as unknown as DynamicServerDouble;
 }

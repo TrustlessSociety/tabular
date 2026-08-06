@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
 import { ExplorerPluginService } from '../helpers/service.js';
 import { createExplorerSnapshot } from './fixtures.js';

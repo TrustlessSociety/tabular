@@ -1,10 +1,18 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { SavedViewsDialog } from '../components/saved-views-dialog.js';
-import type { SavedView } from '../helpers/contracts.js';
 
+//client
+import type { SavedView } from '../helpers/contracts.js';
+import { SavedViewsDialog } from '../components/saved-views-dialog.js';
+
+/**
+ * Return the view result.
+ */
 const view = (access: 'private' | 'shared', name: string, seed: string): SavedView => ({
   id: `view_${seed.repeat(32)}`,
   fileId: `obj_${'f'.repeat(32)}`,

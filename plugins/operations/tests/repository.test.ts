@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { runMigrations } from '../../database/helpers/migrator.js';
 import { createPGliteTestDatabase } from '../../database/tests/helpers/pglite.js';
 import { loadMigrations } from '../../database/migrations/index.js';
@@ -241,7 +244,7 @@ test('PGlite durable operations clear acknowledgement on retry and retain only t
     assert.equal(retained.jobsDeleted, 1);
     assert.equal(await new OperationsRepository(local.database).byId(first), undefined);
     assert.ok(await new OperationsRepository(local.database).byId(other));
-    const tombstone = await local.database.execute<{ active_job_id: string | null }>(`
+    const tombstone = await local.database.execute<{ active_job_id: string | null, }>(`
       SELECT active_job_id FROM tabular.operation_idempotency
        WHERE connection_id = 'operations_test'
     `);
@@ -292,6 +295,9 @@ test('operation event reads scan private non-operation rows but emit only valida
       absoluteExpiresAt: future()
     };
     const identity = {
+      /**
+       * Report the authorized transaction condition.
+       */
       async authorizedTransaction(
         caller: typeof principal,
         _capability: string,
@@ -317,7 +323,10 @@ test('operation event reads scan private non-operation rows but emit only valida
   }
 });
 
-async function seedIdentities(database: { execute: Function }) {
+/**
+ * Return the seed identities result.
+ */
+async function seedIdentities(database: { execute: Function, }) {
   await database.execute(`
     INSERT INTO tabular.identities (id, provider, issuer, provider_subject)
     VALUES (?, 'test', 'https://issuer.invalid', 'one'),
@@ -325,6 +334,9 @@ async function seedIdentities(database: { execute: Function }) {
   `, [identityId, otherIdentityId]);
 }
 
+/**
+ * Create the failed.
+ */
 async function createFailed(
   local: Awaited<ReturnType<typeof createPGliteTestDatabase>>,
   connectionId: string,
@@ -369,6 +381,9 @@ async function createFailed(
   return id;
 }
 
+/**
+ * Return the future result.
+ */
 function future() {
   return new Date(Date.now() + 31 * 86_400_000);
 }

@@ -1,16 +1,18 @@
+//client
 import type {
   PostgreSqlConnectionScope,
   PostgreSqlObjectIdentity,
   SchemaMigrationRecord
 } from './contracts.js';
+import type { QualifiedIdentifier } from './identifiers.js';
 import { DatabaseExecutor } from './executor.js';
-import { qualifiedIdentifier, type QualifiedIdentifier } from './identifiers.js';
+import { qualifiedIdentifier } from './identifiers.js';
 
 type MigrationRow = {
-  version: string;
-  name: string;
-  checksum: string;
-  applied_at: Date | string;
+  version: string,
+  name: string,
+  checksum: string,
+  applied_at: Date | string,
 };
 
 const objectKinds = {
@@ -21,10 +23,19 @@ const objectKinds = {
   f: 'foreign-table'
 } as const;
 
+/**
+ * Provide migration persistence operations.
+ */
 export class MigrationRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a MigrationRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async list(): Promise<SchemaMigrationRecord[]> {
+  /**
+   * List applied migrations in deterministic version order.
+   */
+  public async list(): Promise<SchemaMigrationRecord[]> {
     const result = await this.database.execute<MigrationRow>(`
       SELECT version, name, checksum, applied_at
       FROM tabular.schema_migrations
@@ -39,6 +50,9 @@ export class MigrationRepository {
   }
 }
 
+/**
+ * Read the postgre SQL connection scope.
+ */
 export async function readPostgreSqlConnectionScope(
   database: DatabaseExecutor,
   connectionId: string
@@ -47,8 +61,8 @@ export async function readPostgreSqlConnectionScope(
     throw new Error('Database connection ID must be a stable non-secret slug');
   }
   const result = await database.execute<{
-    database_oid: string;
-    database_name: string;
+    database_oid: string,
+    database_name: string,
   }>(`
     SELECT current_database()::text AS database_name,
            database.oid::text AS database_oid
@@ -63,6 +77,9 @@ export async function readPostgreSqlConnectionScope(
   };
 }
 
+/**
+ * Find the postgre SQL object.
+ */
 export async function findPostgreSqlObject(
   database: DatabaseExecutor,
   connectionId: string,
@@ -71,11 +88,11 @@ export async function findPostgreSqlObject(
   const scope = await readPostgreSqlConnectionScope(database, connectionId);
   const identifier = qualifiedIdentifier(identifierInput.schema, identifierInput.name);
   const result = await database.execute<{
-    oid: string;
-    schema_oid: string;
-    schema: string;
-    name: string;
-    kind: keyof typeof objectKinds;
+    oid: string,
+    schema_oid: string,
+    schema: string,
+    name: string,
+    kind: keyof typeof objectKinds,
   }>(`
     SELECT class.oid::text AS oid,
            namespace.oid::text AS schema_oid,

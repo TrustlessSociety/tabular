@@ -1,7 +1,19 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
+import type {
+  AuthorityPhases,
+  CapabilityAction,
+  PreparedTarget
+} from '../helpers/contracts.js';
+import type { PostgreSqlTargetDefinition } from '../helpers/postgresql-target.js';
 import { startWeb } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
@@ -9,18 +21,9 @@ import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
-import type {
-  AuthorityPhases,
-  CapabilityAction,
-  PreparedTarget
-} from '../helpers/contracts.js';
 import { ActionFault, McpAuthorizedExecutionContext } from '../helpers/contracts.js';
 import { BrowserAuthorizedExecutionContext } from '../helpers/web-authority.js';
-import {
-  RegisteredPostgreSqlTargetAdapter,
-  type PostgreSqlTargetDefinition
-} from '../helpers/postgresql-target.js';
+import { RegisteredPostgreSqlTargetAdapter } from '../helpers/postgresql-target.js';
 import { WebCapabilityAdapter } from '../events/web-adapter.js';
 import { McpShapedCapabilityAdapter } from '../events/mcp-shaped-adapter.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
@@ -51,6 +54,9 @@ let UNSAFE_ROW_ID_COLUMN_ID = '';
 let UNSAFE_INCARNATION_COLUMN_ID = '';
 let UNSAFE_VERSION_COLUMN_ID = '';
 let UNSAFE_COLUMN_ID = '';
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -67,6 +73,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the migration transaction result.
+ */
 function migrationTransaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -334,10 +343,16 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.notEqual(fresh.principal.historyScopeId, rotated.principal.historyScopeId);
     const reader = await application.identity.establishBrowserSession(readerSubject);
     let executionPrincipal = fresh.principal;
+    /**
+     * Return the context result.
+     */
     const context = () => new BrowserAuthorizedExecutionContext(
       application!.identity,
       executionPrincipal
     );
+    /**
+     * Execute the current value.
+     */
     const execute = (action: CapabilityAction) => application!.capability.execute(context(), action);
 
     const forgedHistory = await application.capability.execute(
@@ -456,8 +471,8 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.equal(exactRoundTrip.ok, true);
     const exactRoundTripValue = exactRoundTrip.ok
       ? exactRoundTrip.value as {
-        version: string;
-        cells: Array<{ columnId: string; value: { type: string; value?: unknown } }>;
+        version: string,
+        cells: Array<{ columnId: string, value: { type: string, value?: unknown, }, }>,
       }
       : undefined;
     assert.deepEqual(exactRoundTripValue?.cells, [{
@@ -475,7 +490,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
         return 'tabular_action_member';
       }
     }, async (database) => {
-      const dateStyle = await database.execute<{ date_style: string }>(`
+      const dateStyle = await database.execute<{ date_style: string, }>(`
         SELECT set_config('DateStyle', 'SQL, DMY', true) AS date_style
       `);
       assert.equal(dateStyle.rows[0]?.date_style, 'SQL, DMY');
@@ -498,7 +513,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.equal(mcpRead.isError, false);
     const mcpVersion = mcpRead.isError
       ? ''
-      : (mcpRead.structuredContent.result as { version: string }).version;
+      : (mcpRead.structuredContent.result as { version: string, }).version;
     const mcpCommand = commandId();
     const mcpPatch = await mcpAdapter.invoke(mcpAuthority, {
       tool: 'tabular_record_patch',
@@ -511,10 +526,10 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.equal(mcpPatch.isError, false);
     const webMutationValue = firstPatch.status === 'ok'
       ? firstPatch.data as {
-        rows: Array<{ rowId: string; version: string }>;
-        affectedRowCount: number;
-        affectedCellCount: number;
-        replayed: boolean;
+        rows: Array<{ rowId: string, version: string, }>,
+        affectedRowCount: number,
+        affectedCellCount: number,
+        replayed: boolean,
       }
       : undefined;
     const mcpMutationValue = mcpPatch.isError
@@ -778,7 +793,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
         commandId: mcpInvalidCommand, fileId: FILE_ID, rowId: 'row_two',
         expectedVersion: mcpInvalidRead.isError
           ? ''
-          : (mcpInvalidRead.structuredContent.result as { version: string }).version,
+          : (mcpInvalidRead.structuredContent.result as { version: string, }).version,
         patch: [{ columnId: AMOUNT_ID, value: { type: 'integer', value: '999' } }]
       }
     });
@@ -850,8 +865,8 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.equal(duplicateDrafts.filter((result) => replayed(result)).length, 1);
     assert.equal(
       duplicateDrafts[0].ok && duplicateDrafts[1].ok
-        ? (duplicateDrafts[0].value as { id: string }).id
-          === (duplicateDrafts[1].value as { id: string }).id
+        ? (duplicateDrafts[0].value as { id: string, }).id
+          === (duplicateDrafts[1].value as { id: string, }).id
         : false,
       true
     );
@@ -864,7 +879,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     `, [duplicateDraftCommand]);
     assert.equal(duplicateDraftJournal.rows[0].count, 1);
     const persistentDraftId = duplicateDrafts[0].ok
-      ? (duplicateDrafts[0].value as { id: string }).id
+      ? (duplicateDrafts[0].value as { id: string, }).id
       : '';
     const createdDraft = await execute({
       type: 'draft.create', commandId: commandId(), fileId: FILE_ID, schemaVersion: schemaToken,
@@ -872,7 +887,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     assert.equal(createdDraft.ok, true);
-    const draft = createdDraft.ok ? createdDraft.value as { id: string; version: number } : undefined;
+    const draft = createdDraft.ok ? createdDraft.value as { id: string, version: number, } : undefined;
     const draftUpdates = await Promise.all([
       execute({
         type: 'draft.update', commandId: commandId(),
@@ -898,7 +913,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       patch: [], expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     const deletableValue = deletable.ok
-      ? deletable.value as { id: string; version: number }
+      ? deletable.value as { id: string, version: number, }
       : undefined;
     const deleted = await execute({
       type: 'draft.delete',
@@ -906,13 +921,13 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       draftId: deletableValue!.id,
       expectedDraftVersion: deletableValue!.version
     });
-    assert.equal(deleted.ok && (deleted.value as { state: string }).state, 'abandoned');
+    assert.equal(deleted.ok && (deleted.value as { state: string, }).state, 'abandoned');
 
     const expiringDraft = await execute({
       type: 'draft.create', commandId: commandId(), fileId: FILE_ID, schemaVersion: schemaToken,
       patch: [], expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
-    const expiringId = expiringDraft.ok ? (expiringDraft.value as { id: string }).id : '';
+    const expiringId = expiringDraft.ok ? (expiringDraft.value as { id: string, }).id : '';
     await admin.query(`
       UPDATE tabular.action_drafts
          SET created_at = clock_timestamp() - interval '2 seconds',
@@ -920,7 +935,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
        WHERE id = $1
     `, [expiringId]);
     const expired = await execute({ type: 'draft.read', draftId: expiringId });
-    assert.equal(expired.ok && (expired.value as { state: string }).state, 'expired');
+    assert.equal(expired.ok && (expired.value as { state: string, }).state, 'expired');
 
     const invalidDraft = await execute({
       type: 'draft.create', commandId: commandId(), fileId: FILE_ID, schemaVersion: schemaToken,
@@ -928,7 +943,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     const invalidDraftValue = invalidDraft.ok
-      ? invalidDraft.value as { id: string; version: number }
+      ? invalidDraft.value as { id: string, version: number, }
       : undefined;
     const beforePromotionCount = await admin.query(
       'SELECT count(*)::integer AS count FROM workspace.capability_records'
@@ -946,7 +961,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     const retainedInvalid = await execute({ type: 'draft.read', draftId: invalidDraftValue!.id });
     assert.equal(
       retainedInvalid.ok
-        && (retainedInvalid.value as { validation: Array<{ code: string }> }).validation[0]?.code,
+        && (retainedInvalid.value as { validation: Array<{ code: string, }>, }).validation[0]?.code,
       'database_rejected'
     );
 
@@ -958,7 +973,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       ],
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
-    const driftValue = driftDraft.ok ? driftDraft.value as { id: string; version: number } : undefined;
+    const driftValue = driftDraft.ok ? driftDraft.value as { id: string, version: number, } : undefined;
     await admin.query('ALTER TABLE workspace.capability_records ADD COLUMN extra text');
     const driftPromotion = await execute({
       type: 'draft.promote', commandId: commandId(),
@@ -980,7 +995,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       expiresAt: new Date(Date.now() + 300_000).toISOString()
     });
     const promotableValue = promotable.ok
-      ? promotable.value as { id: string; version: number }
+      ? promotable.value as { id: string, version: number, }
       : undefined;
     const promoted = await execute({
       type: 'draft.promote', commandId: commandId(),
@@ -988,7 +1003,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     });
     assert.equal(promoted.ok, true);
     const promotedRowId = promoted.ok
-      ? (promoted.value as { rows: Array<{ rowId: string }> }).rows[0]!.rowId
+      ? (promoted.value as { rows: Array<{ rowId: string, }>, }).rows[0]!.rowId
       : '';
     assert.equal((await execute({
       type: 'history.undo', commandId: commandId(), fileId: FILE_ID
@@ -1197,7 +1212,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     assert.equal(replayed(crossSessionDraftRetry), true);
     assert.equal(
       crossSessionDraftRetry.ok
-        ? (crossSessionDraftRetry.value as { id: string }).id
+        ? (crossSessionDraftRetry.value as { id: string, }).id
         : '',
       persistentDraftId
     );
@@ -1399,7 +1414,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     );
     assert.equal(typeDriftDraft.ok, true);
     const typeDriftDraftValue = typeDriftDraft.ok
-      ? typeDriftDraft.value as { id: string; version: number }
+      ? typeDriftDraft.value as { id: string, version: number, }
       : undefined;
     await admin.query(`
       ALTER TABLE workspace.capability_records ALTER COLUMN date_value DROP DEFAULT;
@@ -1431,6 +1446,9 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
   }
 });
 
+/**
+ * Read the action.
+ */
 function readAction(rowId: string): CapabilityAction {
   return {
     type: 'record.read',
@@ -1440,32 +1458,47 @@ function readAction(rowId: string): CapabilityAction {
   };
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId() {
   return `cmd_${randomBytes(12).toString('base64url')}`;
 }
 
+/**
+ * Return the result version result.
+ */
 function resultVersion(result: Awaited<ReturnType<
   Awaited<ReturnType<typeof startWeb>>['capability']['execute']
 >>) {
   assert.equal(result.ok, true);
   const value = result.ok ? result.value as {
-    version?: string;
-    rows?: Array<{ version: string }>;
+    version?: string,
+    rows?: Array<{ version: string, }>,
   } : undefined;
   const version = value?.version || value?.rows?.[0]?.version;
   assert.match(version || '', /^ver_[A-Za-z0-9_-]{16,128}$/);
   return version!;
 }
 
-function replayed(result: { ok: boolean; value?: unknown }) {
-  return result.ok && Boolean((result.value as { replayed?: boolean }).replayed);
+/**
+ * Return the replayed result.
+ */
+function replayed(result: { ok: boolean, value?: unknown, }) {
+  return result.ok && Boolean((result.value as { replayed?: boolean, }).replayed);
 }
 
-function assertFailure(result: { ok: boolean; error?: { code: string } }, code: string) {
+/**
+ * Assert the failure.
+ */
+function assertFailure(result: { ok: boolean, error?: { code: string, }, }, code: string) {
   assert.equal(result.ok, false);
   assert.equal(result.ok ? '' : result.error?.code, code);
 }
 
+/**
+ * Return the stable file result.
+ */
 function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableName: string) {
   const schema = [...snapshot.schemas.values()].find((item) => item.name === schemaName);
   const object = [...snapshot.objects.values()].find((item) =>
@@ -1475,6 +1508,9 @@ function stableFile(snapshot: StableCatalogSnapshot, schemaName: string, tableNa
   return object.stableId;
 }
 
+/**
+ * Return the stable column result.
+ */
 function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnName: string) {
   const column = [...snapshot.columns.values()].find((item) =>
     item.objectId === fileId && item.name === columnName
@@ -1484,7 +1520,10 @@ function stableColumn(snapshot: StableCatalogSnapshot, fileId: string, columnNam
 }
 
 class PostgreSqlMcpAuthority extends McpAuthorizedExecutionContext {
-  constructor(
+  /**
+   * Create a PostgreSqlMcpAuthority instance.
+   */
+  public constructor(
     private readonly database: Awaited<ReturnType<typeof startWeb>>['database'],
     actorIdentityId: string
   ) {
@@ -1497,11 +1536,17 @@ class PostgreSqlMcpAuthority extends McpAuthorizedExecutionContext {
     });
   }
 
-  allows(_action: CapabilityAction) {
+  /**
+   * Handle the allows operation.
+   */
+  public allows(_action: CapabilityAction) {
     return true;
   }
 
-  transaction<TargetResult, FinalResult = TargetResult>(
+  /**
+   * Handle the transaction operation.
+   */
+  public transaction<TargetResult, FinalResult = TargetResult>(
     _capability: 'tabular.capability',
     phases: AuthorityPhases<TargetResult, FinalResult>
   ) {
@@ -1517,6 +1562,9 @@ class PostgreSqlMcpAuthority extends McpAuthorizedExecutionContext {
   }
 }
 
+/**
+ * Return the as error result.
+ */
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error(String(error));
 }

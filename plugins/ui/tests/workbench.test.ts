@@ -1,12 +1,18 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement, createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+
+//client
+import type { CommandContext } from '../../commands/helpers/contracts.js';
+import type { IconName } from '../components/icon.js';
 import { GridCanvas, displaySelection } from '../../grid/components/grid-canvas.js';
 import { REVIEW_COLUMNS, createReviewRows } from '../../grid/tests/fixtures.js';
 import { SpreadsheetMenuBar } from '../../commands/components/command-surface.js';
-import type { CommandContext } from '../../commands/helpers/contracts.js';
-import { Icon, type IconName } from '../components/icon.js';
+import { Icon } from '../components/icon.js';
 import { SelectionInspector } from '../components/selection-inspector.js';
 import { EmphasisButton } from '../components/emphasis-button.js';
 

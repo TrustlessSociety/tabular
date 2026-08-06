@@ -1,4 +1,7 @@
+//modules
 import { useEffect, useId, useRef, useState } from 'react';
+
+//client
 import type {
   GridColumn,
   GridCellPresentation,
@@ -9,61 +12,69 @@ import type {
 import { selectionLabel, spreadsheetRowNumber } from '../helpers/selection.js';
 import { TabulatorGridAdapter } from '../helpers/tabulator-adapter.js';
 
+//The grid command contract exported for module callers
 export type GridCommand = {
-  id: number;
-  action: 'select' | 'edit-active';
-  selection?: LogicalGridSelection;
+  id: number,
+  action: 'select' | 'edit-active',
+  selection?: LogicalGridSelection,
 };
 
+//The grid canvas props contract exported for module callers
 export type GridCanvasProps = {
-  rows: GridRow[];
-  columns: GridColumn[];
-  command?: GridCommand;
-  onSelectionChange?: (selection: LogicalGridSelection | null) => void;
-  onFeedback?: (message: string) => void;
+  rows: GridRow[],
+  columns: GridColumn[],
+  command?: GridCommand,
+  onSelectionChange?: (selection: LogicalGridSelection | null) => void,
+  onFeedback?: (message: string) => void,
   onEdit?: (
-    point: { rowId: string; columnId: string },
+    point: { rowId: string, columnId: string, },
     value: GridRow[string],
     previous: GridRow[string]
-  ) => void;
-  onGesture?: (gesture: GridGesture) => void;
-  onColumnActivate?: (columnId: string) => void;
-  onColumnMove?: (columnIds: string[]) => void;
-  onHeaderName?: (columnId: string, name: string) => void;
-  issues?: GridCellIssue[];
-  draftState?: 'none' | 'pending' | 'invalid' | 'failed' | 'stale';
-  presentation?: Record<string, GridCellPresentation>;
-  canMoveRows?: boolean;
-  canMoveColumns?: boolean;
+  ) => void,
+  onGesture?: (gesture: GridGesture) => void,
+  onColumnActivate?: (columnId: string) => void,
+  onColumnMove?: (columnIds: string[]) => void,
+  onHeaderName?: (columnId: string, name: string) => void,
+  issues?: GridCellIssue[],
+  draftState?: 'none' | 'pending' | 'invalid' | 'failed' | 'stale',
+  presentation?: Record<string, GridCellPresentation>,
+  canMoveRows?: boolean,
+  canMoveColumns?: boolean,
 };
 
+//The grid gesture contract exported for module callers
 export type GridGesture =
-  | { type: 'clear' }
-  | { type: 'copy' }
-  | { type: 'paste-request' }
-  | { type: 'paste'; value: string }
-  | { type: 'fill'; value: GridRow[string] }
-  | { type: 'undo' }
-  | { type: 'redo' }
-  | { type: 'cancel-draft' }
-  | { type: 'row-move'; rowId: string; beforeRowId?: string; afterRowId?: string }
+  | { type: 'clear', }
+  | { type: 'copy', }
+  | { type: 'paste-request', }
+  | { type: 'paste', value: string, }
+  | { type: 'fill', value: GridRow[string], }
+  | { type: 'undo', }
+  | { type: 'redo', }
+  | { type: 'cancel-draft', }
+  | { type: 'row-move', rowId: string, beforeRowId?: string, afterRowId?: string, }
   | {
-    type: 'context-menu';
-    target: 'cell' | 'row' | 'header-row' | 'column';
-    x: number;
-    y: number;
-    trigger: HTMLElement;
-    rowId?: string;
-    columnId?: string;
+    type: 'context-menu',
+    target: 'cell' | 'row' | 'header-row' | 'column',
+    x: number,
+    y: number,
+    trigger: HTMLElement,
+    rowId?: string,
+    columnId?: string,
   };
 
-/** Formats logical selections with the coordinates shown to spreadsheet users. */
+/**
+ * Formats logical selections with the coordinates shown to spreadsheet users.
+ */
 export function displaySelection(
   selection: LogicalGridSelection | null,
   columns: GridColumn[],
   rows: GridRow[]
 ) {
   if (!selection) return 'No selection';
+  /**
+   * Return the row coordinate result.
+   */
   const rowCoordinate = (rowId: string) => {
     const index = rows.findIndex((candidate) => candidate.id === rowId);
     return index < 0 ? rowId : String(spreadsheetRowNumber(index));
@@ -78,6 +89,9 @@ export function displaySelection(
     const column = columns.find((candidate) => candidate.id === selection.columnId);
     return `${column?.coordinate || selection.columnId}:${column?.coordinate || selection.columnId}`;
   }
+  /**
+   * Return the coordinate result.
+   */
   const coordinate = (columnId: string) => (
     columns.find((candidate) => candidate.id === columnId)?.coordinate || columnId
   );
@@ -86,6 +100,9 @@ export function displaySelection(
   return selection.kind === 'cell' || start === end ? start : `${start}:${end}`;
 }
 
+/**
+ * Report the valid selection condition.
+ */
 function validSelection(
   selection: LogicalGridSelection | null,
   columns: GridColumn[],
@@ -104,6 +121,9 @@ function validSelection(
     && columnIds.has(selection.focus.columnId);
 }
 
+/**
+ * Render the grid canvas component.
+ */
 export function GridCanvas({
   rows,
   columns,
@@ -225,6 +245,9 @@ export function GridCanvas({
     }).catch((error) => {
       feedbackCallback.current?.(`Grid error: ${error instanceof Error ? error.message : String(error)}`);
     });
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       if (target.matches('input, textarea, select, [contenteditable="true"]')) {
@@ -368,6 +391,9 @@ export function GridCanvas({
       const extend = event.key.startsWith('Arrow') && event.shiftKey;
       if (instance.navigate(direction, extend)) event.preventDefault();
     };
+    /**
+     * Handle the click event.
+     */
     const onClick = (event: MouseEvent) => {
       if (event.button !== 0) return;
       const rowHeader = (event.target as HTMLElement).closest<HTMLElement>(
@@ -377,6 +403,9 @@ export function GridCanvas({
       instance.select({ kind: 'header-row' });
       rowHeader.focus({ preventScroll: true });
     };
+    /**
+     * Handle the context menu event.
+     */
     const onContextMenu = (event: MouseEvent) => {
       const element = event.target as HTMLElement;
       const rowHeader = element.closest<HTMLElement>(

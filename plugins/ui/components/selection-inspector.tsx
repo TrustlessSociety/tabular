@@ -1,15 +1,23 @@
-import { useEffect, useRef, type RefObject } from 'react';
+//modules
+import type { RefObject } from 'react';
+import { useEffect, useRef } from 'react';
+
+//client
 import type { GridColumn, LogicalGridSelection } from '../../grid/helpers/contracts.js';
 import { Icon } from './icon.js';
 
+//The selection inspector props contract exported for module callers
 export type SelectionInspectorProps = {
-  open: boolean;
-  selection: LogicalGridSelection | null;
-  columns: GridColumn[];
-  triggerRef: RefObject<HTMLButtonElement | null>;
-  onClose: () => void;
+  open: boolean,
+  selection: LogicalGridSelection | null,
+  columns: GridColumn[],
+  triggerRef: RefObject<HTMLButtonElement | null>,
+  onClose: () => void,
 };
 
+/**
+ * Describe the current value.
+ */
 function describe(selection: LogicalGridSelection | null, columns: GridColumn[]) {
   if (!selection) return { type: 'None', anchor: '—', focus: '—' };
   if (selection.kind === 'row') return { type: 'Entire row', anchor: selection.rowId, focus: selection.rowId };
@@ -22,19 +30,28 @@ function describe(selection: LogicalGridSelection | null, columns: GridColumn[])
     const column = columns.find((candidate) => candidate.id === selection.columnId);
     return { type: 'Entire column', anchor: column?.label || selection.columnId, focus: column?.coordinate || selection.columnId };
   }
-  const name = (point: { rowId: string; columnId: string }) => {
+  /**
+   * Return the name result.
+   */
+  const name = (point: { rowId: string, columnId: string, }) => {
     const column = columns.find((candidate) => candidate.id === point.columnId);
     return `${column?.coordinate || point.columnId}${point.rowId}`;
   };
   return { type: selection.kind === 'range' ? 'Cell range' : 'Cell', anchor: name(selection.anchor), focus: name(selection.focus) };
 }
 
+/**
+ * Render the selection inspector component.
+ */
 export function SelectionInspector(props: SelectionInspectorProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
   const doneButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!props.open) return;
     closeButton.current?.focus();
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         props.onClose();
@@ -58,6 +75,9 @@ export function SelectionInspector(props: SelectionInspectorProps) {
   }, [props.open]);
   if (!props.open) return null;
   const details = describe(props.selection, props.columns);
+  /**
+   * Close the current value.
+   */
   const close = () => {
     props.onClose();
     requestAnimationFrame(() => props.triggerRef.current?.focus());

@@ -1,32 +1,56 @@
-import { createHash, type Hash } from 'node:crypto';
+//node
+import type { Hash } from 'node:crypto';
+import { createHash } from 'node:crypto';
+
+//client
 import { IMPORT_PARSER_VERSION } from './contracts.js';
 
+/**
+ * Provide the source fingerprint behavior used by this module.
+ */
 export class SourceFingerprint {
+  //The hash state retained by this class instance
   readonly #hash: Hash = createHash('sha256');
+  //The bytes state retained by this class instance
   #bytes = 0;
 
-  update(value: Uint8Array) {
+  /**
+   * Add one byte chunk to the running source digest and size.
+   */
+  public update(value: Uint8Array) {
     this.#hash.update(value);
     this.#bytes += value.byteLength;
   }
 
-  get byteLength() {
+  /**
+   * Return the byte length value.
+   */
+  public get byteLength() {
     return this.#bytes;
   }
 
-  digest() {
+  /**
+   * Handle the digest operation.
+   */
+  public digest() {
     return this.#hash.digest('hex');
   }
 }
 
+/**
+ * Return the deterministic fingerprint result.
+ */
 export function deterministicFingerprint(value: unknown) {
   return createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 }
 
+/**
+ * Import the fingerprint.
+ */
 export function importFingerprint(input: {
-  source: 'csv' | 'xlsx';
-  sourceFingerprint: string;
-  options: unknown;
+  source: 'csv' | 'xlsx',
+  sourceFingerprint: string,
+  options: unknown,
 }) {
   return deterministicFingerprint({
     parserVersion: IMPORT_PARSER_VERSION,
@@ -36,10 +60,16 @@ export function importFingerprint(input: {
   });
 }
 
+/**
+ * Return the canonical JSON result.
+ */
 export function canonicalJson(value: unknown): string {
   return JSON.stringify(canonical(value));
 }
 
+/**
+ * Return the canonical result.
+ */
 function canonical(value: unknown): unknown {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number') {

@@ -1,14 +1,21 @@
-import assert from 'node:assert/strict';
+//node
 import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+
+//client
 import { createExplorerSnapshot } from '../../explorer/tests/fixtures.js';
 import { ImportPage } from '../views/import-page.js';
 
 const pageSource = readFileSync(new URL('../views/import-page.tsx', import.meta.url), 'utf8');
 
-/** Returns one bounded source section so wiring assertions cannot match another handler. */
+/**
+ * Returns one bounded source section so wiring assertions cannot match another handler.
+ */
 function sourceSection(start: string, end: string) {
   const startIndex = pageSource.indexOf(start);
   const endIndex = pageSource.indexOf(end, startIndex + start.length);
@@ -17,7 +24,9 @@ function sourceSection(start: string, end: string) {
   return pageSource.slice(startIndex, endIndex);
 }
 
-/** Confirms each required action occurs after the preceding action. */
+/**
+ * Confirms each required action occurs after the preceding action.
+ */
 function assertOrdered(source: string, actions: string[]) {
   let cursor = -1;
   for (const action of actions) {

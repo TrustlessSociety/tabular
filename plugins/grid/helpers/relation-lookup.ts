@@ -1,34 +1,42 @@
+//node
 import { createHash } from 'node:crypto';
+
+//modules
 import type { Value } from '@stackpress/inquire/types';
-import type { DatabaseExecutor } from '../../database/helpers/executor.js';
-import { quoteIdentifier } from '../../database/helpers/identifiers.js';
-import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
+
+//client
 import type { StableColumn, StableObject, StableSchema } from '../../catalog/helpers/contracts.js';
+import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   GridCellValue,
   GridRelationLookupInput,
   GridRelationLookupResult
 } from './contracts.js';
+import { quoteIdentifier } from '../../database/helpers/identifiers.js';
+import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 
 type PreparedRelation = {
-  sourceColumnIds: string[];
-  targetFileId: string;
-  targetColumnIds: string[];
-  targetRelationOid: string;
-  targetReference: string;
-  targetColumns: StableColumn[];
-  keyColumns: StableColumn[];
-  pickerTemplate: string;
-  outputTemplate: string;
+  sourceColumnIds: string[],
+  targetFileId: string,
+  targetColumnIds: string[],
+  targetRelationOid: string,
+  targetReference: string,
+  targetColumns: StableColumn[],
+  keyColumns: StableColumn[],
+  pickerTemplate: string,
+  outputTemplate: string,
 };
 
 type LookupColumn = {
-  attribute_number: number;
-  name: string;
-  type_name: string;
-  can_select: boolean;
+  attribute_number: number,
+  name: string,
+  type_name: string,
+  can_select: boolean,
 };
 
+/**
+ * Prepare the relation lookup.
+ */
 export async function prepareRelationLookup(
   database: DatabaseExecutor,
   connectionId: string,
@@ -39,9 +47,9 @@ export async function prepareRelationLookup(
   const sourceColumn = column(stable.columns, input.fileId, input.columnId);
   if (!source || !sourceColumn) return undefined;
   const native = await database.execute<{
-    target_relation_oid: string;
-    source_numbers: string;
-    target_numbers: string;
+    target_relation_oid: string,
+    source_numbers: string,
+    target_numbers: string,
   }>(`
     SELECT confrelid::text AS target_relation_oid,
            conkey::text AS source_numbers, confkey::text AS target_numbers
@@ -80,8 +88,8 @@ export async function prepareRelationLookup(
     return undefined;
   }
   const metadata = await database.execute<{
-    field_config: Record<string, unknown>;
-    format_config: Record<string, unknown>;
+    field_config: Record<string, unknown>,
+    format_config: Record<string, unknown>,
   }>(`
     SELECT field_config, format_config
       FROM tabular.column_metadata
@@ -100,6 +108,9 @@ export async function prepareRelationLookup(
   };
 }
 
+/**
+ * Execute the relation lookup.
+ */
 export async function executeRelationLookup(
   database: DatabaseExecutor,
   prepared: PreparedRelation,
@@ -186,6 +197,9 @@ export async function executeRelationLookup(
   };
 }
 
+/**
+ * Report the empty result condition.
+ */
 function emptyResult(prepared: PreparedRelation) {
   return {
     sourceColumnIds: prepared.sourceColumnIds,
@@ -194,32 +208,53 @@ function emptyResult(prepared: PreparedRelation) {
   };
 }
 
+/**
+ * Return the object result.
+ */
 function object(objects: Map<string, StableObject>, id: string) {
   return [...objects.values()].find((candidate) => candidate.stableId === id);
 }
 
+/**
+ * Return the column result.
+ */
 function column(columns: Map<string, StableColumn>, fileId: string, id: string) {
   return [...columns.values()].find((candidate) => candidate.objectId === fileId && candidate.stableId === id);
 }
 
+/**
+ * Return the numbers result.
+ */
 function numbers(value: string) {
   return value.replace(/[{}]/g, '').split(/[ ,]+/).filter(Boolean).map(Number);
 }
 
+/**
+ * Return the string config result.
+ */
 function stringConfig(config: Record<string, unknown> | undefined, key: string, fallback: string) {
   return typeof config?.[key] === 'string' ? String(config[key]) : fallback;
 }
 
-function unique(items: Array<{ stable: StableColumn; live: LookupColumn }>) {
+/**
+ * Return the unique result.
+ */
+function unique(items: Array<{ stable: StableColumn, live: LookupColumn, }>) {
   return [...new Map(items.map((item) => [item.stable.stableId, item])).values()];
 }
 
+/**
+ * Return the grid value result.
+ */
 function gridValue(type: string, value: unknown): GridCellValue {
   if (value === null || typeof value === 'undefined') return null;
   if (type === 'bool') return value === true || value === 'true';
   return String(value);
 }
 
+/**
+ * Render the template.
+ */
 function renderTemplate(template: string, values: Record<string, GridCellValue>) {
   return template.replace(/\{\{?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}?\}/g, (_match, name: string) =>
     String(values[name] ?? '')

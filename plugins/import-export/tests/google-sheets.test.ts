@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import {
   GOOGLE_READONLY_SCOPE,
@@ -165,6 +168,9 @@ test('Google import fails closed for changed revisions, revoked access, denial a
   );
 });
 
+/**
+ * Return the JSON result.
+ */
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), {
     status,

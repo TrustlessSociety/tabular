@@ -1,9 +1,12 @@
-import assert from 'node:assert/strict';
+//node
 import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+
+//client
 import type { LogLevel } from '../../../bootstrap/logger.js';
 import type { OperationJob } from '../helpers/contracts.js';
-import { OperationHandlerRegistry, operationHandler } from '../helpers/handlers.js';
 import type { OperationsPluginService } from '../helpers/service.js';
+import { OperationHandlerRegistry, operationHandler } from '../helpers/handlers.js';
 import { OperationWorker } from '../helpers/worker.js';
 
 const SECRET_MESSAGE = 'postgres://secret-user:secret-password@database/private';
@@ -29,6 +32,9 @@ test('scheduled pump failures are contained and retried with bounded log-safe ba
     captureLogger(records)
   );
   const unhandled: unknown[] = [];
+  /**
+   * Handle the unhandled event.
+   */
   const onUnhandled = (reason: unknown) => unhandled.push(reason);
   process.on('unhandledRejection', onUnhandled);
 
@@ -101,6 +107,9 @@ test('scheduled heartbeat failures abort execution without leaking rejection or 
     captureLogger(records)
   );
   const unhandled: unknown[] = [];
+  /**
+   * Handle the unhandled event.
+   */
   const onUnhandled = (reason: unknown) => unhandled.push(reason);
   process.on('unhandledRejection', onUnhandled);
 
@@ -182,6 +191,9 @@ test('a claim returned after shutdown begins is left for lease recovery and neve
 });
 });
 
+/**
+ * Return the worker service result.
+ */
 function workerService(overrides: Record<string, unknown> = {}) {
   return {
     runtime: {
@@ -194,10 +206,16 @@ function workerService(overrides: Record<string, unknown> = {}) {
         }
       },
       resources: {
+        /**
+         * Register the current value.
+         */
         register() {}
       }
     },
     handlers: new OperationHandlerRegistry(),
+    /**
+     * Prepare the authority.
+     */
     prepareAuthority() {},
     recoverExpired: async () => [],
     claim: async () => undefined,
@@ -213,6 +231,9 @@ function workerService(overrides: Record<string, unknown> = {}) {
   } as unknown as OperationsPluginService;
 }
 
+/**
+ * Return the operation job result.
+ */
 function operationJob(): OperationJob<'import.commit'> {
   return {
     id: SECRET_JOB_ID,
@@ -238,17 +259,23 @@ function operationJob(): OperationJob<'import.commit'> {
 }
 
 type CapturedLog = {
-  level: LogLevel;
-  event: string;
-  fields: Record<string, unknown>;
+  level: LogLevel,
+  event: string,
+  fields: Record<string, unknown>,
 };
 
+/**
+ * Return the capture logger result.
+ */
 function captureLogger(records: CapturedLog[]) {
   return (level: LogLevel, event: string, fields: Record<string, unknown> = {}) => {
     records.push({ level, event, fields });
   };
 }
 
+/**
+ * Wait for the supplied promise-like value to settle.
+ */
 async function waitFor(predicate: () => boolean, timeoutMs = 2_000) {
   const deadline = Date.now() + timeoutMs;
   while (!predicate()) {
@@ -257,10 +284,16 @@ async function waitFor(predicate: () => boolean, timeoutMs = 2_000) {
   }
 }
 
+/**
+ * Return the delay result.
+ */
 function delay(milliseconds: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/**
+ * Escape the reg exp.
+ */
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

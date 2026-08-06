@@ -1,4 +1,7 @@
+//modules
 import type { Value } from '@stackpress/inquire/types';
+
+//client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   AppliedCellChange,
@@ -16,45 +19,57 @@ type Scope = Pick<
   'actorIdentityId' | 'sessionId' | 'historyScopeId' | 'connectionId' | 'surface' | 'expiresAt'
 >;
 
+//The draft record contract exported for module callers
 export type DraftRecord = {
-  id: string;
-  file_id: string;
-  row_id: string | null;
-  row_rank: string | null;
-  schema_version: string;
-  patch: CellPatch[];
-  validation_state: ValidationIssue[];
-  draft_version: string | number;
-  state: SafeDraft['state'];
-  expires_at: Date | string;
+  id: string,
+  file_id: string,
+  row_id: string | null,
+  row_rank: string | null,
+  schema_version: string,
+  patch: CellPatch[],
+  validation_state: ValidationIssue[],
+  draft_version: string | number,
+  state: SafeDraft['state'],
+  expires_at: Date | string,
 };
 
+//The journal replay contract exported for module callers
 export type JournalReplay = {
-  id: string;
-  file_id: string;
-  schema_version: string;
-  request_digest: string;
-  result_summary: Record<string, unknown>;
+  id: string,
+  file_id: string,
+  schema_version: string,
+  request_digest: string,
+  result_summary: Record<string, unknown>,
 };
 
+//The session history entry contract exported for module callers
 export type SessionHistoryEntry = {
-  action_id: string;
-  file_id: string;
-  schema_version: string;
-  forward_patch: AppliedCellChange[];
-  inverse_patch: AppliedCellChange[];
-  prior_versions: Record<string, string>;
-  resulting_versions: Record<string, string>;
-  operations: Record<string, 'insert' | 'update' | 'delete'>;
-  active_incarnations: Record<string, string>;
-  last_reversal_versions: Record<string, string> | null;
-  state: 'applied' | 'undone';
+  action_id: string,
+  file_id: string,
+  schema_version: string,
+  forward_patch: AppliedCellChange[],
+  inverse_patch: AppliedCellChange[],
+  prior_versions: Record<string, string>,
+  resulting_versions: Record<string, string>,
+  operations: Record<string, 'insert' | 'update' | 'delete'>,
+  active_incarnations: Record<string, string>,
+  last_reversal_versions: Record<string, string> | null,
+  state: 'applied' | 'undone',
 };
 
+/**
+ * Provide capability persistence operations.
+ */
 export class CapabilityRepository {
-  constructor(private readonly database: DatabaseExecutor) {}
+  /**
+   * Create a CapabilityRepository instance.
+   */
+  public constructor(private readonly database: DatabaseExecutor) {}
 
-  async lockCommand(scope: Scope, commandId: string) {
+  /**
+   * Handle the lock command operation.
+   */
+  public async lockCommand(scope: Scope, commandId: string) {
     await this.database.execute(`
       SELECT pg_advisory_xact_lock(
         hashtextextended('tabular-action:' || ? || ':' || ? || ':' || ?, 0)
@@ -62,7 +77,10 @@ export class CapabilityRepository {
     `, [scope.actorIdentityId, scope.connectionId, commandId]);
   }
 
-  async journalReplay(scope: Scope, commandId: string) {
+  /**
+   * Handle the journal replay operation.
+   */
+  public async journalReplay(scope: Scope, commandId: string) {
     const result = await this.database.execute<JournalReplay>(`
       SELECT id, file_id, schema_version, request_digest, result_summary
         FROM tabular.action_journal
@@ -72,21 +90,24 @@ export class CapabilityRepository {
     return result.rows[0];
   }
 
-  async insertCommittedAction(input: {
-    scope: Scope;
-    id: string;
-    commandId: string;
-    requestDigest: string;
-    fileId: string;
+  /**
+   * Insert the committed action.
+   */
+  public async insertCommittedAction(input: {
+    scope: Scope,
+    id: string,
+    commandId: string,
+    requestDigest: string,
+    fileId: string,
     actionType:
       | 'record.patch'
       | 'record.insert'
       | 'record.delete'
       | 'range.patch'
-      | 'draft.promote';
-    schemaVersion: string;
-    effect: TargetMutationEffect;
-    resultSummary: Record<string, unknown>;
+      | 'draft.promote',
+    schemaVersion: string,
+    effect: TargetMutationEffect,
+    resultSummary: Record<string, unknown>,
   }) {
     const { scope, effect } = input;
     const versions = versionMaps(effect);
@@ -138,16 +159,19 @@ export class CapabilityRepository {
     await this.trimHistory(scope);
   }
 
-  async insertDraftAction(input: {
-    scope: Scope;
-    id: string;
-    commandId: string;
-    requestDigest: string;
-    fileId: string;
-    actionType: 'draft.create' | 'draft.update' | 'draft.delete';
-    schemaVersion: string;
-    affectedCellCount: number;
-    resultSummary: Record<string, unknown>;
+  /**
+   * Insert the draft action.
+   */
+  public async insertDraftAction(input: {
+    scope: Scope,
+    id: string,
+    commandId: string,
+    requestDigest: string,
+    fileId: string,
+    actionType: 'draft.create' | 'draft.update' | 'draft.delete',
+    schemaVersion: string,
+    affectedCellCount: number,
+    resultSummary: Record<string, unknown>,
   }) {
     const { scope } = input;
     await this.database.execute(`
@@ -174,15 +198,18 @@ export class CapabilityRepository {
     ]);
   }
 
-  async insertReversalAction(input: {
-    scope: Scope;
-    id: string;
-    commandId: string;
-    requestDigest: string;
-    mode: 'undo' | 'redo';
-    original: SessionHistoryEntry;
-    effect: TargetMutationEffect;
-    resultSummary: Record<string, unknown>;
+  /**
+   * Insert the reversal action.
+   */
+  public async insertReversalAction(input: {
+    scope: Scope,
+    id: string,
+    commandId: string,
+    requestDigest: string,
+    mode: 'undo' | 'redo',
+    original: SessionHistoryEntry,
+    effect: TargetMutationEffect,
+    resultSummary: Record<string, unknown>,
   }) {
     const { scope, original, effect } = input;
     await this.database.execute(`
@@ -227,7 +254,10 @@ export class CapabilityRepository {
     ]);
   }
 
-  async historyCandidate(
+  /**
+   * Handle the history candidate operation.
+   */
+  public async historyCandidate(
     scope: Scope,
     mode: 'undo' | 'redo',
     fileId?: string,
@@ -265,7 +295,10 @@ export class CapabilityRepository {
     return result.rows[0];
   }
 
-  async listJournal(
+  /**
+   * List the journal.
+   */
+  public async listJournal(
     scope: Scope,
     fileId: string,
     limit: number,
@@ -284,15 +317,15 @@ export class CapabilityRepository {
        LIMIT ?
     `, values, maximumResultBytes);
     const result = await this.database.execute<{
-      id: string;
-      file_id: string;
-      action_type: SafeJournalEntry['actionType'];
-      affected_row_count: number;
-      affected_cell_count: number;
-      entry_state: 'applied' | 'undone' | null;
-      created_at: Date | string;
-      undone_at: Date | string | null;
-      redo_invalidated_at: Date | string | null;
+      id: string,
+      file_id: string,
+      action_type: SafeJournalEntry['actionType'],
+      affected_row_count: number,
+      affected_cell_count: number,
+      entry_state: 'applied' | 'undone' | null,
+      created_at: Date | string,
+      undone_at: Date | string | null,
+      redo_invalidated_at: Date | string | null,
     }>(`
       SELECT j.id, j.file_id, j.action_type, j.affected_row_count,
              j.affected_cell_count, e.state AS entry_state, j.created_at,
@@ -318,7 +351,10 @@ export class CapabilityRepository {
     }));
   }
 
-  async expireOwnedDrafts(scope: Scope) {
+  /**
+   * Handle the expire owned drafts operation.
+   */
+  public async expireOwnedDrafts(scope: Scope) {
     await this.database.execute(`
       UPDATE tabular.action_drafts
          SET state = 'expired', updated_at = clock_timestamp()
@@ -327,16 +363,19 @@ export class CapabilityRepository {
     `, [scope.actorIdentityId, scope.connectionId]);
   }
 
-  async createDraft(input: {
-    scope: Scope;
-    id: string;
-    fileId: string;
-    rowId?: string;
-    rowRank?: string;
-    schemaVersion: string;
-    patch: CellPatch[];
-    validation: ValidationIssue[];
-    expiresAt: Date;
+  /**
+   * Create the draft.
+   */
+  public async createDraft(input: {
+    scope: Scope,
+    id: string,
+    fileId: string,
+    rowId?: string,
+    rowRank?: string,
+    schemaVersion: string,
+    patch: CellPatch[],
+    validation: ValidationIssue[],
+    expiresAt: Date,
   }) {
     const result = await this.database.execute<DraftRecord>(`
       INSERT INTO tabular.action_drafts (
@@ -362,7 +401,10 @@ export class CapabilityRepository {
     return safeDraft(required(result.rows[0], 'Created draft was not returned'));
   }
 
-  async draftForUpdate(scope: Scope, draftId: string, maximumResultBytes?: number) {
+  /**
+   * Handle the draft for update operation.
+   */
+  public async draftForUpdate(scope: Scope, draftId: string, maximumResultBytes?: number) {
     await this.expireOwnedDrafts(scope);
     const values = [draftId, scope.actorIdentityId, scope.connectionId];
     await this.assertBoundedRead(`
@@ -381,7 +423,10 @@ export class CapabilityRepository {
     return result.rows[0];
   }
 
-  async listActiveDrafts(scope: Scope, fileId: string, maximumResultBytes?: number) {
+  /**
+   * List the active drafts.
+   */
+  public async listActiveDrafts(scope: Scope, fileId: string, maximumResultBytes?: number) {
     await this.expireOwnedDrafts(scope);
     const values = [scope.actorIdentityId, scope.connectionId, fileId];
     await this.assertBoundedRead(`
@@ -405,7 +450,10 @@ export class CapabilityRepository {
     return result.rows.map(safeDraft);
   }
 
-  async updateDraft(
+  /**
+   * Update the draft.
+   */
+  public async updateDraft(
     scope: Scope,
     draftId: string,
     expectedVersion: number,
@@ -434,7 +482,10 @@ export class CapabilityRepository {
     return result.rows[0] ? safeDraft(result.rows[0]) : undefined;
   }
 
-  async abandonDraft(scope: Scope, draftId: string, expectedVersion: number) {
+  /**
+   * Handle the abandon draft operation.
+   */
+  public async abandonDraft(scope: Scope, draftId: string, expectedVersion: number) {
     const result = await this.database.execute<DraftRecord>(`
       UPDATE tabular.action_drafts
          SET state = 'abandoned', draft_version = draft_version + 1,
@@ -454,7 +505,10 @@ export class CapabilityRepository {
     return result.rows[0] ? safeDraft(result.rows[0]) : undefined;
   }
 
-  async setDraftValidation(scope: Scope, draftId: string, validation: ValidationIssue[]) {
+  /**
+   * Set the draft validation.
+   */
+  public async setDraftValidation(scope: Scope, draftId: string, validation: ValidationIssue[]) {
     await this.database.execute(`
       UPDATE tabular.action_drafts
          SET validation_state = ?::jsonb, updated_at = clock_timestamp()
@@ -466,7 +520,10 @@ export class CapabilityRepository {
     ]);
   }
 
-  async promoteDraft(scope: Scope, draftId: string, actionId: string) {
+  /**
+   * Handle the promote draft operation.
+   */
+  public async promoteDraft(scope: Scope, draftId: string, actionId: string) {
     await this.database.execute(`
       UPDATE tabular.action_drafts
          SET state = 'promoted', promoted_action_id = ?, promoted_at = clock_timestamp(),
@@ -483,6 +540,9 @@ export class CapabilityRepository {
     ]);
   }
 
+  /**
+   * Handle the invalidate redo operation.
+   */
   private async invalidateRedo(scope: Scope) {
     await this.database.execute(`
       UPDATE tabular.session_action_entries
@@ -492,7 +552,10 @@ export class CapabilityRepository {
     `, [scope.actorIdentityId, scope.historyScopeId]);
   }
 
-  async lockHistoryScope(scope: Scope) {
+  /**
+   * Handle the lock history scope operation.
+   */
+  public async lockHistoryScope(scope: Scope) {
     await this.database.execute(`
       SELECT pg_advisory_xact_lock(
         hashtextextended('tabular-history:' || ? || ':' || ?, 0)
@@ -500,6 +563,9 @@ export class CapabilityRepository {
     `, [scope.actorIdentityId, scope.historyScopeId]);
   }
 
+  /**
+   * Assert the bounded read.
+   */
   private async assertBoundedRead(
     query: string,
     values: Value[],
@@ -511,7 +577,7 @@ export class CapabilityRepository {
       || maximumResultBytes > 1_048_576) {
       throw new Error('Capability result budget is invalid');
     }
-    const measured = await this.database.execute<{ bytes: string }>(`
+    const measured = await this.database.execute<{ bytes: string, }>(`
       SELECT COALESCE(sum(octet_length(row_to_json(bounded_row)::text) + 1), 0)::text AS bytes
         FROM (${query}) AS bounded_row
     `, values);
@@ -520,6 +586,9 @@ export class CapabilityRepository {
     }
   }
 
+  /**
+   * Handle the purge expired history operation.
+   */
   private async purgeExpiredHistory() {
     await this.database.execute(`
       DELETE FROM tabular.session_action_entries
@@ -527,6 +596,9 @@ export class CapabilityRepository {
     `);
   }
 
+  /**
+   * Handle the trim history operation.
+   */
   private async trimHistory(scope: Scope) {
     await this.database.execute(`
       DELETE FROM tabular.session_action_entries
@@ -541,6 +613,9 @@ export class CapabilityRepository {
   }
 }
 
+/**
+ * Report the safe draft condition.
+ */
 export function safeDraft(row: DraftRecord): SafeDraft {
   return {
     id: row.id,
@@ -556,6 +631,9 @@ export function safeDraft(row: DraftRecord): SafeDraft {
   };
 }
 
+/**
+ * Return the inverse changes result.
+ */
 function inverseChanges(changes: AppliedCellChange[]): AppliedCellChange[] {
   return changes.map((change) => ({
     ...change,
@@ -564,6 +642,9 @@ function inverseChanges(changes: AppliedCellChange[]): AppliedCellChange[] {
   }));
 }
 
+/**
+ * Return the version maps result.
+ */
 function versionMaps(effect: TargetMutationEffect) {
   return {
     prior: Object.fromEntries(effect.rows.map((row) => [row.rowId, row.priorVersion])),
@@ -571,14 +652,23 @@ function versionMaps(effect: TargetMutationEffect) {
   };
 }
 
+/**
+ * Return the incarnation map result.
+ */
 function incarnationMap(effect: TargetMutationEffect) {
   return Object.fromEntries(effect.rows.map((row) => [row.rowId, row.incarnation]));
 }
 
+/**
+ * Return the iso result.
+ */
 function iso(value: Date | string) {
   return new Date(value).toISOString();
 }
 
+/**
+ * Return the required result.
+ */
 function required<Value>(value: Value | undefined, message: string): Value {
   if (typeof value === 'undefined') throw new Error(message);
   return value;

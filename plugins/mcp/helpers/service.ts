@@ -1,38 +1,39 @@
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
 import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
-import {
-  ActionFault,
-  CapabilityResultBudgetExceededError,
-  type CapabilityAction
-} from '../../capability/helpers/contracts.js';
+import type { CapabilityAction } from '../../capability/helpers/contracts.js';
 import type {
   CapabilityPluginService,
   GridTargetPlan
 } from '../../capability/helpers/service.js';
+import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
+import type { McpExecutionBoundary } from './authority.js';
+import type {
+  McpCredentialVerifier,
+  McpCallOptions,
+  McpFrontendContract,
+  McpResourceResponse,
+  McpSafeError,
+  McpToolName,
+  McpToolResponse,
+  VerifiedMcpPrincipal
+} from './contracts.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import {
+  ActionFault,
+  CapabilityResultBudgetExceededError
+} from '../../capability/helpers/contracts.js';
 import { discoverCallerCatalog } from '../../catalog/helpers/discovery.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import {
   MCP_CAPABILITY_ACTIONS,
   MCP_CONTRACT_VERSION,
   MCP_RESOURCE_TEMPLATES,
   MCP_SERVICE,
   MCP_TOOL_DEFINITIONS,
-  assertVerifiedMcpPrincipal,
-  type McpCredentialVerifier,
-  type McpCallOptions,
-  type McpFrontendContract,
-  type McpResourceResponse,
-  type McpSafeError,
-  type McpToolName,
-  type McpToolResponse,
-  type VerifiedMcpPrincipal
+  assertVerifiedMcpPrincipal
 } from './contracts.js';
-import {
-  WebPoolGovernedMcpAuthority,
-  type McpExecutionBoundary
-} from './authority.js';
+import { WebPoolGovernedMcpAuthority } from './authority.js';
 import {
   validateListFilesArguments,
   validateQueryRowsArguments,
@@ -41,12 +42,12 @@ import {
 } from './validation.js';
 
 type FrontendColumnMetadata = {
-  column_id: string;
-  display_name: string;
-  field_kind: string;
-  format_kind: string;
-  field_config: unknown;
-  format_config: unknown;
+  column_id: string,
+  display_name: string,
+  field_kind: string,
+  format_kind: string,
+  field_config: unknown,
+  format_config: unknown,
 };
 
 const MAX_MCP_RESULT_BYTES = 1_048_576;
@@ -54,35 +55,50 @@ const MAX_MCP_ISSUES = 100;
 const MAX_MCP_DATABASE_VALUE_BYTES = 262_144;
 
 type McpExecutionLease = McpExecutionBoundary & {
-  close(): void;
+  close(): void,
 };
 
 class McpLifecycleFault extends Error {
-  constructor(readonly safe: McpSafeError) {
+  /**
+   * Create a McpLifecycleFault instance.
+   */
+  public constructor(public readonly safe: McpSafeError) {
     super(safe.description);
     this.name = 'McpLifecycleFault';
   }
 }
 
+/**
+ * Provide mcp plugin operations through one service boundary.
+ */
 export class McpPluginService {
-  readonly name = MCP_SERVICE;
+  //The name state retained by this class instance
+  public readonly name = MCP_SERVICE;
+  //The active executions state retained by this class instance
   readonly #activeExecutions = new Set<AbortController>();
+  //The draining state retained by this class instance
   #draining = false;
 
-  constructor(
+  /**
+   * Create a McpPluginService instance.
+   */
+  public constructor(
     private readonly runtime: ApplicationRuntimeService,
     private readonly database: DatabasePluginService,
     private readonly capability: CapabilityPluginService,
     private readonly catalog: {
-      reconcile: typeof reconcileCatalog;
-      discover: typeof discoverCallerCatalog;
+      reconcile: typeof reconcileCatalog,
+      discover: typeof discoverCallerCatalog,
     } = {
       reconcile: reconcileCatalog,
       discover: discoverCallerCatalog
     }
   ) {}
 
-  async verifyCredential<Credential>(
+  /**
+   * Verify the credential.
+   */
+  public async verifyCredential<Credential>(
     verifier: McpCredentialVerifier<Credential>,
     credential: Credential
   ) {
@@ -100,29 +116,44 @@ export class McpPluginService {
     return principal;
   }
 
-  tools(principal: VerifiedMcpPrincipal) {
+  /**
+   * Handle the tools operation.
+   */
+  public tools(principal: VerifiedMcpPrincipal) {
     this.#validatePrincipal(principal);
     return structuredClone(MCP_TOOL_DEFINITIONS.filter((definition) =>
       principal.scopes.tools.includes(definition.name)));
   }
 
-  resourceTemplates(principal: VerifiedMcpPrincipal) {
+  /**
+   * Handle the resource templates operation.
+   */
+  public resourceTemplates(principal: VerifiedMcpPrincipal) {
     this.#validatePrincipal(principal);
     return principal.scopes.resources.includes('tabular_frontend_contract')
       ? structuredClone(MCP_RESOURCE_TEMPLATES)
       : [];
   }
 
-  ready() {
+  /**
+   * Handle the ready operation.
+   */
+  public ready() {
     return !this.#draining;
   }
 
-  beginDrain() {
+  /**
+   * Move the lifecycle into its draining phase.
+   */
+  public beginDrain() {
     this.#draining = true;
     for (const controller of this.#activeExecutions) controller.abort();
   }
 
-  async close() {
+  /**
+   * Close the current value.
+   */
+  public async close() {
     if (this.#draining && this.#activeExecutions.size === 0) return;
     this.beginDrain();
     const deadline = Date.now() + this.runtime.config.server.shutdownTimeoutMs;
@@ -134,7 +165,10 @@ export class McpPluginService {
     }
   }
 
-  async callTool(
+  /**
+   * Handle the call tool operation.
+   */
+  public async callTool(
     principal: VerifiedMcpPrincipal,
     input: unknown,
     options: McpCallOptions = {}
@@ -160,6 +194,9 @@ export class McpPluginService {
     }
   }
 
+  /**
+   * Handle the internal call tool operation.
+   */
   async #callTool(
     principal: VerifiedMcpPrincipal,
     execution: McpExecutionLease,
@@ -227,7 +264,10 @@ export class McpPluginService {
     });
   }
 
-  async readResource(
+  /**
+   * Read the resource.
+   */
+  public async readResource(
     principal: VerifiedMcpPrincipal,
     input: unknown,
     options: McpCallOptions = {}
@@ -253,6 +293,9 @@ export class McpPluginService {
     }
   }
 
+  /**
+   * Handle the internal read resource operation.
+   */
   async #readResource(
     principal: VerifiedMcpPrincipal,
     execution: McpExecutionLease,
@@ -276,6 +319,9 @@ export class McpPluginService {
     }
   }
 
+  /**
+   * Handle the internal validate principal operation.
+   */
   #validatePrincipal(principal: VerifiedMcpPrincipal) {
     assertVerifiedMcpPrincipal(principal);
     if (
@@ -287,11 +333,17 @@ export class McpPluginService {
     }
   }
 
+  /**
+   * Handle the internal authority operation.
+   */
   #authority(principal: VerifiedMcpPrincipal, execution: McpExecutionBoundary) {
     this.#validatePrincipal(principal);
     return new WebPoolGovernedMcpAuthority(this.database, principal, execution);
   }
 
+  /**
+   * Handle the internal begin execution operation.
+   */
   #beginExecution(options: McpCallOptions): McpExecutionLease {
     if (this.#draining) throw new McpLifecycleFault(drainingError());
     const maximum = Math.max(1, this.runtime.config.database.poolMaximum - 1);
@@ -317,6 +369,9 @@ export class McpPluginService {
     const controller = new AbortController();
     let deadlineExceeded = false;
     let closed = false;
+    /**
+     * Handle the abort event.
+     */
     const onAbort = () => controller.abort();
     options.signal?.addEventListener('abort', onAbort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -340,6 +395,9 @@ export class McpPluginService {
     };
   }
 
+  /**
+   * Handle the internal frontend contract operation.
+   */
   async #frontendContract(
     authority: WebPoolGovernedMcpAuthority,
     fileId: string,
@@ -428,9 +486,12 @@ export class McpPluginService {
     });
   }
 
+  /**
+   * Handle the internal list files operation.
+   */
   async #listFiles(
     authority: WebPoolGovernedMcpAuthority,
-    input: { cursor?: string; limit: number }
+    input: { cursor?: string, limit: number, }
   ) {
     let stable: StableCatalogSnapshot | undefined;
     return authority.readTransaction({
@@ -473,6 +534,9 @@ export class McpPluginService {
     });
   }
 
+  /**
+   * Handle the internal query rows operation.
+   */
   async #queryRows(
     authority: WebPoolGovernedMcpAuthority,
     input: ReturnType<typeof validateQueryRowsArguments>
@@ -516,6 +580,9 @@ export class McpPluginService {
   }
 }
 
+/**
+ * Return the tool success result.
+ */
 function toolSuccess(result: unknown): McpToolResponse {
   const serialized = JSON.stringify(result);
   const response: McpToolResponse = {
@@ -528,6 +595,9 @@ function toolSuccess(result: unknown): McpToolResponse {
     : toolFailure(resultTooLargeError());
 }
 
+/**
+ * Return the resource success result.
+ */
 function resourceSuccess(uri: string, resource: McpFrontendContract): McpResourceResponse {
   const serialized = JSON.stringify(resource);
   const response: McpResourceResponse = {
@@ -540,6 +610,9 @@ function resourceSuccess(uri: string, resource: McpFrontendContract): McpResourc
     : resourceFailure(resultTooLargeError());
 }
 
+/**
+ * Return the tool failure result.
+ */
 function toolFailure(error: McpSafeError): McpToolResponse {
   const bounded = boundedError(error);
   const response: McpToolResponse = {
@@ -556,6 +629,9 @@ function toolFailure(error: McpSafeError): McpToolResponse {
   return toolFailure(resultTooLargeError());
 }
 
+/**
+ * Return the resource failure result.
+ */
 function resourceFailure(error: McpSafeError): McpResourceResponse {
   const bounded = boundedError(error);
   const response: McpResourceResponse = {
@@ -568,6 +644,9 @@ function resourceFailure(error: McpSafeError): McpResourceResponse {
     : resourceFailure(resultTooLargeError());
 }
 
+/**
+ * Return the bounded error result.
+ */
 function boundedError(error: McpSafeError): McpSafeError {
   return {
     category: String(error.category).slice(0, 80),
@@ -583,10 +662,16 @@ function boundedError(error: McpSafeError): McpSafeError {
   };
 }
 
+/**
+ * Return the response bytes result.
+ */
 function responseBytes(response: McpToolResponse | McpResourceResponse) {
   return Buffer.byteLength(JSON.stringify(response), 'utf8');
 }
 
+/**
+ * Report the invalid error condition.
+ */
 function invalidError(): McpSafeError {
   return {
     category: 'invalid_action',
@@ -595,6 +680,9 @@ function invalidError(): McpSafeError {
   };
 }
 
+/**
+ * Report the denied error condition.
+ */
 function deniedError(): McpSafeError {
   return {
     category: 'capability_denied',
@@ -603,6 +691,9 @@ function deniedError(): McpSafeError {
   };
 }
 
+/**
+ * Return the result too large error result.
+ */
 function resultTooLargeError(): McpSafeError {
   return {
     category: 'result_too_large',
@@ -611,6 +702,9 @@ function resultTooLargeError(): McpSafeError {
   };
 }
 
+/**
+ * Report the safe error condition.
+ */
 function safeError(
   error: unknown,
   authority?: Pick<WebPoolGovernedMcpAuthority,
@@ -651,14 +745,20 @@ function safeError(
   };
 }
 
+/**
+ * Return the lifecycle or denied error result.
+ */
 function lifecycleOrDeniedError(error: unknown) {
   return error instanceof McpLifecycleFault ? error.safe : deniedError();
 }
 
+/**
+ * Return the execution error result.
+ */
 function executionError(execution: {
-  deadlineExceeded(): boolean;
+  deadlineExceeded(): boolean,
 } | {
-  transactionDeadlineExceeded: boolean;
+  transactionDeadlineExceeded: boolean,
 }): McpSafeError {
   const exceeded = 'deadlineExceeded' in execution
     ? execution.deadlineExceeded()
@@ -670,6 +770,9 @@ function executionError(execution: {
   };
 }
 
+/**
+ * Return the deadline error result.
+ */
 function deadlineError(): McpSafeError {
   return {
     category: 'deadline_exceeded',
@@ -678,6 +781,9 @@ function deadlineError(): McpSafeError {
   };
 }
 
+/**
+ * Return the draining error result.
+ */
 function drainingError(): McpSafeError {
   return {
     category: 'server_draining',
@@ -686,6 +792,9 @@ function drainingError(): McpSafeError {
   };
 }
 
+/**
+ * Return the capacity error result.
+ */
 function capacityError(): McpSafeError {
   return {
     category: 'capacity_exhausted',
@@ -694,21 +803,30 @@ function capacityError(): McpSafeError {
   };
 }
 
+/**
+ * Return the postgres code result.
+ */
 function postgresCode(error: unknown) {
   return error && typeof error === 'object' && 'code' in error
     ? String(error.code)
     : '';
 }
 
+/**
+ * Report the safe object condition.
+ */
 function safeObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? structuredClone(value as Record<string, unknown>)
     : {};
 }
 
+/**
+ * Return the frontend operations result.
+ */
 function frontendOperations(
   tools: readonly McpToolName[],
-  authority: { update: boolean; insert: boolean; delete: boolean }
+  authority: { update: boolean, insert: boolean, delete: boolean, }
 ) {
   const readTools = new Set<McpToolName>([
     'get_frontend_contract',
@@ -739,11 +857,17 @@ function frontendOperations(
     || (canMutate && reversibleTools.has(tool)));
 }
 
+/**
+ * Encode the cursor.
+ */
 function encodeCursor(schemaId: string, fileId: string) {
   return Buffer.from(JSON.stringify({ version: 1, schemaId, fileId }), 'utf8')
     .toString('base64url');
 }
 
+/**
+ * Decode the cursor.
+ */
 function decodeCursor(cursor: string) {
   try {
     const value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as unknown;
@@ -764,6 +888,9 @@ function decodeCursor(cursor: string) {
   }
 }
 
+/**
+ * Return the discovery key result.
+ */
 function discoveryKey(schemaId: string, fileId: string) {
   return `${schemaId}:${fileId}`;
 }

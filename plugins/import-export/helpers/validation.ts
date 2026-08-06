@@ -1,15 +1,18 @@
-import {
-  IMPORT_HARD_LIMITS,
-  ImportParserError,
-  type CsvDelimiter,
-  type CsvParserOptions,
-  type ImportParserLimits,
-  type XlsxParserOptions
+//client
+import type {
+  CsvDelimiter,
+  CsvParserOptions,
+  ImportParserLimits,
+  XlsxParserOptions
 } from './contracts.js';
+import { IMPORT_HARD_LIMITS, ImportParserError } from './contracts.js';
 
 const LIMIT_KEYS = Object.keys(IMPORT_HARD_LIMITS) as Array<keyof ImportParserLimits>;
 const DELIMITERS = new Set<CsvDelimiter>([',', ';', '\t', '|']);
 
+/**
+ * Resolve the parser limits.
+ */
 export function resolveParserLimits(
   requested: Partial<ImportParserLimits> | undefined
 ): ImportParserLimits {
@@ -31,6 +34,9 @@ export function resolveParserLimits(
   return limits;
 }
 
+/**
+ * Validate the CSV options.
+ */
 export function validateCsvOptions(options: CsvParserOptions = {}) {
   exactKeys(options, ['delimiter', 'limits'], 'CSV parser options');
   const delimiter = options.delimiter || 'auto';
@@ -40,6 +46,9 @@ export function validateCsvOptions(options: CsvParserOptions = {}) {
   return { delimiter, limits: resolveParserLimits(options.limits) };
 }
 
+/**
+ * Validate the XLSX options.
+ */
 export function validateXlsxOptions(options: XlsxParserOptions = {}) {
   exactKeys(options, ['sheetName', 'limits'], 'XLSX parser options');
   if (typeof options.sheetName !== 'undefined') {
@@ -54,6 +63,9 @@ export function validateXlsxOptions(options: XlsxParserOptions = {}) {
   return { sheetName: options.sheetName, limits: resolveParserLimits(options.limits) };
 }
 
+/**
+ * Return the require within limit result.
+ */
 export function requireWithinLimit(
   value: number,
   maximum: number,
@@ -63,6 +75,9 @@ export function requireWithinLimit(
   if (value > maximum) throw new ImportParserError(code, message);
 }
 
+/**
+ * Return the exact keys result.
+ */
 function exactKeys(value: object, allowed: string[], label: string) {
   if (Object.keys(value).some((key) => !allowed.includes(key))) {
     throw new ImportParserError('invalid_parser_options', `${label} contain an unsupported key`);

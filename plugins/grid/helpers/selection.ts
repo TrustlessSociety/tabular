@@ -1,24 +1,37 @@
+//client
 import type {
   GridPoint,
   GridSelectionCoverage,
   LogicalGridSelection
 } from './contracts.js';
 
+//The selection listener contract exported for module callers
 export type SelectionListener = (selection: LogicalGridSelection | null) => void;
 
-/** Converts a zero-based visible row index into its spreadsheet row number. */
+/**
+ * Converts a zero-based visible row index into its spreadsheet row number.
+ */
 export function spreadsheetRowNumber(index: number) {
   return index + 1;
 }
 
+/**
+ * Report the same point condition.
+ */
 function samePoint(left: GridPoint, right: GridPoint) {
   return left.rowId === right.rowId && left.columnId === right.columnId;
 }
 
+/**
+ * Return the between result.
+ */
 function between(value: number, left: number, right: number) {
   return value >= Math.min(left, right) && value <= Math.max(left, right);
 }
 
+/**
+ * Return the selection label result.
+ */
 export function selectionLabel(selection: LogicalGridSelection | null) {
   if (!selection) return 'No selection';
   if (selection.kind === 'row') return `Row ${selection.rowId}`;
@@ -32,6 +45,9 @@ export function selectionLabel(selection: LogicalGridSelection | null) {
     : `${start} to ${end}`;
 }
 
+/**
+ * Return the coverage for result.
+ */
 export function coverageFor(
   selection: LogicalGridSelection | null,
   point: GridPoint,
@@ -46,6 +62,9 @@ export function coverageFor(
   );
 }
 
+/**
+ * Return the coverage for index maps result.
+ */
 export function coverageForIndexMaps(
   selection: LogicalGridSelection | null,
   point: GridPoint,
@@ -93,25 +112,42 @@ export function coverageForIndexMaps(
   };
 }
 
+/**
+ * Provide the logical selection store behavior used by this module.
+ */
 export class LogicalSelectionStore {
+  //The selection state retained by this class instance
   #selection: LogicalGridSelection | null = null;
+  //The listeners state retained by this class instance
   readonly #listeners = new Set<SelectionListener>();
 
-  constructor(initial?: LogicalGridSelection) {
+  /**
+   * Create a LogicalSelectionStore instance.
+   */
+  public constructor(initial?: LogicalGridSelection) {
     if (initial) this.#selection = structuredClone(initial);
   }
 
-  get() {
+  /**
+   * Return a defensive copy of the current logical selection.
+   */
+  public get() {
     return this.#selection ? structuredClone(this.#selection) : null;
   }
 
-  set(selection: LogicalGridSelection) {
+  /**
+   * Set the current value.
+   */
+  public set(selection: LogicalGridSelection) {
     this.#selection = structuredClone(selection);
     this.#emit();
     return this.get();
   }
 
-  selectCell(point: GridPoint, extend = false) {
+  /**
+   * Select the cell.
+   */
+  public selectCell(point: GridPoint, extend = false) {
     if (
       extend
       && this.#selection
@@ -125,31 +161,52 @@ export class LogicalSelectionStore {
     return this.set({ kind: 'cell', anchor: point, focus: point });
   }
 
-  selectRow(rowId: string) {
+  /**
+   * Select the row.
+   */
+  public selectRow(rowId: string) {
     return this.set({ kind: 'row', rowId });
   }
 
-  selectColumn(columnId: string) {
+  /**
+   * Select the column.
+   */
+  public selectColumn(columnId: string) {
     return this.set({ kind: 'column', columnId });
   }
 
-  selectHeader(columnId: string) {
+  /**
+   * Select the header.
+   */
+  public selectHeader(columnId: string) {
     return this.set({ kind: 'header', columnId });
   }
 
-  selectHeaderRow() {
+  /**
+   * Select the header row.
+   */
+  public selectHeaderRow() {
     return this.set({ kind: 'header-row' });
   }
 
-  clear() {
+  /**
+   * Clear the current value.
+   */
+  public clear() {
     if (!this.#selection) return;
     this.#selection = null;
     this.#emit();
   }
 
-  reconcile(rowIds: ReadonlySet<string>, columnIds: ReadonlySet<string>) {
+  /**
+   * Reconcile the current value.
+   */
+  public reconcile(rowIds: ReadonlySet<string>, columnIds: ReadonlySet<string>) {
     const selection = this.#selection;
     if (!selection) return null;
+    /**
+     * Report the valid point condition.
+     */
     const validPoint = (point: GridPoint) => (
       rowIds.has(point.rowId) && columnIds.has(point.columnId)
     );
@@ -164,11 +221,17 @@ export class LogicalSelectionStore {
     return this.get();
   }
 
-  subscribe(listener: SelectionListener) {
+  /**
+   * Handle the subscribe operation.
+   */
+  public subscribe(listener: SelectionListener) {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   }
 
+  /**
+   * Handle the internal emit operation.
+   */
   #emit() {
     const snapshot = this.get();
     for (const listener of this.#listeners) listener(snapshot);

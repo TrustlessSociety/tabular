@@ -1,8 +1,51 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { GridCanvas, type GridCommand } from '../../grid/components/grid-canvas.js';
+//modules
+import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import 'tabulator-tables/dist/css/tabulator.min.css';
+
+//client
+import type { PresentationToolbarState } from '../../commands/components/command-surface.js';
+import type { ContextMenuState } from '../../commands/components/context-menu.js';
+import type {
+  CommandContext,
+  CommandId,
+  CommandState,
+  PresentationHistoryFrame
+} from '../../commands/helpers/contracts.js';
+import type { TableSettingsDraft } from '../../explorer/components/table-settings-panel.js';
+import type {
+  AuthRequiredPageProps,
+  ExplorerFile,
+  ExplorerPageProps,
+  ImportEntryPageProps,
+  TablePageProps
+} from '../../explorer/helpers/contracts.js';
+import type { FileDescription, PlannedFileDdl } from '../../files/helpers/contracts.js';
+import type { GridCommand } from '../../grid/components/grid-canvas.js';
 import type { GridGesture } from '../../grid/components/grid-canvas.js';
+import type {
+  GridCellIssue,
+  GridCellPresentation,
+  GridCellValue,
+  GridColumn,
+  GridFilter,
+  GridResource,
+  GridRow,
+  GridSort,
+  LogicalGridSelection
+} from '../../grid/helpers/contracts.js';
+import type { GridEditDraft, GridHistoryFrame } from '../../grid/helpers/editing.js';
+import type { ActivityPageProps } from '../../operations/pages/contracts.js';
+import type { RealtimeState } from '../../realtime/events/controller.js';
+import type { SavedViewIncludes } from '../../saved-views/components/saved-views-dialog.js';
+import type {
+  SavedView,
+  SavedViewCapabilities,
+  SavedViewDefinition
+} from '../../saved-views/helpers/contracts.js';
+import type { BlankColumnInsertion, ColumnInsertionRequest } from '../helpers/column-insertion.js';
+import { GridCanvas } from '../../grid/components/grid-canvas.js';
 import { ColumnSettingsPanel } from '../../grid/components/column-settings-panel.js';
-import type { GridCellIssue, GridCellPresentation, GridCellValue, GridColumn, GridFilter, GridResource, GridRow, GridSort, LogicalGridSelection } from '../../grid/helpers/contracts.js';
 import { GRID_HEADER_ROW_ID } from '../../grid/helpers/contracts.js';
 import { spreadsheetRowNumber } from '../../grid/helpers/selection.js';
 import {
@@ -23,9 +66,7 @@ import {
   stageRelationChoice,
   stageScalarRange,
   updateInsertDraft,
-  updateInsertRelationDraft,
-  type GridEditDraft,
-  type GridHistoryFrame
+  updateInsertRelationDraft
 } from '../../grid/helpers/editing.js';
 import {
   dispatchGridCapability,
@@ -36,19 +77,23 @@ import {
   loadRelationOptions,
   planGridDdl
 } from '../../grid/events/actions.js';
-import { TableSettingsPanel, type TableSettingsDraft } from '../../explorer/components/table-settings-panel.js';
+import { TableSettingsPanel } from '../../explorer/components/table-settings-panel.js';
 import { FileCreateDialog } from '../../explorer/components/file-ddl-confirmation.js';
-import type { FileDescription, PlannedFileDdl } from '../../files/helpers/contracts.js';
-import { applyExplorerDdlPlan, dispatchExplorerAction, waitForExplorerDdl } from '../../explorer/events/actions.js';
-import type { AuthRequiredPageProps, ExplorerFile, ExplorerPageProps, ImportEntryPageProps, TablePageProps } from '../../explorer/helpers/contracts.js';
+import {
+  applyExplorerDdlPlan,
+  dispatchExplorerAction,
+  waitForExplorerDdl
+} from '../../explorer/events/actions.js';
 import { normalizePhysicalName } from '../../explorer/helpers/model.js';
 import ExplorerPage from '../../explorer/views/explorer.js';
 import { ImportPage } from '../../import-export/views/import-page.js';
 import { downloadAuthorizedCsv } from '../../import-export/events/actions.js';
 import { Icon } from '../components/icon.js';
-import { SpreadsheetMenuBar, FormattingToolbar, type PresentationToolbarState } from '../../commands/components/command-surface.js';
-import { CommandContextMenu, type ContextMenuState } from '../../commands/components/context-menu.js';
-import type { CommandContext, CommandId, CommandState, PresentationHistoryFrame } from '../../commands/helpers/contracts.js';
+import {
+  SpreadsheetMenuBar,
+  FormattingToolbar
+} from '../../commands/components/command-surface.js';
+import { CommandContextMenu } from '../../commands/components/context-menu.js';
 import {
   applyPresentationPatch,
   clearPresentation,
@@ -65,9 +110,7 @@ import {
   applyBlankColumnInsertions,
   applyColumnInsertion,
   reconcileBlankColumnInsertions,
-  removeBlankColumnInsertion,
-  type BlankColumnInsertion,
-  type ColumnInsertionRequest
+  removeBlankColumnInsertion
 } from '../helpers/column-insertion.js';
 import {
   committedRowIdsInVisibleOrder,
@@ -85,22 +128,9 @@ import {
   loadSavedView,
   loadSavedViews
 } from '../../saved-views/events/actions.js';
-import type {
-  SavedView,
-  SavedViewCapabilities,
-  SavedViewDefinition
-} from '../../saved-views/helpers/contracts.js';
-import {
-  SavedViewsDialog,
-  type SavedViewIncludes
-} from '../../saved-views/components/saved-views-dialog.js';
-import {
-  RealtimeController,
-  type RealtimeState
-} from '../../realtime/events/controller.js';
+import { SavedViewsDialog } from '../../saved-views/components/saved-views-dialog.js';
+import { RealtimeController } from '../../realtime/events/controller.js';
 import ActivityPage from '../../operations/views/activity-page.js';
-import type { ActivityPageProps } from '../../operations/pages/contracts.js';
-import 'tabulator-tables/dist/css/tabulator.min.css';
 import '../../explorer/views/explorer.css';
 import '../../commands/views/commands.css';
 import './workbench.css';
@@ -108,36 +138,38 @@ import '../../saved-views/views/saved-views.css';
 import '../../import-export/views/import-export.css';
 import '../../operations/views/activity.css';
 
+//The workbench page props contract exported for module callers
 export type WorkbenchPageProps = TablePageProps;
+//The app page props contract exported for module callers
 export type AppPageProps = ExplorerPageProps | TablePageProps | ImportEntryPageProps | AuthRequiredPageProps | ActivityPageProps;
 
-type RemoteDraftHandle = { id: string; version: number };
+type RemoteDraftHandle = { id: string, version: number, };
 type DraftState = 'none' | 'pending' | 'invalid' | 'failed' | 'stale';
 type RetainedGridDraft = {
-  draft: GridEditDraft;
-  state: Exclude<DraftState, 'none'>;
-  needsSchemaRevalidation?: boolean;
+  draft: GridEditDraft,
+  state: Exclude<DraftState, 'none'>,
+  needsSchemaRevalidation?: boolean,
 };
 type PendingUnnamedCell = {
-  columnId: string;
-  rowId: string;
-  value: GridCellValue;
+  columnId: string,
+  rowId: string,
+  value: GridCellValue,
 };
-type PendingInsertDraft = Extract<GridEditDraft, { kind: 'insert' }>;
+type PendingInsertDraft = Extract<GridEditDraft, { kind: 'insert', }>;
 type PendingColumnInsertion = ColumnInsertionRequest & {
-  confirmed: boolean;
-  sourceDraftId?: string;
+  confirmed: boolean,
+  sourceDraftId?: string,
 };
 type WorkbenchHistoryFrame =
-  | { kind: 'data'; frame: GridHistoryFrame }
+  | { kind: 'data', frame: GridHistoryFrame, }
   | PresentationHistoryFrame;
 
 type WorkbenchViewState = {
-  gridlines: boolean;
-  compact: boolean;
-  zoom: 50 | 75 | 90 | 100 | 125 | 150 | 200;
-  frozenRows: 'none' | 'one' | 'two' | 'current';
-  frozenColumns: 'none' | 'one' | 'two' | 'current';
+  gridlines: boolean,
+  compact: boolean,
+  zoom: 50 | 75 | 90 | 100 | 125 | 150 | 200,
+  frozenRows: 'none' | 'one' | 'two' | 'current',
+  frozenColumns: 'none' | 'one' | 'two' | 'current',
 };
 
 const BLANK_COLUMNS: GridColumn[] = Array.from({ length: 12 }, (_, index) => ({
@@ -155,7 +187,10 @@ const BLANK_ROWS: GridRow[] = Array.from({ length: 1000 }, (_, index) => ({
   id: `placeholder_row_${index + 1}`
 }));
 
-export function Head({ styles = [], surface = 'table' }: { styles?: string[]; surface?: AppPageProps['surface'] }) {
+/**
+ * Render the head component.
+ */
+export function Head({ styles = [], surface = 'table' }: { styles?: string[], surface?: AppPageProps['surface'], }) {
   return (
     <>
       <title>{surface === 'explorer' ? 'Files — Tabular' : surface === 'import-entry' ? 'Import values — Tabular' : surface === 'activity' ? 'System activity — Tabular' : surface === 'auth-required' ? 'Sign in required — Tabular' : 'Tabular spreadsheet'}</title>
@@ -168,14 +203,39 @@ export function Head({ styles = [], surface = 'table' }: { styles?: string[]; su
   );
 }
 
+/**
+ * Render the app page component.
+ */
 export default function AppPage(props: AppPageProps) {
-  if (props.surface === 'auth-required') return <AuthenticationRequiredPage {...props} />;
-  if (props.surface === 'explorer') return <ExplorerPage {...props} />;
-  if (props.surface === 'import-entry') return <ImportPage {...props} />;
-  if (props.surface === 'activity') return <ActivityPage {...props} />;
-  return <WorkbenchPage {...props} />;
+  //select the server-approved surface without adding client-side route state
+  if (props.surface === 'auth-required') {
+    return (
+      <AuthenticationRequiredPage {...props} />
+    );
+  }
+  if (props.surface === 'explorer') {
+    return (
+      <ExplorerPage {...props} />
+    );
+  }
+  if (props.surface === 'import-entry') {
+    return (
+      <ImportPage {...props} />
+    );
+  }
+  if (props.surface === 'activity') {
+    return (
+      <ActivityPage {...props} />
+    );
+  }
+  return (
+    <WorkbenchPage {...props} />
+  );
 }
 
+/**
+ * Render the authentication required page component.
+ */
 export function AuthenticationRequiredPage(props: AuthRequiredPageProps) {
   return (
     <div className="explorer-shell">
@@ -202,6 +262,9 @@ export function AuthenticationRequiredPage(props: AuthRequiredPageProps) {
   );
 }
 
+/**
+ * Render the workbench page component.
+ */
 export function WorkbenchPage(props: WorkbenchPageProps) {
   const initialFolder = props.snapshot.folders.find((item) => item.slug === props.route.folder) || props.snapshot.folders[0]!;
   const initialFile = initialWorkbenchFile(props, initialFolder.id);
@@ -381,6 +444,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     borderStyle: presentationValue(presentation, formattingPoints, 'borderStyle') || 'solid',
     numberFormat: presentationValue(presentation, formattingPoints, 'numberFormat') || 'automatic'
   }), [presentation, formattingPoints]);
+  /**
+   * Apply the resolved view.
+   */
   const applyResolvedView = (
     resolvedView: NonNullable<GridResource['view']>,
     resolvedRows: GridRow[],
@@ -491,6 +557,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     if (!deleteCandidate) return;
     const dialog = deleteDialog.current;
     requestAnimationFrame(() => dialog?.querySelector<HTMLButtonElement>('button')?.focus());
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -576,7 +645,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
         );
         if (!draft) continue;
 
-        // Empty insert drafts have no spreadsheet value to recover. Remove
+        //Empty insert drafts have no spreadsheet value to recover. Remove
         // them remotely so reload restores the untouched logical row instead
         // of reviving required-field errors forever.
         if (draft.kind === 'insert' && insertDraftIsEmpty(draft, nextColumns)) {
@@ -708,17 +777,26 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setTransientSort(undefined);
   }, [activeSavedView?.id, activeSavedView?.version]);
 
+  /**
+   * Return the request grid selection result.
+   */
   const requestGridSelection = (next: LogicalGridSelection | null) => {
     if (!next) return;
     commandSequence.current += 1;
     setCommand({ id: commandSequence.current, action: 'select', selection: next });
   };
 
+  /**
+   * Return the next command id result.
+   */
   const nextCommandId = (prefix: string) => {
     mutationSequence.current += 1;
     return `cmd_${prefix}_${Date.now()}_${mutationSequence.current}`;
   };
 
+  /**
+   * Read the live grid snapshot.
+   */
   const readLiveGridSnapshot = async () => {
     const resource = await loadGridResource(props.route.folder, props.route.table, {
       ...(activeSavedView ? {
@@ -871,7 +949,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     };
   }, [file.id, gridMode, streamCursor]);
 
-  /** Adds or replaces one row-scoped retained draft without touching its peers. */
+  /**
+   * Adds or replaces one row-scoped retained draft without touching its peers.
+   */
   const retainGridDraft = (
     draft: GridEditDraft,
     state: RetainedGridDraft['state'],
@@ -892,7 +972,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     });
   };
 
-  /** Persists one draft through its own sequenced remote handle. */
+  /**
+   * Persists one draft through its own sequenced remote handle.
+   */
   const persistGridDraft = (candidate: GridEditDraft, preserveFeedback = false) => {
     if (gridMode !== 'live' || !schemaVersion) return;
     const persistent = persistentDraftPatch(candidate, columns);
@@ -923,7 +1005,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
         setFeedback(`${result.error.message} The in-tab draft is still retained.`);
         return { result: undefined };
       }
-      const summary = result.data as { id?: unknown; version?: unknown };
+      const summary = result.data as { id?: unknown, version?: unknown, };
       if (typeof summary.id !== 'string' || typeof summary.version !== 'number') {
         return { result: undefined };
       }
@@ -934,6 +1016,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     );
   };
 
+  /**
+   * Return the stage grid draft result.
+   */
   const stageGridDraft = (draft: GridEditDraft) => {
     const issues = draftIssues(draft);
     const changed = draft.changes.some((change) => (
@@ -968,6 +1053,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return true;
   };
 
+  /**
+   * Cancel the grid draft.
+   */
   const cancelGridDraft = async (
     message = 'Draft canceled; accepted PostgreSQL values restored',
     requested?: GridEditDraft
@@ -1024,6 +1112,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(message);
   };
 
+  /**
+   * Return the commit grid draft result.
+   */
   const commitGridDraft = async (candidate = editDraft, automatic = false) => {
     if (!candidate) return;
     const retainedEntry = retainedDrafts.find((entry) => entry.draft.id === candidate!.id);
@@ -1057,7 +1148,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
         typeof capabilityActionForDraft
       >) | undefined;
       try {
-        // A final editor event can finish persistence immediately before the
+        //A final editor event can finish persistence immediately before the
         // click. Read the sequencer-owned handle instead of a lagging React
         // render so promotion always uses its newest draft version.
         if (!automatic) await draftPersistence.current.settle(candidate.id);
@@ -1123,7 +1214,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       setFeedback('Saving typed PostgreSQL action…');
       let result = await dispatchGridCapability(action, props.csrfToken);
 
-      // A newly inserted row or a just-applied live refresh can leave the UI
+      //A newly inserted row or a just-applied live refresh can leave the UI
       // with an older version token even though the edited cell itself has not
       // changed. Refresh and retry once only when doing so cannot overwrite an
       // unexpected value in any target cell.
@@ -1197,7 +1288,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
         if (!actionUsesRemoteDraft) {
           const retained = await persistGridDraft(rejectedDraft, true);
           if (retained && result.error.code === 'validation_failed') {
-            // Promotion replays the server-side validation against the retained
+            //Promotion replays the server-side validation against the retained
             // draft and stores those PostgreSQL issues for reload recovery.
             const retainedResult = await dispatchGridCapability({
               type: 'draft.promote',
@@ -1280,7 +1371,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   };
   commitGridDraftRef.current = commitGridDraft;
 
-  /** Revalidates a retained invalid value and saves it as soon as it is valid. */
+  /**
+   * Revalidates a retained invalid value and saves it as soon as it is valid.
+   */
   const saveCorrectedGridDraft = async (candidate: GridEditDraft) => {
     const issues = draftIssues(candidate);
     if (issues.length) {
@@ -1303,6 +1396,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     await commitGridDraft(candidate);
   };
 
+  /**
+   * Return the perform history result.
+   */
   const performHistory = async (mode: 'undo' | 'redo') => {
     if (editDraft) {
       setFeedback('Correct the retained value before using history');
@@ -1369,6 +1465,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`${mode === 'undo' ? 'Undid' : 'Redid'} · ${frame.label}`);
   };
 
+  /**
+   * Return the saved view definition result.
+   */
   const savedViewDefinition = (includes: SavedViewIncludes): SavedViewDefinition => ({
     schemaVersion: 1,
     columnOrder: columns
@@ -1381,10 +1480,13 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     includes
   });
 
+  /**
+   * Create the saved view.
+   */
   const createSavedView = async (input: {
-    name: string;
-    access: 'private' | 'shared';
-    includes: SavedViewIncludes;
+    name: string,
+    access: 'private' | 'shared',
+    includes: SavedViewIncludes,
   }) => {
     setSavedViewBusy(true);
     setSavedViewError(undefined);
@@ -1406,6 +1508,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`Created ${input.access === 'shared' ? 'shared' : 'private'} view ${input.name}`);
   };
 
+  /**
+   * Update the saved view.
+   */
   const updateSavedView = async (view: SavedView) => {
     setSavedViewBusy(true);
     setSavedViewError(undefined);
@@ -1427,6 +1532,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`Updated saved view ${view.name}`);
   };
 
+  /**
+   * Return the duplicate saved view result.
+   */
   const duplicateSavedView = async (view: SavedView) => {
     setSavedViewBusy(true);
     setSavedViewError(undefined);
@@ -1446,6 +1554,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`Duplicated ${view.name} as a private view`);
   };
 
+  /**
+   * Delete the saved view.
+   */
   const deleteSavedView = async (view: SavedView) => {
     setSavedViewBusy(true);
     setSavedViewError(undefined);
@@ -1465,10 +1576,13 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`Deleted saved view ${view.name}`);
   };
 
+  /**
+   * Move the shared row.
+   */
   const moveSharedRow = async (move: {
-    rowId: string;
-    beforeRowId?: string;
-    afterRowId?: string;
+    rowId: string,
+    beforeRowId?: string,
+    afterRowId?: string,
   }) => {
     if (editDraft) {
       setFeedback('Correct the retained value before moving a row');
@@ -1502,12 +1616,15 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       await realtimeRefresh.current();
       return;
     }
-    const data = result.data as { version?: unknown };
+    const data = result.data as { version?: unknown, };
     if (typeof data.version === 'number') setRowOrderVersion(data.version);
     setFeedback('Shared row order saved');
     await realtimeRefresh.current();
   };
 
+  /**
+   * Move the columns.
+   */
   const moveColumns = (columnIds: string[]) => {
     const reordered = reorderColumns(columns, columnIds);
     const namedIds = columnIds.filter((columnId) => !columnId.startsWith('draft_'));
@@ -1524,6 +1641,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       : 'Column order saved for this browser session');
   };
 
+  /**
+   * Handle the grid gesture.
+   */
   const handleGridGesture = (gesture: GridGesture) => {
     if (gesture.type === 'context-menu') {
       const relation = gesture.target === 'cell'
@@ -1563,7 +1683,7 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       return;
     }
 
-    // Backspace and Delete operate on retained insert values too. A row whose
+    //Backspace and Delete operate on retained insert values too. A row whose
     // last raw value is cleared is discarded; a partially filled invalid row
     // keeps its other raw values and row-number validation summary.
     if (
@@ -1625,12 +1745,18 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Open the column settings.
+   */
   const openColumnSettings = (columnId?: string, trigger?: HTMLElement) => {
     if (trigger) columnSettingsTrigger.current = trigger;
     setColumnSettingsId(columnId?.startsWith('draft_') ? undefined : columnId);
     setColumnSettingsOpen(true);
   };
 
+  /**
+   * Return the selected row id result.
+   */
   const selectedRowId = () => {
     if (!selection) return undefined;
     if (selection.kind === 'row') return selection.rowId;
@@ -1638,6 +1764,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return undefined;
   };
 
+  /**
+   * Return the selected column id result.
+   */
   const selectedColumnId = () => {
     if (!selection) return undefined;
     if (selection.kind === 'header' || selection.kind === 'column') {
@@ -1647,6 +1776,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return undefined;
   };
 
+  /**
+   * Insert the row.
+   */
   const insertRow = (placement: 'above' | 'below' = 'below') => {
     if (editDraft) {
       setFeedback('Correct the retained value first');
@@ -1682,6 +1814,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Return the request delete row result.
+   */
   const requestDeleteRow = (trigger?: HTMLElement) => {
     const rowId = selectedRowId();
     if (!rowId || rowId.startsWith('draft_row_')) {
@@ -1692,6 +1827,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setDeleteCandidate(rowId);
   };
 
+  /**
+   * Return the confirm delete row result.
+   */
   const confirmDeleteRow = () => {
     if (!deleteCandidate) return;
     try {
@@ -1703,6 +1841,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Copy the selection value.
+   */
   const copySelectionValue = () => {
     if (!selection) return;
     if (selection.kind === 'header-row') {
@@ -1737,6 +1878,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`Copied ${points.length} ${points.length === 1 ? 'cell' : 'cells'}`);
   };
 
+  /**
+   * Return the paste selection value result.
+   */
   const pasteSelectionValue = () => {
     void (async () => {
       let value = workbenchClipboard.current;
@@ -1745,6 +1889,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     })();
   };
 
+  /**
+   * Return the commit rename result.
+   */
   const commitRename = async () => {
     if (cancelRename.current) {
       cancelRename.current = false;
@@ -1786,6 +1933,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Apply the settings.
+   */
   const applySettings = async (draft: TableSettingsDraft) => {
     const targetFolder = props.snapshot.folders.find((item) => item.id === draft.folderId) || folder;
     const sourceFolder = props.snapshot.folders.find((item) => item.id === file.folderId) || folder;
@@ -1823,12 +1973,18 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Return the plan blank file result.
+   */
   const planBlankFile = async (trigger: HTMLElement) => {
     createFileTrigger.current = trigger;
     setCreateError(undefined);
     setCreateDialogOpen(true);
   };
 
+  /**
+   * Create the blank file.
+   */
   const createBlankFile = async (displayName: string) => {
     setCreateBusy(true);
     setCreateError(undefined);
@@ -1860,6 +2016,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Apply the planned file change.
+   */
   const applyPlannedFileChange = async (plan: PlannedFileDdl, folderSlug: string) => {
     const applied = await applyExplorerDdlPlan(plan, props.csrfToken);
     if (applied.status !== 'applied') {
@@ -1877,6 +2036,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return undefined;
   };
 
+  /**
+   * Apply the planned grid change.
+   */
   const applyPlannedGridChange = async (plan: PlannedFileDdl) => {
     const confirmation = await confirmGridDdl(
       plan.requestId,
@@ -1891,6 +2053,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
       : 'The PostgreSQL change is still pending. Check System activity and try again.';
   };
 
+  /**
+   * Return the initialize legacy blank file result.
+   */
   const initializeLegacyBlankFile = async () => {
     if (initializingBlankFile || !file.id.startsWith('obj_')) return;
     setInitializingBlankFile(true);
@@ -1915,6 +2080,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     window.location.reload();
   };
 
+  /**
+   * Create the named column.
+   */
   const createNamedColumn = async (columnId: string, displayName: string) => {
     const name = displayName.trim();
     if (!columnId.startsWith('draft_') || !name || creatingColumnId) return;
@@ -1971,9 +2139,11 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     ));
   };
 
-  /** Creates unnamed metadata columns backed by Tabular's hidden JSON field. */
+  /**
+   * Creates unnamed metadata columns backed by Tabular's hidden JSON field.
+   */
   const createUnnamedCellColumn = async (
-    point: { rowId: string; columnId: string },
+    point: { rowId: string, columnId: string, },
     value: GridCellValue
   ) => {
     if (value === null || String(value).trim() === '') {
@@ -2119,6 +2289,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   }, [pendingUnnamedCell, columns, baseRows]);
 
+  /**
+   * Return the selection for band action result.
+   */
   const selectionForBandAction = () => {
     if (!selection || !rows.length || !columns.length) return selection;
     if (selection.kind === 'row') return {
@@ -2134,6 +2307,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return selection;
   };
 
+  /**
+   * Clear the band selection.
+   */
   const clearBandSelection = () => {
     if (editDraft) { setFeedback('Correct the retained value first'); return; }
     try {
@@ -2150,6 +2326,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     }
   };
 
+  /**
+   * Apply the formatting.
+   */
   const applyFormatting = (id: CommandId) => {
     if (!formattingPoints.length) return;
     const before = structuredClone(presentation);
@@ -2175,6 +2354,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     setFeedback(`${label} applied to ${formattingPoints.length} ${target} · current tab`);
   };
 
+  /**
+   * Return the state for command result.
+   */
   const stateForCommand = (id: CommandId, base: CommandState): CommandState => {
     if (!base.enabled) return base;
     const states: Partial<Record<CommandId, unknown>> = {
@@ -2219,6 +2401,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
     return value === 'mixed' ? { ...base, mixed: true } : typeof value === 'boolean' ? { ...base, checked: value } : base;
   };
 
+  /**
+   * Handle the command.
+   */
   const handleCommand = (id: CommandId, trigger: HTMLElement) => {
     if (id.startsWith('format.')) { applyFormatting(id); return; }
     if (id === 'view.list' || id === 'view.new') {
@@ -2420,6 +2605,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   };
 
   useEffect(() => {
+    /**
+     * Handle the key down event.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       const target = event.target as HTMLElement;
@@ -2829,6 +3017,9 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   );
 }
 
+/**
+ * Return the selected column from result.
+ */
 function selectedColumnFrom(selection: LogicalGridSelection | null) {
   if (!selection) return undefined;
   if (selection.kind === 'header' || selection.kind === 'column') {
@@ -2838,6 +3029,9 @@ function selectedColumnFrom(selection: LogicalGridSelection | null) {
   return selection.focus.columnId;
 }
 
+/**
+ * Return the selected row from result.
+ */
 function selectedRowFrom(selection: LogicalGridSelection | null) {
   if (!selection) return undefined;
   if (selection.kind === 'row') return selection.rowId;
@@ -2845,6 +3039,9 @@ function selectedRowFrom(selection: LogicalGridSelection | null) {
   return undefined;
 }
 
+/**
+ * Return the project saved view columns result.
+ */
 function projectSavedViewColumns(columns: GridColumn[], definition: SavedViewDefinition) {
   const hidden = new Set(definition.hiddenColumnIds);
   const byId = new Map(columns.map((column) => [column.id, column]));
@@ -2859,6 +3056,9 @@ function projectSavedViewColumns(columns: GridColumn[], definition: SavedViewDef
   ];
 }
 
+/**
+ * Return the intersect presentation result.
+ */
 function intersectPresentation(
   presentation: Record<string, GridCellPresentation>,
   rows: GridRow[],
@@ -2877,9 +3077,12 @@ function intersectPresentation(
   }));
 }
 
+/**
+ * Return the reorder rows result.
+ */
 function reorderRows(
   rows: GridRow[],
-  move: { rowId: string; beforeRowId?: string; afterRowId?: string }
+  move: { rowId: string, beforeRowId?: string, afterRowId?: string, }
 ) {
   const moving = rows.find((row) => row.id === move.rowId);
   if (!moving) return rows;
@@ -2897,6 +3100,9 @@ function reorderRows(
   return next;
 }
 
+/**
+ * Return the row move by direction result.
+ */
 function rowMoveByDirection(
   order: string[],
   rowId: string,
@@ -2916,6 +3122,9 @@ function rowMoveByDirection(
   };
 }
 
+/**
+ * Return the selected row label result.
+ */
 function selectedRowLabel(selection: LogicalGridSelection | null, rows: readonly GridRow[]) {
   if (!selection || selection.kind === 'column') return undefined;
   if (selection.kind === 'header' || selection.kind === 'header-row') return undefined;
@@ -2924,6 +3133,9 @@ function selectedRowLabel(selection: LogicalGridSelection | null, rows: readonly
   return index < 0 ? undefined : String(spreadsheetRowNumber(index));
 }
 
+/**
+ * Return the command feedback label result.
+ */
 function commandFeedbackLabel(id: CommandId) {
   const labels: Partial<Record<CommandId, string>> = {
     'format.bold': 'Bold',
@@ -2946,6 +3158,9 @@ function commandFeedbackLabel(id: CommandId) {
   return id.split('.').at(-1)!.replace(/-/g, ' ').replace(/^./, (letter) => letter.toUpperCase());
 }
 
+/**
+ * Return the initial workbench file result.
+ */
 function initialWorkbenchFile(props: WorkbenchPageProps, folderId: string): ExplorerFile {
   const folder = props.snapshot.folders.find((item) => item.id === folderId)!;
   const current = folder.files.find((item) => item.slug === props.route.table);
@@ -2967,17 +3182,25 @@ function initialWorkbenchFile(props: WorkbenchPageProps, folderId: string): Expl
   };
 }
 
-/** Creates a compact account mark from the verified server-side display name. */
+/**
+ * Creates a compact account mark from the verified server-side display name.
+ */
 function identityInitials(displayName: string) {
   const words = displayName.trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]?.toLocaleUpperCase()).join('') || '?';
 }
 
+/**
+ * Return the versions for rows result.
+ */
 function versionsForRows(versions: Record<string, string>, rows: GridRow[]) {
   const ids = new Set(rows.map((row) => row.id));
   return Object.fromEntries(Object.entries(versions).filter(([rowId]) => ids.has(rowId)));
 }
 
+/**
+ * Return the selection after row removal result.
+ */
 function selectionAfterRowRemoval(
   selection: LogicalGridSelection | null,
   rows: GridRow[],
@@ -2995,6 +3218,9 @@ function selectionAfterRowRemoval(
   return { kind: 'cell', anchor: point, focus: point };
 }
 
+/**
+ * Return the selection for rows result.
+ */
 function selectionForRows(
   selection: LogicalGridSelection | null,
   rows: GridRow[],
@@ -3021,10 +3247,13 @@ function selectionForRows(
     : selectionAfterRowRemoval(selection, rows, columns, 0);
 }
 
-function actionIssueMessage(error: { issues?: unknown[] }, columns: readonly GridColumn[]) {
+/**
+ * Return the action issue message result.
+ */
+function actionIssueMessage(error: { issues?: unknown[], }, columns: readonly GridColumn[]) {
   const issue = error.issues?.find((candidate) =>
-    candidate && typeof candidate === 'object' && typeof (candidate as { message?: unknown }).message === 'string'
-  ) as { columnId?: string; code?: string; message?: string } | undefined;
+    candidate && typeof candidate === 'object' && typeof (candidate as { message?: unknown, }).message === 'string'
+  ) as { columnId?: string, code?: string, message?: string, } | undefined;
   if (!issue) return undefined;
   if (issue.code === 'schema_changed') {
     return 'The table structure changed while this row was being edited. Retry Commit to revalidate the retained values';
@@ -3036,6 +3265,9 @@ function actionIssueMessage(error: { issues?: unknown[] }, columns: readonly Gri
   return `${column?.label ? `${column.label}: ` : ''}${issue.message}`;
 }
 
+/**
+ * Return the enrich grid columns result.
+ */
 function enrichGridColumns(
   columns: GridColumn[],
   description: FileDescription,
@@ -3086,6 +3318,9 @@ function enrichGridColumns(
   });
 }
 
+/**
+ * Hydrate the relation options.
+ */
 async function hydrateRelationOptions(fileId: string, columns: GridColumn[], rows: GridRow[]) {
   const next = columns.map((column) => ({ ...column }));
   for (const column of next) {
@@ -3120,6 +3355,9 @@ async function hydrateRelationOptions(fileId: string, columns: GridColumn[], row
   return next;
 }
 
+/**
+ * Return the relation option matches row result.
+ */
 function relationOptionMatchesRow(
   option: NonNullable<GridColumn['options']>[number],
   row: GridRow
@@ -3129,6 +3367,9 @@ function relationOptionMatchesRow(
   ));
 }
 
+/**
+ * Merge the relation options.
+ */
 function mergeRelationOptions(
   current: NonNullable<GridColumn['options']>,
   incoming: NonNullable<GridColumn['options']>
@@ -3136,6 +3377,9 @@ function mergeRelationOptions(
   return [...new Map([...current, ...incoming].map((option) => [option.value, option])).values()];
 }
 
+/**
+ * Return the grid kind for field result.
+ */
 function gridKindForField(field: string, storageType: string): GridColumn['kind'] {
   if (field === 'relation') return 'relation';
   if (['select', 'radio', 'suggest'].includes(field)) return 'select';
@@ -3152,6 +3396,9 @@ function gridKindForField(field: string, storageType: string): GridColumn['kind'
   return 'text';
 }
 
+/**
+ * Return the options from config result.
+ */
 function optionsFromConfig(config: Record<string, unknown>) {
   if (!Array.isArray(config.options)) return undefined;
   return config.options.flatMap((option) => {
@@ -3167,6 +3414,9 @@ function optionsFromConfig(config: Record<string, unknown>) {
   });
 }
 
+/**
+ * Return the spreadsheet columns result.
+ */
 function spreadsheetColumns(columns: GridColumn[]) {
   const padded = columns.length >= BLANK_COLUMNS.length
     ? columns
@@ -3177,6 +3427,9 @@ function spreadsheetColumns(columns: GridColumn[]) {
   }));
 }
 
+/**
+ * Return the reorder columns result.
+ */
 function reorderColumns(columns: GridColumn[], columnIds: readonly string[]) {
   const byId = new Map(columns.map((column) => [column.id, column]));
   return [
@@ -3188,6 +3441,9 @@ function reorderColumns(columns: GridColumn[], columnIds: readonly string[]) {
   ];
 }
 
+/**
+ * Return the remap presentation history result.
+ */
 function remapPresentationHistory(
   history: WorkbenchHistoryFrame[],
   fromRowId: string,
@@ -3202,6 +3458,9 @@ function remapPresentationHistory(
     : entry);
 }
 
+/**
+ * Restore the column order.
+ */
 function restoreColumnOrder(columns: GridColumn[], fileId: string) {
   if (typeof sessionStorage === 'undefined') return columns;
   try {
@@ -3214,6 +3473,9 @@ function restoreColumnOrder(columns: GridColumn[], fileId: string) {
   }
 }
 
+/**
+ * Return the spreadsheet coordinate result.
+ */
 function spreadsheetCoordinate(index: number) {
   let coordinate = '';
   for (let value = index + 1; value > 0; value = Math.floor((value - 1) / 26)) {
@@ -3222,6 +3484,9 @@ function spreadsheetCoordinate(index: number) {
   return coordinate;
 }
 
+/**
+ * Return the logical row number result.
+ */
 function logicalRowNumber(rowId: string, rows: GridRow[]) {
   const placeholder = /^placeholder_row_(\d+)$/.exec(rowId);
   if (placeholder) return Number(placeholder[1]);
@@ -3230,17 +3495,24 @@ function logicalRowNumber(rowId: string, rows: GridRow[]) {
   return index + 1;
 }
 
+/**
+ * Report whether the placeholder row condition holds.
+ */
 function isPlaceholderRow(rowId: string) {
   return rowId.startsWith('placeholder_row_');
 }
 
-/** Reports whether a draft owns the displayed row being edited or discarded. */
+/**
+ * Reports whether a draft owns the displayed row being edited or discarded.
+ */
 function draftContainsRow(draft: GridEditDraft, rowId: string) {
   if (draft.kind === 'insert' || draft.kind === 'delete') return draft.row.id === rowId;
   return draft.changes.some((change) => change.point.rowId === rowId);
 }
 
-/** Selects the most actionable aggregate state without merging draft identity. */
+/**
+ * Selects the most actionable aggregate state without merging draft identity.
+ */
 function strongestDraftState(states: RetainedGridDraft['state'][]): DraftState {
   const precedence: RetainedGridDraft['state'][] = [
     'failed',

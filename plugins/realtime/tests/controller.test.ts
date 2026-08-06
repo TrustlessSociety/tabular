@@ -1,42 +1,63 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  RealtimeController,
-  type RealtimeChange,
-  type RealtimeState
-} from '../events/controller.js';
+
+//client
+import type { RealtimeChange, RealtimeState } from '../events/controller.js';
+import { RealtimeController } from '../events/controller.js';
 
 class FakeEventSource {
-  static CLOSED = 2;
-  static instances: FakeEventSource[] = [];
-  readonly listeners = new Map<string, Array<(event: unknown) => void>>();
-  readonly url: string;
-  readonly withCredentials: boolean;
-  readyState = 1;
-  onopen: (() => void) | null = null;
-  onerror: (() => void) | null = null;
-  closed = false;
+  //The closed state retained by this class instance
+  public static CLOSED = 2;
+  //The instances state retained by this class instance
+  public static instances: FakeEventSource[] = [];
+  //The listeners state retained by this class instance
+  public readonly listeners = new Map<string, Array<(event: unknown) => void>>();
+  //The url state retained by this class instance
+  public readonly url: string;
+  //The with credentials state retained by this class instance
+  public readonly withCredentials: boolean;
+  //The ready state state retained by this class instance
+  public readyState = 1;
+  //The onopen state retained by this class instance
+  public onopen: (() => void) | null = null;
+  //The onerror state retained by this class instance
+  public onerror: (() => void) | null = null;
+  //The closed state retained by this class instance
+  public closed = false;
 
-  constructor(url: string | URL, options?: EventSourceInit) {
+  /**
+   * Create a FakeEventSource instance.
+   */
+  public constructor(url: string | URL, options?: EventSourceInit) {
     this.url = String(url);
     this.withCredentials = Boolean(options?.withCredentials);
     FakeEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+  /**
+   * Handle the add event listener operation.
+   */
+  public addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
     const callback = typeof listener === 'function'
       ? listener as (event: unknown) => void
       : (event: unknown) => listener.handleEvent(event as Event);
     this.listeners.set(type, [...(this.listeners.get(type) || []), callback]);
   }
 
-  dispatch(type: string, data: string, lastEventId = '') {
+  /**
+   * Dispatch the current value.
+   */
+  public dispatch(type: string, data: string, lastEventId = '') {
     for (const listener of this.listeners.get(type) || []) {
       listener({ data, lastEventId });
     }
   }
 
-  close() {
+  /**
+   * Close the current value.
+   */
+  public close() {
     this.closed = true;
     this.readyState = FakeEventSource.CLOSED;
   }

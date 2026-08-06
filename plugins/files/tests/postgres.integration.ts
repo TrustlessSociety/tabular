@@ -1,7 +1,15 @@
-import assert from 'node:assert/strict';
+//node
 import { randomBytes } from 'node:crypto';
+import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//modules
 import pg from 'pg';
+
+//client
+import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
+import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
+import type { FileDdlAction } from '../helpers/contracts.js';
 import { createApplication, startWeb } from '../../../bootstrap/application.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { runMigrations } from '../../database/helpers/migrator.js';
@@ -9,14 +17,14 @@ import { ManagedPostgresPool } from '../../database/helpers/pool.js';
 import { withPostgreSqlTransaction } from '../../database/helpers/transactions.js';
 import { loadMigrations } from '../../database/migrations/index.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
-import type { StableCatalogSnapshot } from '../../catalog/helpers/contracts.js';
 import { TestIdentityProvider } from '../../identity/tests/provider-double.js';
-import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
-import type { FileDdlAction } from '../helpers/contracts.js';
 
 const { Pool } = pg;
 const connectionString = process.env.TABULAR_TEST_POSTGRES_URL;
 
+/**
+ * Assert the disposable target.
+ */
 function assertDisposableTarget(value: string | undefined): asserts value is string {
   assert.equal(
     process.env.TABULAR_TEST_POSTGRES_DISPOSABLE,
@@ -33,6 +41,9 @@ function assertDisposableTarget(value: string | undefined): asserts value is str
   assert.equal(target.hash, '');
 }
 
+/**
+ * Return the role URL result.
+ */
 function roleUrl(value: string, role: string, password: string) {
   const url = new URL(value);
   url.username = role;
@@ -40,6 +51,9 @@ function roleUrl(value: string, role: string, password: string) {
   return url.toString();
 }
 
+/**
+ * Return the migration transaction result.
+ */
 function migrationTransaction(pool: ManagedPostgresPool) {
   return <Result>(callback: Parameters<typeof withPostgreSqlTransaction<Result>>[2]) =>
     withPostgreSqlTransaction(pool, {
@@ -1261,6 +1275,9 @@ test('PostgreSQL 18 owner-confirmed file DDL, native relations, hidden fields, a
   }
 });
 
+/**
+ * Apply the current value.
+ */
 async function apply(
   web: Awaited<ReturnType<typeof startWeb>>,
   migrator: Awaited<ReturnType<typeof createApplication>>,
@@ -1272,6 +1289,9 @@ async function apply(
   return migrator.files.applyConfirmed(planned.requestId);
 }
 
+/**
+ * Return the stable catalog result.
+ */
 async function stableCatalog(
   application: Awaited<ReturnType<typeof startWeb>>,
   connectionId: string
@@ -1281,12 +1301,18 @@ async function stableCatalog(
   );
 }
 
+/**
+ * Return the stable schema result.
+ */
 function stableSchema(stable: StableCatalogSnapshot, schema: string) {
   const value = [...stable.schemas.values()].find((item) => item.name === schema);
   assert.ok(value, `Missing stable schema ${schema}`);
   return value.stableId;
 }
 
+/**
+ * Return the stable file result.
+ */
 function stableFile(stable: StableCatalogSnapshot, schema: string, relation: string) {
   const schemaValue = [...stable.schemas.values()].find((item) => item.name === schema);
   const value = [...stable.objects.values()].find((item) =>
@@ -1296,6 +1322,9 @@ function stableFile(stable: StableCatalogSnapshot, schema: string, relation: str
   return value.stableId;
 }
 
+/**
+ * Return the stable column result.
+ */
 function stableColumn(stable: StableCatalogSnapshot, fileId: string, column: string) {
   const value = [...stable.columns.values()].find((item) =>
     item.objectId === fileId && item.name === column
@@ -1304,10 +1333,16 @@ function stableColumn(stable: StableCatalogSnapshot, fileId: string, column: str
   return value.stableId;
 }
 
+/**
+ * Return the command id result.
+ */
 function commandId() {
   return `cmd_${randomBytes(18).toString('base64url')}`;
 }
 
+/**
+ * Return the environment result.
+ */
 function environment(webUrl: string, migratorUrl: string, kind: 'web' | 'migrator') {
   return {
     NODE_ENV: 'test',
@@ -1322,6 +1357,9 @@ function environment(webUrl: string, migratorUrl: string, kind: 'web' | 'migrato
   };
 }
 
+/**
+ * Reset the fixture.
+ */
 async function resetFixture(admin: InstanceType<typeof Pool>) {
   await admin.query('DROP SCHEMA IF EXISTS tabular CASCADE');
   await admin.query('DROP SCHEMA IF EXISTS workspace CASCADE');
@@ -1338,6 +1376,9 @@ async function resetFixture(admin: InstanceType<typeof Pool>) {
   }
 }
 
+/**
+ * Return the as error result.
+ */
 function asError(error: unknown) {
   return error instanceof Error ? error : new Error(String(error));
 }

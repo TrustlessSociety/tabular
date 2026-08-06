@@ -1,5 +1,8 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
 import {
   savedViewSlug,
   validateDefinition,
@@ -11,6 +14,9 @@ const columnId = `col_${'c'.repeat(32)}`;
 const secondColumnId = `col_${'d'.repeat(32)}`;
 const rowId = `row_${'r'.repeat(16)}`;
 
+/**
+ * Return the definition result.
+ */
 function definition() {
   return {
     schemaVersion: 1,

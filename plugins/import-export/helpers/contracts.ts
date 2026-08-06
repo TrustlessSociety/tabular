@@ -1,18 +1,22 @@
+//node
 import type { Readable } from 'node:stream';
 
+//The import parser version value exported for module callers
 export const IMPORT_PARSER_VERSION = 'tabular-values-v1' as const;
 
+//The import parser limits contract exported for module callers
 export type ImportParserLimits = {
-  sourceBytes: number;
-  sheets: number;
-  rows: number;
-  columns: number;
-  cells: number;
-  cellCharacters: number;
-  issues: number;
-  delimiterProbeCharacters: number;
+  sourceBytes: number,
+  sheets: number,
+  rows: number,
+  columns: number,
+  cells: number,
+  cellCharacters: number,
+  issues: number,
+  delimiterProbeCharacters: number,
 };
 
+//The import hard limits value exported for module callers
 export const IMPORT_HARD_LIMITS: Readonly<ImportParserLimits> = Object.freeze({
   sourceBytes: 32 * 1024 * 1024,
   sheets: 32,
@@ -24,47 +28,57 @@ export const IMPORT_HARD_LIMITS: Readonly<ImportParserLimits> = Object.freeze({
   delimiterProbeCharacters: 1_000_000
 });
 
+//The import byte input contract exported for module callers
 export type ImportByteInput =
   | Buffer
   | Uint8Array
   | Readable
   | AsyncIterable<Buffer | Uint8Array | string>;
 
+//The xlsx byte input contract exported for module callers
 export type XlsxByteInput = ImportByteInput | string;
 
+//The csv encoding contract exported for module callers
 export type CsvEncoding = 'utf-8' | 'utf-16le';
+//The csv delimiter contract exported for module callers
 export type CsvDelimiter = ',' | ';' | '\t' | '|';
 
+//The csv parser options contract exported for module callers
 export type CsvParserOptions = {
-  delimiter?: CsvDelimiter | 'auto';
-  limits?: Partial<ImportParserLimits>;
+  delimiter?: CsvDelimiter | 'auto',
+  limits?: Partial<ImportParserLimits>,
 };
 
+//The xlsx parser options contract exported for module callers
 export type XlsxParserOptions = {
-  sheetName?: string;
-  limits?: Partial<ImportParserLimits>;
+  sheetName?: string,
+  limits?: Partial<ImportParserLimits>,
 };
 
+//The parsed import cell contract exported for module callers
 export type ParsedImportCell =
-  | { type: 'empty'; value: null; sourceToken: '' }
-  | { type: 'text'; value: string; sourceToken: string }
-  | { type: 'number'; value: string; sourceToken: string }
-  | { type: 'boolean'; value: boolean; sourceToken: 'true' | 'false' }
-  | { type: 'date'; value: string; sourceToken: string };
+  | { type: 'empty', value: null, sourceToken: '', }
+  | { type: 'text', value: string, sourceToken: string, }
+  | { type: 'number', value: string, sourceToken: string, }
+  | { type: 'boolean', value: boolean, sourceToken: 'true' | 'false', }
+  | { type: 'date', value: string, sourceToken: string, };
 
+//The parsed import row contract exported for module callers
 export type ParsedImportRow = {
-  rowNumber: number;
-  cells: ParsedImportCell[];
+  rowNumber: number,
+  cells: ParsedImportCell[],
 };
 
+//The parsed import sheet contract exported for module callers
 export type ParsedImportSheet = {
-  index: number;
-  name: string;
-  rows: ParsedImportRow[];
-  rowCount: number;
-  columnCount: number;
+  index: number,
+  name: string,
+  rows: ParsedImportRow[],
+  rowCount: number,
+  columnCount: number,
 };
 
+//The import parser issue code contract exported for module callers
 export type ImportParserIssueCode =
   | 'csv_empty_source'
   | 'csv_unclosed_quote'
@@ -76,44 +90,48 @@ export type ImportParserIssueCode =
   | 'xlsx_unsupported_cell'
   | 'xlsx_sheet_not_found';
 
+//The import parser issue contract exported for module callers
 export type ImportParserIssue = {
-  code: ImportParserIssueCode;
-  message: string;
-  rowNumber?: number;
-  columnNumber?: number;
-  sheetName?: string;
+  code: ImportParserIssueCode,
+  message: string,
+  rowNumber?: number,
+  columnNumber?: number,
+  sheetName?: string,
 };
 
+//The import parser notice contract exported for module callers
 export type ImportParserNotice = {
-  code: 'xlsx_formula_cached_value' | 'xlsx_hyperlink_flattened' | 'xlsx_rich_text_flattened';
-  message: string;
-  rowNumber: number;
-  columnNumber: number;
-  sheetName: string;
+  code: 'xlsx_formula_cached_value' | 'xlsx_hyperlink_flattened' | 'xlsx_rich_text_flattened',
+  message: string,
+  rowNumber: number,
+  columnNumber: number,
+  sheetName: string,
 };
 
+//The parsed import result contract exported for module callers
 export type ParsedImportResult = {
-  source: 'csv' | 'xlsx';
-  parserVersion: typeof IMPORT_PARSER_VERSION;
-  sourceByteLength: number;
-  sourceFingerprint: string;
-  importFingerprint: string;
-  status: 'ready' | 'invalid';
-  sheets: ParsedImportSheet[];
-  issues: ImportParserIssue[];
-  notices: ImportParserNotice[];
+  source: 'csv' | 'xlsx',
+  parserVersion: typeof IMPORT_PARSER_VERSION,
+  sourceByteLength: number,
+  sourceFingerprint: string,
+  importFingerprint: string,
+  status: 'ready' | 'invalid',
+  sheets: ParsedImportSheet[],
+  issues: ImportParserIssue[],
+  notices: ImportParserNotice[],
   totals: {
-    sheets: number;
-    rows: number;
-    columns: number;
-    cells: number;
-  };
+    sheets: number,
+    rows: number,
+    columns: number,
+    cells: number,
+  },
   csv?: {
-    encoding: CsvEncoding;
-    delimiter: CsvDelimiter;
-  };
+    encoding: CsvEncoding,
+    delimiter: CsvDelimiter,
+  },
 };
 
+//The inferred storage type contract exported for module callers
 export type InferredStorageType =
   | 'text'
   | 'bigint'
@@ -124,17 +142,24 @@ export type InferredStorageType =
   | 'timestamptz'
   | 'jsonb';
 
+//The column inference contract exported for module callers
 export type ColumnInference = {
-  columnNumber: number;
-  suggestedType: InferredStorageType;
-  nonEmptyCount: number;
-  confidence: 'certain' | 'mixed' | 'empty';
-  reason: string;
+  columnNumber: number,
+  suggestedType: InferredStorageType,
+  nonEmptyCount: number,
+  confidence: 'certain' | 'mixed' | 'empty',
+  reason: string,
 };
 
+/**
+ * Represent an owned import parser failure.
+ */
 export class ImportParserError extends Error {
-  constructor(
-    readonly code:
+  /**
+   * Create a ImportParserError instance.
+   */
+  public constructor(
+    public readonly code:
       | 'invalid_parser_options'
       | 'source_too_large'
       | 'sheet_limit_exceeded'

@@ -1,7 +1,10 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createApplication } from '../../../bootstrap/application.js';
+
+//client
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
+import { createApplication } from '../../../bootstrap/application.js';
 import { loadGridResource } from '../events/actions.js';
 import { createGridPluginService } from '../helpers/service.js';
 import { GRID_ROUTES, resolveGridReadQuery } from '../pages/routes.js';
@@ -302,6 +305,9 @@ test('grid query resolution rejects hidden transient and stale saved-view column
   );
 });
 
+/**
+ * Return the column description result.
+ */
 function columnDescription(id: string) {
   return {
     id,

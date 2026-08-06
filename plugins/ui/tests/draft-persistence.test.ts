@@ -1,5 +1,9 @@
+//node
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+//client
+import type { GridEditDraft } from '../../grid/helpers/editing.js';
 import {
   DraftPersistenceRegistry,
   DraftPersistenceSequencer
@@ -10,10 +14,9 @@ import {
   draftForSchemaRevalidation,
   projectDraftCellIssues
 } from '../helpers/draft-errors.js';
-import type { GridEditDraft } from '../../grid/helpers/editing.js';
 
 test('rapid persistent corrections serialize behind one draft create and reuse its handle', async () => {
-  const sequencer = new DraftPersistenceSequencer<{ id: string; version: number }>();
+  const sequencer = new DraftPersistenceSequencer<{ id: string, version: number, }>();
   let releaseCreate!: () => void;
   const createGate = new Promise<void>((resolve) => { releaseCreate = resolve; });
   const calls: string[] = [];
@@ -46,7 +49,7 @@ test('rapid persistent corrections serialize behind one draft create and reuse i
 });
 
 test('adjacent sparse rows retain independent persistence handles', async () => {
-  const registry = new DraftPersistenceRegistry<string, { id: string; version: number }>();
+  const registry = new DraftPersistenceRegistry<string, { id: string, version: number, }>();
   const calls: string[] = [];
 
   await registry.enqueue('row-19', async (handle) => {
@@ -228,7 +231,7 @@ test('row-version retry permits unchanged targets and detects real concurrent ed
     }]
   };
 
-  // A version-only mismatch is safe to retry because the target cell still
+  //A version-only mismatch is safe to retry because the target cell still
   // holds the exact value the editor started from.
   assert.deepEqual(conflictingDraftTargets(draft, [{
     id: 'row-2',
@@ -236,7 +239,7 @@ test('row-version retry permits unchanged targets and detects real concurrent ed
     price: '60000'
   }]), []);
 
-  // Another action applying the same intended value is also safe and does not
+  //Another action applying the same intended value is also safe and does not
   // need to be reported as destructive contention.
   assert.deepEqual(conflictingDraftTargets(draft, [{
     id: 'row-2',
@@ -244,7 +247,7 @@ test('row-version retry permits unchanged targets and detects real concurrent ed
     price: '60000'
   }]), []);
 
-  // A genuinely different target value remains an explicit conflict so the
+  //A genuinely different target value remains an explicit conflict so the
   // retry can never overwrite it silently.
   assert.deepEqual(conflictingDraftTargets(draft, [{
     id: 'row-2',

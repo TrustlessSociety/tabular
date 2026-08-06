@@ -1,13 +1,20 @@
-import type { HttpServer } from '@stackpress/ingest/types';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { SavedViewsPluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 import { validateSavedViewAction } from '../helpers/validation.js';
 
+//The saved view routes value exported for module callers
 export const SAVED_VIEW_ROUTES = ['/events/saved-views'] as const;
 
+/**
+ * Register the saved view routes.
+ */
 export function registerSavedViewRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   identity: IdentityPluginService,
   savedViews: SavedViewsPluginService
 ) {
@@ -78,12 +85,18 @@ export function registerSavedViewRoutes(
   });
 }
 
+/**
+ * Return the exact query result.
+ */
 function exactQuery(parameters: URLSearchParams, allowed: string[]) {
   if ([...parameters.keys()].some((key) => !allowed.includes(key))) {
     throw new ApplicationError('invalid_query', 400, 'The saved-view query is invalid');
   }
 }
 
+/**
+ * Return the bounded result.
+ */
 function bounded(value: string, label: string, maximum: number) {
   if (!value || value.length > maximum || /[\u0000-\u001f\u007f]/.test(value)) {
     throw new ApplicationError('invalid_query', 400, `The ${label} is invalid`);
@@ -91,6 +104,9 @@ function bounded(value: string, label: string, maximum: number) {
   return value;
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (typeof contentType !== 'string'
     || !/^application\/json(?:;\s*charset=utf-8)?$/i.test(contentType)) {
@@ -98,6 +114,9 @@ function requireJson(contentType: string | string[] | undefined) {
   }
 }
 
+/**
+ * Report the invalid session condition.
+ */
 function invalidSession(): never {
   throw new ApplicationError('invalid_session', 401, 'The browser session is invalid');
 }

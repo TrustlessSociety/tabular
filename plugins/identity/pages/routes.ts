@@ -1,12 +1,16 @@
+//modules
 import type { Response } from '@stackpress/ingest/http';
-import type { HttpServer } from '@stackpress/ingest/types';
-import { ApplicationError } from '../../../bootstrap/errors.js';
+
+//client
+import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../helpers/service.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
 import {
   renderPostgreSqlLogin,
   renderSignedInAccount
 } from '../views/authentication.js';
 
+//The identity routes value exported for module callers
 export const IDENTITY_ROUTES = [
   '/auth/login',
   '/auth/account',
@@ -15,8 +19,13 @@ export const IDENTITY_ROUTES = [
   '/auth/logout'
 ] as const;
 
+/**
+ * Register the identity routes.
+ */
 export function registerIdentityRoutes(
-  server: HttpServer<any, any>,
+  //Stackpress resolves installed services dynamically, so this route boundary
+  // cannot name a complete static service map yet
+  server: ApplicationServer,
   identity: IdentityPluginService
 ) {
   server.get('/auth/login', async ({ req, res }) => {
@@ -126,6 +135,9 @@ export function registerIdentityRoutes(
   });
 }
 
+/**
+ * Return the login credentials result.
+ */
 function loginCredentials(username: unknown, password: unknown) {
   if (
     typeof username !== 'string'
@@ -143,6 +155,9 @@ function loginCredentials(username: unknown, password: unknown) {
   return { roleName: username, password };
 }
 
+/**
+ * Render the identity html.
+ */
 function renderIdentityHtml(
   response: Response,
   html: string,
@@ -158,17 +173,26 @@ function renderIdentityHtml(
   response.html(html, status);
 }
 
+/**
+ * Return the require form result.
+ */
 function requireForm(contentType: string | string[] | undefined) {
   if (!isFormContentType(contentType)) {
     throw new ApplicationError('authentication_failed', 401, 'Sign-in failed');
   }
 }
 
+/**
+ * Report whether the form content type condition holds.
+ */
 function isFormContentType(contentType: string | string[] | undefined) {
   return typeof contentType === 'string'
     && /^application\/x-www-form-urlencoded(?:;\s*charset=utf-8)?$/i.test(contentType);
 }
 
+/**
+ * Return the require JSON result.
+ */
 function requireJson(contentType: string | string[] | undefined) {
   if (
     typeof contentType !== 'string'

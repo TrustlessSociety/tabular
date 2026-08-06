@@ -1,8 +1,14 @@
-import { Icon, type IconName } from '../../ui/components/icon.js';
+//modules
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
+//client
+import type { IconName } from '../../ui/components/icon.js';
+import { Icon } from '../../ui/components/icon.js';
+
+//The activity filter contract exported for module callers
 export type ActivityFilter = 'all' | 'active' | 'attention' | 'completed';
 
+//The activity state contract exported for module callers
 export type ActivityState =
   | 'queued'
   | 'running'
@@ -12,27 +18,31 @@ export type ActivityState =
   | 'cancelled'
   | 'dead-letter';
 
+//The activity progress contract exported for module callers
 export type ActivityProgress = {
-  completed: number;
-  total: number;
-  label: string;
+  completed: number,
+  total: number,
+  label: string,
 };
 
+//The activity result contract exported for module callers
 export type ActivityResult = {
-  label: string;
-  href?: string;
-  summary?: string;
+  label: string,
+  href?: string,
+  summary?: string,
 };
 
+//The activity failure contract exported for module callers
 export type ActivityFailure = {
-  title: string;
-  detail: string;
-  code?: string;
+  title: string,
+  detail: string,
+  code?: string,
 };
 
+//The activity timeline entry contract exported for module callers
 export type ActivityTimelineEntry = {
-  label: string;
-  at: string;
+  label: string,
+  at: string,
 };
 
 /**
@@ -40,61 +50,66 @@ export type ActivityTimelineEntry = {
  * shape so authorization-bearing identities never enter component state.
  */
 export type ActivityItem = {
-  id: string;
-  kind: string;
-  title: string;
-  target: string;
-  state: ActivityState;
-  unread: boolean;
-  progress?: ActivityProgress;
-  attempt: number;
-  maxAttempts: number;
-  createdAt: string;
-  updatedAt: string;
-  startedAt?: string;
-  finishedAt?: string;
-  acknowledgedAt?: string;
-  result?: ActivityResult;
-  failure?: ActivityFailure;
-  timeline: ActivityTimelineEntry[];
+  id: string,
+  kind: string,
+  title: string,
+  target: string,
+  state: ActivityState,
+  unread: boolean,
+  progress?: ActivityProgress,
+  attempt: number,
+  maxAttempts: number,
+  createdAt: string,
+  updatedAt: string,
+  startedAt?: string,
+  finishedAt?: string,
+  acknowledgedAt?: string,
+  result?: ActivityResult,
+  failure?: ActivityFailure,
+  timeline: ActivityTimelineEntry[],
   actions: {
-    canRetry: boolean;
-    canCancel: boolean;
-    canAcknowledge: boolean;
-  };
+    canRetry: boolean,
+    canCancel: boolean,
+    canAcknowledge: boolean,
+  },
 };
 
+//The activity summary contract exported for module callers
 export type ActivitySummary = {
-  running: number;
-  queued: number;
-  attention: number;
-  completed: number;
+  running: number,
+  queued: number,
+  attention: number,
+  completed: number,
 };
 
+//The activity center props contract exported for module callers
 export type ActivityCenterProps = {
-  items: ActivityItem[];
-  summary: ActivitySummary;
-  filter: ActivityFilter;
-  selected?: ActivityItem;
-  loading?: boolean;
-  pendingAction?: 'retry' | 'cancel' | 'acknowledge';
-  error?: string;
-  onFilter: (filter: ActivityFilter) => void;
-  onSelect: (item: ActivityItem) => void;
-  onClose: () => void;
-  onRetry: (item: ActivityItem) => void;
-  onCancel: (item: ActivityItem) => void;
-  onAcknowledge: (item: ActivityItem) => void;
-  onRecover: () => void;
+  items: ActivityItem[],
+  summary: ActivitySummary,
+  filter: ActivityFilter,
+  selected?: ActivityItem,
+  loading?: boolean,
+  pendingAction?: 'retry' | 'cancel' | 'acknowledge',
+  error?: string,
+  onFilter: (filter: ActivityFilter) => void,
+  onSelect: (item: ActivityItem) => void,
+  onClose: () => void,
+  onRetry: (item: ActivityItem) => void,
+  onCancel: (item: ActivityItem) => void,
+  onAcknowledge: (item: ActivityItem) => void,
+  onRecover: () => void,
 };
 
-const FILTERS: Array<{ value: ActivityFilter; label: string }> = [
+const FILTERS: Array<{ value: ActivityFilter, label: string, }> = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
   { value: 'attention', label: 'Needs attention' },
   { value: 'completed', label: 'Completed' }
 ];
 
+/**
+ * Render the activity center component.
+ */
 export function ActivityCenter(props: ActivityCenterProps) {
   const visible = props.items.filter((item) => activityGroup(item.state) === props.filter || props.filter === 'all');
   const counts = {
@@ -205,11 +220,14 @@ export function ActivityCenter(props: ActivityCenterProps) {
   );
 }
 
+/**
+ * Render the metric card component.
+ */
 function MetricCard({ label, value, detail, state }: {
-  label: string;
-  value: number;
-  detail: string;
-  state?: 'running' | 'attention';
+  label: string,
+  value: number,
+  detail: string,
+  state?: 'running' | 'attention',
 }) {
   return (
     <article className="activity-metric" data-state={state}>
@@ -220,10 +238,13 @@ function MetricCard({ label, value, detail, state }: {
   );
 }
 
+/**
+ * Render the activity row component.
+ */
 function ActivityRow({ item, selected, onSelect }: {
-  item: ActivityItem;
-  selected: boolean;
-  onSelect: (item: ActivityItem) => void;
+  item: ActivityItem,
+  selected: boolean,
+  onSelect: (item: ActivityItem) => void,
 }) {
   const progress = boundedProgress(item.progress);
   return (
@@ -263,13 +284,16 @@ function ActivityRow({ item, selected, onSelect }: {
   );
 }
 
+/**
+ * Render the activity detail component.
+ */
 function ActivityDetail(props: {
-  item: ActivityItem;
-  pendingAction?: ActivityCenterProps['pendingAction'];
-  onClose: () => void;
-  onRetry: (item: ActivityItem) => void;
-  onCancel: (item: ActivityItem) => void;
-  onAcknowledge: (item: ActivityItem) => void;
+  item: ActivityItem,
+  pendingAction?: ActivityCenterProps['pendingAction'],
+  onClose: () => void,
+  onRetry: (item: ActivityItem) => void,
+  onCancel: (item: ActivityItem) => void,
+  onAcknowledge: (item: ActivityItem) => void,
 }) {
   const item = props.item;
   const progress = boundedProgress(item.progress);
@@ -379,6 +403,9 @@ function ActivityDetail(props: {
   );
 }
 
+/**
+ * Return the summarize activity result.
+ */
 export function summarizeActivity(items: ActivityItem[]): ActivitySummary {
   return items.reduce<ActivitySummary>((summary, item) => {
     const group = activityGroup(item.state);
@@ -390,17 +417,26 @@ export function summarizeActivity(items: ActivityItem[]): ActivitySummary {
   }, { running: 0, queued: 0, attention: 0, completed: 0 });
 }
 
+/**
+ * Return the activity group result.
+ */
 export function activityGroup(state: ActivityState): Exclude<ActivityFilter, 'all'> {
   if (state === 'queued' || state === 'running' || state === 'retrying') return 'active';
   if (state === 'failed' || state === 'dead-letter') return 'attention';
   return 'completed';
 }
 
+/**
+ * Return the bounded progress result.
+ */
 function boundedProgress(progress?: ActivityProgress) {
   if (!progress || !Number.isFinite(progress.completed) || !Number.isFinite(progress.total) || progress.total <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((progress.completed / progress.total) * 100)));
 }
 
+/**
+ * Return the progress label result.
+ */
 function progressLabel(item: ActivityItem) {
   if (item.state === 'queued') return 'Waiting for a worker';
   if (item.state === 'retrying') return `Retry ${item.attempt} of ${item.maxAttempts}`;
@@ -410,7 +446,10 @@ function progressLabel(item: ActivityItem) {
   return item.failure?.title || 'No progress reported';
 }
 
-function StatusBadge({ state, acknowledged }: { state: ActivityState; acknowledged: boolean }) {
+/**
+ * Render the status badge component.
+ */
+function StatusBadge({ state, acknowledged }: { state: ActivityState, acknowledged: boolean, }) {
   return (
     <span className="activity-status" data-state={state}>
       {(state === 'running' || state === 'retrying') && <i aria-hidden="true" />}
@@ -419,16 +458,25 @@ function StatusBadge({ state, acknowledged }: { state: ActivityState; acknowledg
   );
 }
 
+/**
+ * Return the status label result.
+ */
 function statusLabel(state: ActivityState) {
   return state === 'dead-letter'
     ? 'Dead letter'
     : state.charAt(0).toUpperCase() + state.slice(1);
 }
 
+/**
+ * Return the human kind result.
+ */
 function humanKind(kind: string) {
   return kind.split(/[._-]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') || 'Operation';
 }
 
+/**
+ * Return the icon for kind result.
+ */
 function iconForKind(kind: string): IconName {
   const normalized = kind.toLowerCase();
   if (normalized.includes('import')) return 'import';
@@ -437,11 +485,17 @@ function iconForKind(kind: string): IconName {
   return 'operation';
 }
 
+/**
+ * Format the timestamp.
+ */
 function formatTimestamp(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Unavailable' : date.toLocaleString();
 }
 
+/**
+ * Format the relative time.
+ */
 function formatRelativeTime(value: string) {
   const time = new Date(value).getTime();
   if (!Number.isFinite(time)) return 'Unavailable';
@@ -455,6 +509,9 @@ function formatRelativeTime(value: string) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
+/**
+ * Return the navigate filter result.
+ */
 function navigateFilter(
   event: ReactKeyboardEvent<HTMLButtonElement>,
   current: ActivityFilter,

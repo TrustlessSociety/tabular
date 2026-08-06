@@ -1,5 +1,7 @@
+//modules
 import type { ReactNode, SVGProps } from 'react';
 
+//The icon name contract exported for module callers
 export type IconName =
   | 'account'
   | 'activity'
@@ -110,8 +112,10 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   wrap: <><path d="M4 6h16M4 12h13a3 3 0 0 1 0 6h-3M17 15l-3 3 3 3M4 18h6" /></>
 };
 
-/** Renders one decorative, dependency-free Lucide-informed SVG mark. */
-export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {
+/**
+ * Renders one decorative, dependency-free Lucide-informed SVG mark.
+ */
+export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName, }) {
   return (
     <svg
       width="16"
