@@ -72,7 +72,15 @@ test('source runtime serves health, readiness, Reactus, and releases the listene
     //the normal public login route remains visibly reachable
     const login = await fetch(`${runtime.origin}/auth/login`);
     assert.equal(login.status, 200);
-    assert.match(await login.text(), /Sign in to Tabular/);
+    assert.match(login.headers.get('content-security-policy') || '', /style-src 'self'/);
+    const loginHtml = await login.text();
+    assert.match(loginHtml, /Sign in to Tabular/);
+    const stylesheetHref = loginHtml.match(/href="([^\"]+\.css\?v=[a-f0-9]{16})"/)?.[1];
+    assert.ok(stylesheetHref);
+    const stylesheet = await fetch(`${runtime.origin}${stylesheetHref}`);
+    assert.equal(stylesheet.status, 200);
+    assert.match(stylesheet.headers.get('content-type') || '', /text\/css/);
+    assert.match(await stylesheet.text(), /\.auth-card/);
 
     //owned failures preserve their public contract
     const invalid = await fetch(`${runtime.origin}/__test/invalid`);

@@ -2,7 +2,10 @@
 import type { Response } from '@stackpress/ingest/http';
 
 //client
-import type { ApplicationServer } from '../../../bootstrap/application.js';
+import type {
+  ApplicationRuntimeService,
+  ApplicationServer
+} from '../../../bootstrap/application.js';
 import type { IdentityPluginService } from '../helpers/service.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import {
@@ -26,14 +29,17 @@ export function registerIdentityRoutes(
   //Stackpress resolves installed services dynamically, so this route boundary
   // cannot name a complete static service map yet
   server: ApplicationServer,
-  identity: IdentityPluginService
+  identity: IdentityPluginService,
+  runtime: ApplicationRuntimeService
 ) {
+  const stylesheetHref = authenticationStylesheetHref(runtime);
+
   server.get('/auth/login', async ({ req, res }) => {
     if (await identity.authenticateBrowserSession(req.session(identity.cookieName()))) {
       res.redirect('/', 303);
       return;
     }
-    renderIdentityHtml(res, renderPostgreSqlLogin());
+    renderIdentityHtml(res, renderPostgreSqlLogin(stylesheetHref));
   });
 
   server.post('/auth/login', async ({ req, res }) => {
@@ -56,7 +62,7 @@ export function registerIdentityRoutes(
       ) {
         throw error;
       }
-      renderIdentityHtml(res, renderPostgreSqlLogin(true), 401);
+      renderIdentityHtml(res, renderPostgreSqlLogin(stylesheetHref, true), 401);
     }
   });
 
@@ -71,6 +77,7 @@ export function registerIdentityRoutes(
     renderIdentityHtml(
       res,
       renderSignedInAccount(
+        stylesheetHref,
         resumed.principal.displayName || 'PostgreSQL user',
         resumed.csrfToken
       )
@@ -136,6 +143,20 @@ export function registerIdentityRoutes(
 }
 
 /**
+ * Resolves the verified Reactus stylesheet for the authentication documents.
+ */
+function authenticationStylesheetHref(runtime: ApplicationRuntimeService) {
+  const stylesheet = runtime.artifacts.artifacts.find((artifact) =>
+    artifact.type === 'asset'
+    && artifact.entry === runtime.config.reactus.entry
+    && artifact.publicRoute?.endsWith('.css'));
+  if (!stylesheet?.publicRoute) {
+    throw new Error('The authentication stylesheet is missing from the Reactus manifest');
+  }
+  return `${stylesheet.publicRoute}?v=${stylesheet.sha256.slice(0, 16)}`;
+}
+
+/**
  * Return the login credentials result.
  */
 function loginCredentials(username: unknown, password: unknown) {
@@ -168,7 +189,7 @@ function renderIdentityHtml(
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+    "default-src 'none'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
   );
   response.html(html, status);
 }

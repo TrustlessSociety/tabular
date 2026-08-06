@@ -23,7 +23,7 @@ export default function identityPlugin(
     throw new Error(`${DATABASE_SERVICE} must be registered before ${IDENTITY_SERVICE}`);
   }
   const service = new IdentityPluginService(database, runtime.config);
-  if (runtime.processKind === 'web') registerIdentityRoutes(server, service);
+  if (runtime.processKind === 'web') registerIdentityRoutes(server, service, runtime);
   server.register(IDENTITY_SERVICE, service);
   runtime.pluginOrder.push(IDENTITY_SERVICE);
 }

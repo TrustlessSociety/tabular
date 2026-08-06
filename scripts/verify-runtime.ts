@@ -44,7 +44,9 @@ try {
   assert.equal(protectedPage.headers.get('location'), '/auth/login');
   const login = await fetch(`${runtime.origin}/auth/login`);
   assert.equal(login.status, 200);
-  assert.match(await login.text(), /Sign in to Tabular/);
+  assert.match(login.headers.get('content-security-policy') || '', /style-src 'self'/);
+  const loginHtml = await login.text();
+  assert.match(loginHtml, /Sign in to Tabular/);
   const clientArtifact = runtime.runtime.artifacts.artifacts.find((artifact) =>
     artifact.publicRoute?.startsWith('/client/'));
   const assetArtifact = runtime.runtime.artifacts.artifacts.find((artifact) =>
@@ -53,6 +55,7 @@ try {
   assert.ok(assetArtifact?.publicRoute, 'Manifest should expose a stylesheet artifact');
   const clientRoute = `${clientArtifact.publicRoute}?v=${clientArtifact.sha256.slice(0, 16)}`;
   const assetRoute = `${assetArtifact.publicRoute}?v=${assetArtifact.sha256.slice(0, 16)}`;
+  assert.match(loginHtml, new RegExp(`href="${assetRoute.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
   const client = await fetch(`${runtime.origin}${clientRoute}`);
   assert.equal(client.status, 200);
   assert.match(client.headers.get('content-type') || '', /javascript/);
@@ -60,7 +63,9 @@ try {
   const asset = await fetch(`${runtime.origin}${assetRoute}`);
   assert.equal(asset.status, 200);
   assert.match(asset.headers.get('content-type') || '', /text\/css/);
-  assert.ok((await asset.arrayBuffer()).byteLength > 0);
+  const assetBody = await asset.text();
+  assert.ok(assetBody.length > 0);
+  assert.match(assetBody, /\.auth-card/);
   assert.equal((await fetch(`${runtime.origin}/client/not-in-manifest.js`)).status, 404);
   const invalid = await fetch(`${runtime.origin}/__test/invalid`);
   assert.equal(invalid.status, 400);

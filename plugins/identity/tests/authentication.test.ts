@@ -84,14 +84,18 @@ test('unsafe PostgreSQL roles fail after closing the authentication connection',
 });
 
 test('identity documents expose stable accessible sign-in and logout controls', () => {
-  const login = renderPostgreSqlLogin(true);
+  const stylesheet = '/assets/workbench.css?v=0123456789abcdef';
+  const login = renderPostgreSqlLogin(stylesheet, true);
+  assert.match(login, /class="auth-page"/);
+  assert.match(login, /href="\/assets\/workbench\.css\?v=0123456789abcdef" rel="stylesheet"/);
   assert.match(login, /id="postgres-login-form"/);
   assert.match(login, /for="postgres-role">PostgreSQL role/);
   assert.match(login, /autocomplete="current-password"/);
   assert.match(login, /id="postgres-login-error" role="alert"/);
   assert.doesNotMatch(login, /value=".*password/);
 
-  const account = renderSignedInAccount('<reviewer>', 'c'.repeat(43));
+  const account = renderSignedInAccount(stylesheet, '<reviewer>', 'c'.repeat(43));
+  assert.match(account, /class="auth-card auth-card--account"/);
   assert.match(account, /id="signed-in-identity">&lt;reviewer&gt;/);
   assert.match(account, /id="logout-form" method="post" action="\/auth\/logout"/);
   assert.match(account, /name="csrfToken"/);

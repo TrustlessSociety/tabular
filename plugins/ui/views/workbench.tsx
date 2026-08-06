@@ -137,6 +137,7 @@ import './workbench.css';
 import '../../saved-views/views/saved-views.css';
 import '../../import-export/views/import-export.css';
 import '../../operations/views/activity.css';
+import '../../identity/views/authentication.css';
 
 //The workbench page props contract exported for module callers
 export type WorkbenchPageProps = TablePageProps;

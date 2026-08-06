@@ -1,5 +1,5 @@
 //stackpress
-import type { Server } from 'stackpress/server';
+import type Server from '@stackpress/ingest/Server';
 //util
 import connect from './connect.js';
 
