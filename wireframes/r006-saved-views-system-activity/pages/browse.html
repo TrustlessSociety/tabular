@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Inc. files</title>
+  <link rel="stylesheet" href="../lib/base/tokens.css">
+  <link rel="stylesheet" href="../lib/base/reset.css">
+  <link rel="stylesheet" href="../lib/base/base.css">
+  <link rel="stylesheet" href="../lib/icons.css">
+  <link rel="stylesheet" href="../lib/app.css?v=r005-round10">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-topbar app-topbar--explorer">
+      <a class="app-logo app-topbar__brand" href="./browse.html" aria-label="Acme Inc. files">
+        <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+        <span>Acme Inc.</span>
+      </a>
+      <label class="app-search explorer-topbar__search">
+        <span data-wf-icon="search"></span>
+        <input class="app-input" type="search" placeholder="Search files" aria-label="Search files" data-explorer-search>
+      </label>
+      <div class="app-topbar__end">
+        <button class="app-button app-button--ghost app-button--icon" type="button" aria-label="Account menu"><span data-wf-icon="user"></span></button>
+      </div>
+    </header>
+
+    <main class="app-main app-main--padded">
+      <section class="file-explorer" data-file-explorer data-explorer-view="list" aria-label="File explorer">
+        <div class="file-explorer__head">
+          <div>
+            <nav class="crumbs" aria-label="Breadcrumb">
+              <a href="./browse.html" data-explorer-root>Acme Inc.</a>
+              <span data-explorer-folder-crumb hidden>
+                <span data-wf-icon="chevron-right"></span>
+                <strong data-explorer-folder-crumb-text>Operations</strong>
+              </span>
+            </nav>
+          </div>
+          <div class="file-explorer__head-actions">
+            <a class="app-button" href="./table.html?new=1&amp;folder=operations&amp;table=untitled-file" data-explorer-new-file hidden><span data-wf-icon="add"></span> New file</a>
+            <a class="app-button app-button--secondary" href="./import.html?folder=operations" data-explorer-import hidden><span data-wf-icon="import"></span> Import</a>
+            <div class="explorer-view-toggle" role="group" aria-label="Explorer view">
+              <button type="button" aria-label="List view" title="List view" aria-pressed="true" data-explorer-view="list"><span data-wf-icon="rows"></span></button>
+              <button type="button" aria-label="Grid view" title="Grid view" aria-pressed="false" data-explorer-view="grid"><span data-wf-icon="grid"></span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="file-explorer__toolbar">
+          <h2 data-explorer-section-title>Folders</h2>
+          <span class="app-meta" data-explorer-count>2 folders</span>
+        </div>
+
+        <div class="explorer-collection" data-explorer-collection="root">
+          <a class="explorer-item" href="./browse.html?folder=operations" data-explorer-item data-search="operations folder spreadsheets customer orders inventory vendors stock movements purchase requests">
+            <span class="explorer-item__identity">
+              <span class="explorer-item__icon"><span data-wf-icon="folder"></span></span>
+              <span><strong>Operations</strong></span>
+            </span>
+            <span class="explorer-item__meta">5 files</span>
+            <span class="explorer-item__meta explorer-item__meta--updated">Edited 12 min ago</span>
+            <span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./browse.html?folder=finance" data-explorer-item data-search="finance folder spreadsheets invoices expenses budgets">
+            <span class="explorer-item__identity">
+              <span class="explorer-item__icon"><span data-wf-icon="folder"></span></span>
+              <span><strong>Finance</strong></span>
+            </span>
+            <span class="explorer-item__meta">3 files</span>
+            <span class="explorer-item__meta explorer-item__meta--updated">Edited 18 min ago</span>
+            <span data-wf-icon="chevron-right"></span>
+          </a>
+        </div>
+
+        <div class="explorer-collection" data-explorer-collection="operations" hidden>
+          <a class="explorer-item" href="./table.html?folder=operations&amp;table=customer-orders" data-explorer-item data-search="customer orders public customer_orders operations">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Customer orders</strong><small>public.customer_orders</small></span></span>
+            <span class="explorer-item__meta">7 x 248</span><span class="explorer-item__meta explorer-item__meta--updated">Edited 12 min ago</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=operations&amp;table=inventory" data-explorer-item data-search="inventory public inventory operations">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Inventory</strong><small>public.inventory</small></span></span>
+            <span class="explorer-item__meta">11 x 1,482</span><span class="explorer-item__meta explorer-item__meta--updated">Edited 1 hr ago</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=operations&amp;table=vendors" data-explorer-item data-search="vendors public vendors operations">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Vendors</strong><small>public.vendors</small></span></span>
+            <span class="explorer-item__meta">9 x 63</span><span class="explorer-item__meta explorer-item__meta--updated">Edited yesterday</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=operations&amp;table=stock-movements" data-explorer-item data-search="stock movements public stock_movements operations">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Stock movements</strong><small>public.stock_movements</small></span></span>
+            <span class="explorer-item__meta">8 x 4,209</span><span class="explorer-item__meta explorer-item__meta--updated">Edited 3 days ago</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=operations&amp;table=purchase-requests" data-explorer-item data-search="purchase requests public purchase_requests operations">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Purchase requests</strong><small>public.purchase_requests</small></span></span>
+            <span class="explorer-item__meta">12 x 176</span><span class="explorer-item__meta explorer-item__meta--updated">Edited Jul 20</span><span data-wf-icon="chevron-right"></span>
+          </a>
+        </div>
+
+        <div class="explorer-collection" data-explorer-collection="finance" hidden>
+          <a class="explorer-item" href="./table.html?folder=finance&amp;table=invoices" data-explorer-item data-search="invoices public invoices finance">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Invoices</strong><small>public.invoices</small></span></span>
+            <span class="explorer-item__meta">8 x 932</span><span class="explorer-item__meta explorer-item__meta--updated">Edited 18 min ago</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=finance&amp;table=expenses" data-explorer-item data-search="expenses public expenses finance">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Expenses</strong><small>public.expenses</small></span></span>
+            <span class="explorer-item__meta">7 x 1,284</span><span class="explorer-item__meta explorer-item__meta--updated">Edited 2 hrs ago</span><span data-wf-icon="chevron-right"></span>
+          </a>
+          <a class="explorer-item" href="./table.html?folder=finance&amp;table=budgets" data-explorer-item data-search="budgets public budgets finance">
+            <span class="explorer-item__identity"><span class="explorer-item__icon"><span data-wf-icon="table"></span></span><span><strong>Budgets</strong><small>public.budgets</small></span></span>
+            <span class="explorer-item__meta">10 x 24</span><span class="explorer-item__meta explorer-item__meta--updated">Edited yesterday</span><span data-wf-icon="chevron-right"></span>
+          </a>
+        </div>
+
+        <div class="empty-state" data-explorer-empty hidden>
+          <span data-wf-icon="search"></span>
+          <strong>No matching files</strong>
+          <p class="app-meta">Try a different folder or spreadsheet name.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../lib/icons.js?v=r005-round3"></script>
+  <script src="../lib/app.js?v=r005-round11"></script>
+</body>
+</html>

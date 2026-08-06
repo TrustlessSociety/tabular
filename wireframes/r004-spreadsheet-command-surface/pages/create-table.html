@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create a table · Tabular</title>
+  <link rel="stylesheet" href="../lib/base/tokens.css">
+  <link rel="stylesheet" href="../lib/base/reset.css">
+  <link rel="stylesheet" href="../lib/base/base.css">
+  <link rel="stylesheet" href="../lib/icons.css">
+  <link rel="stylesheet" href="../lib/app.css">
+</head>
+<body>
+  <header class="focused-topbar">
+    <a class="app-logo" href="../workflows.html">
+      <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+      <span>Tabular</span>
+    </a>
+    <span class="app-meta"><span data-department-name>Operations</span> department</span>
+    <a class="app-button app-button--ghost app-button--icon" href="./browse.html?department=operations" data-department-return aria-label="Close table builder">
+      <span data-wf-icon="close"></span>
+    </a>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-wrap">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="./browse.html?department=operations" data-department-return data-department-name>Operations</a>
+        <span data-wf-icon="chevron-right"></span>
+        <strong>New table</strong>
+      </nav>
+
+      <section class="builder-head">
+        <p class="app-eyebrow">Create table</p>
+        <h1>Create a table</h1>
+        <p class="wf-copy">Start with familiar fields. <span data-department-name>Operations</span> will manage the table, while Tabular creates the real PostgreSQL structure behind it.</p>
+      </section>
+
+      <form data-table-builder novalidate>
+        <div class="builder-layout">
+          <div>
+            <section class="builder-card">
+              <div class="builder-card__header">
+                <h2>Table identity</h2>
+                <span class="app-badge">Managed by <span data-department-name>Operations</span></span>
+              </div>
+              <div class="builder-card__body">
+                <div class="builder-form-grid">
+                  <label class="app-field">
+                    <span class="app-label">Table name</span>
+                    <input class="app-input" type="text" name="label" value="Customer orders" autocomplete="off" data-table-label>
+                    <span class="app-help">Shown to people in Tabular.</span>
+                  </label>
+                  <label class="app-field">
+                    <span class="app-label">PostgreSQL table</span>
+                    <input class="app-input app-code" type="text" name="table" value="customer_orders" autocomplete="off" data-table-name aria-describedby="table-name-help table-name-error">
+                    <span class="app-help" id="table-name-help">Created as <span class="app-code">public.customer_orders</span>.</span>
+                    <span class="app-error" id="table-name-error" data-table-name-error hidden>Enter a table name.</span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section class="builder-card">
+              <div class="builder-card__header">
+                <div>
+                  <h2>Columns</h2>
+                  <p class="app-meta">Choose how people enter values. Storage and display remain adjustable.</p>
+                </div>
+                <button class="app-button app-button--secondary app-button--compact" type="button" data-add-builder-column>
+                  <span data-wf-icon="add"></span> Add column
+                </button>
+              </div>
+              <div class="builder-card__body">
+                <div class="column-list" data-column-list>
+                  <div class="column-card" data-builder-column>
+                    <label class="app-field">
+                      <span class="app-label">Column name</span>
+                      <input class="app-input" type="text" value="Customer" data-column-name>
+                    </label>
+                    <label class="app-field">
+                      <span class="app-label">Field</span>
+                      <select class="app-select" data-field-type>
+                        <option value="text">Text</option>
+                        <option value="email">Email</option>
+                        <option value="relation" selected>Relation</option>
+                        <option value="price">Price</option>
+                        <option value="select">Select</option>
+                        <option value="switch">Switch</option>
+                        <option value="datetime">Date and time</option>
+                      </select>
+                    </label>
+                    <div class="column-card__inference" data-inference>foreign key · related record</div>
+                    <button class="app-button app-button--ghost app-button--icon column-card__remove" type="button" data-remove-builder-column aria-label="Remove Customer column">
+                      <span data-wf-icon="trash"></span>
+                    </button>
+                  </div>
+
+                  <div class="column-card" data-builder-column>
+                    <label class="app-field">
+                      <span class="app-label">Column name</span>
+                      <input class="app-input" type="text" value="Email" data-column-name>
+                    </label>
+                    <label class="app-field">
+                      <span class="app-label">Field</span>
+                      <select class="app-select" data-field-type>
+                        <option value="text">Text</option>
+                        <option value="email" selected>Email</option>
+                        <option value="relation">Relation</option>
+                        <option value="price">Price</option>
+                        <option value="select">Select</option>
+                        <option value="switch">Switch</option>
+                        <option value="datetime">Date and time</option>
+                      </select>
+                    </label>
+                    <div class="column-card__inference" data-inference>text · email link</div>
+                    <button class="app-button app-button--ghost app-button--icon column-card__remove" type="button" data-remove-builder-column aria-label="Remove Email column">
+                      <span data-wf-icon="trash"></span>
+                    </button>
+                  </div>
+
+                  <div class="column-card" data-builder-column>
+                    <label class="app-field">
+                      <span class="app-label">Column name</span>
+                      <input class="app-input" type="text" value="Total" data-column-name>
+                    </label>
+                    <label class="app-field">
+                      <span class="app-label">Field</span>
+                      <select class="app-select" data-field-type>
+                        <option value="text">Text</option>
+                        <option value="email">Email</option>
+                        <option value="relation">Relation</option>
+                        <option value="price" selected>Price</option>
+                        <option value="select">Select</option>
+                        <option value="switch">Switch</option>
+                        <option value="datetime">Date and time</option>
+                      </select>
+                    </label>
+                    <div class="column-card__inference" data-inference>numeric · currency</div>
+                    <button class="app-button app-button--ghost app-button--icon column-card__remove" type="button" data-remove-builder-column aria-label="Remove Total column">
+                      <span data-wf-icon="trash"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <button class="app-button app-button--ghost" type="button" data-add-builder-column>
+                  <span data-wf-icon="add"></span> Add another column
+                </button>
+              </div>
+            </section>
+
+            <div class="builder-actions">
+              <a class="app-button app-button--secondary" href="./browse.html?department=operations" data-department-return>Cancel</a>
+              <button class="app-button" type="submit" data-create-table>
+                <span data-wf-icon="table"></span> Create table
+              </button>
+            </div>
+          </div>
+
+          <aside class="builder-summary" aria-label="PostgreSQL summary">
+            <section class="builder-card">
+              <div class="builder-card__header">
+                <h2>What Tabular will create</h2>
+              </div>
+              <div class="builder-card__body">
+                <div class="summary-block">
+                  <p class="app-eyebrow">PostgreSQL object</p>
+                  <strong class="app-code" data-object-identity>public.customer_orders</strong>
+                </div>
+                <div class="summary-block">
+                  <h3>Defaults</h3>
+                  <div class="wf-stack">
+                    <span class="app-check"><input type="checkbox" checked data-primary-key> Add an automatic record ID</span>
+                    <span class="app-check"><input type="checkbox" checked> Keep incomplete rows as drafts</span>
+                    <span class="app-check"><input type="checkbox" checked> Record schema changes</span>
+                  </div>
+                </div>
+                <div class="summary-block">
+                  <h3>PostgreSQL preview</h3>
+                  <pre class="sql-preview" data-sql-preview>CREATE TABLE public.customer_orders (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  customer_id bigint REFERENCES public.customers(id),
+  email text,
+  total numeric
+);</pre>
+                </div>
+                <div class="summary-block">
+                  <div class="app-alert">
+                    <span data-wf-icon="database"></span>
+                    <span>The table remains available to PostgreSQL tools and queries outside Tabular.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="../lib/icons.js"></script>
+  <script src="../lib/app.js"></script>
+</body>
+</html>

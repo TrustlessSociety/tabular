@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tabular R-003 Grid</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./vendor/tabulator.css" />
+    <link rel="stylesheet" href="./r003.css" />
+  </head>
+  <body>
+    <header class="app-bar">
+      <button class="brand" type="button" aria-label="Open Acme Inc. explorer">
+        <span class="brand-mark" aria-hidden="true">T</span>
+        <span>Acme Inc.</span>
+      </button>
+      <span class="database">company / Operations</span>
+      <button class="account" type="button" aria-label="Account menu">CB</button>
+    </header>
+    <main>
+      <section class="sheet" aria-labelledby="sheet-title">
+        <header class="identity">
+          <div>
+            <p class="breadcrumbs">Acme Inc. <span>›</span> company <span>›</span> Operations</p>
+            <h1 id="sheet-title">Customer orders</h1>
+          </div>
+          <span class="technical">operations.customer_orders</span>
+        </header>
+        <div class="menubar" role="menubar" aria-label="Spreadsheet menus">
+          <button type="button" role="menuitem">File</button>
+          <button type="button" role="menuitem">Edit</button>
+          <button type="button" role="menuitem">View</button>
+          <button type="button" role="menuitem">Format</button>
+        </div>
+        <div class="toolbar" role="toolbar" aria-label="Selection actions">
+          <button id="copy-selection" type="button">Copy</button>
+          <button id="clear-selection" type="button">Clear selected values</button>
+          <span class="separator" aria-hidden="true"></span>
+          <button id="bold-selection" type="button" aria-label="Bold" aria-pressed="false"><b>B</b></button>
+          <output id="selection-summary" aria-live="polite">No selection</output>
+        </div>
+        <div id="logical-grid" aria-label="Tabular spreadsheet"></div>
+        <footer>
+          <span id="record-summary">Opening records…</span>
+          <span id="selection-status" role="status" aria-live="polite"></span>
+        </footer>
+      </section>
+    </main>
+    <script type="module" src="./r003.js"></script>
+  </body>
+</html>

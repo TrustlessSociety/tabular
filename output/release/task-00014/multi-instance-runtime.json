@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "task": "00014",
+  "result": "passed",
+  "generatedAt": "2026-08-04T04:25:59.220Z",
+  "target": "exact-disposable-local-postgresql-18",
+  "postgresql": "180004",
+  "topology": {
+    "kind": "independent-source-application-instances-shared-postgresql",
+    "operatingSystemProcesses": 1,
+    "webApplicationInstances": 2,
+    "workerApplicationInstances": 2,
+    "stickySessionsRequired": false
+  },
+  "realtime": {
+    "durableOutboxLoadEvents": 40,
+    "crossInstanceLastEventIdResume": true,
+    "slowConsumerSnapshotRecovery": "client-backpressure",
+    "cursorGapSnapshotRecovery": "cursor-gap",
+    "authorizationLossClosesStream": "access.revoked",
+    "resourceAndPrivateAudienceIsolation": true
+  },
+  "workers": {
+    "contenders": 2,
+    "singleLeaseWinner": true,
+    "staleLeaseFencing": true,
+    "abandonedLeaseRecoveredBySecondInstance": true,
+    "recoveryAttempt": 2
+  },
+  "suites": [
+    "test:postgres:foundation",
+    "test:postgres:identity-catalog",
+    "test:postgres:capability-actions",
+    "test:postgres:files-ddl",
+    "test:postgres:grid",
+    "test:postgres:realtime-views",
+    "test:postgres:import-export",
+    "test:postgres:operations",
+    "test:postgres:mcp-parity",
+    "test:postgres:production-boundary"
+  ]
+}

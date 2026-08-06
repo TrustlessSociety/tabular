@@ -1,0 +1,30 @@
+{
+  "name": "tabular-direct-stackpress-composition-proof",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "test": "npm run build && tsx --test tests/proof.test.ts",
+    "serve": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.15",
+    "@stackpress/ingest": "0.10.8",
+    "@stackpress/inquire": "0.10.8",
+    "@stackpress/inquire-pglite": "0.10.8",
+    "@stackpress/lib": "0.10.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "reactus": "0.10.8"
+  },
+  "devDependencies": {
+    "@types/node": "25.3.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.2",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  }
+}

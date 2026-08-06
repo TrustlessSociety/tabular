@@ -1,0 +1,66 @@
+{
+  "task": "00011",
+  "result": "passed_with_external_credential_blocker",
+  "browser": "Codex in-app browser",
+  "viewports": [
+    { "width": 1280, "height": 900, "horizontalOverflow": false },
+    { "width": 390, "height": 844, "horizontalOverflow": false }
+  ],
+  "checks": {
+    "focusedImportHeaderWithoutExplorerSearch": "passed",
+    "googleUnavailableExplainedWithoutMock": "passed",
+    "permissionDenial": "passed",
+    "malformedPartialRowBlocked": "passed",
+    "csvThreeStepImport": "passed",
+    "mappingErrorInlineFocusAndRecovery": "passed",
+    "backNavigationPreservesMapping": "passed",
+    "collisionSafeTableName": "passed",
+    "queuedProgressVisible": "passed",
+    "atomicWorkerCommit": "passed",
+    "cancellationAndFreshRestart": "passed",
+    "atomicRollbackAndRetry": "passed",
+    "xlsxWorksheetSelectionRetained": "passed",
+    "xlsxCachedValuesWithoutFormulaText": "passed",
+    "serverAuthorizedSavedViewCsvExport": "passed",
+    "serverResolvedSavedViewBrowserRerun": "passed",
+    "responsivePrimaryFlow": "passed",
+    "consoleErrors": 0,
+    "consoleWarnings": 0,
+    "liveGoogleSheets": "blocked_external_credentials"
+  },
+  "export": {
+    "artifact": "filtered-sorted-saved-view.csv",
+    "rowCount": 3,
+    "columnCount": 4,
+    "sanitizedCells": 1,
+    "utf8Bom": true,
+    "lineEndings": "crlf"
+  },
+  "googleMissingConfiguration": [
+    "TABULAR_GOOGLE_CLIENT_ID",
+    "TABULAR_GOOGLE_CLIENT_SECRET",
+    "TABULAR_GOOGLE_REDIRECT_URI",
+    "TABULAR_GOOGLE_TOKEN_ENCRYPTION_KEY"
+  ],
+  "screenshots": [
+    "permission-denied-desktop.png",
+    "malformed-csv-desktop.png",
+    "csv-preview-desktop.png",
+    "mapping-error-focused-desktop.png",
+    "ready-to-import-desktop.png",
+    "csv-import-progress-desktop.png",
+    "csv-import-complete-desktop.png",
+    "csv-import-canceled-desktop.png",
+    "import-rolled-back-desktop.png",
+    "import-retry-complete-desktop.png",
+    "xlsx-sheet-selector-desktop.png",
+    "xlsx-current-selector-desktop.png",
+    "xlsx-current-preview-desktop.png",
+    "xlsx-ready-desktop.png",
+    "xlsx-import-complete-desktop.png",
+    "choose-source-390.png",
+    "csv-preview-390.png",
+    "csv-ready-390.png",
+    "csv-import-complete-390.png"
+  ]
+}

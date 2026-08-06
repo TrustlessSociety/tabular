@@ -1,0 +1,52 @@
+
+
+/* Root */
+
+:root { display: initial; }
+
+html, body, body > div {
+  height: 100%;
+  scroll-behavior: smooth;
+  width: 100%;
+}
+
+/* Themes
+------------------------------*/
+
+:root {
+  --bg-zero: #f7f1e8;
+  --bg-first: #efe5d7;
+  --bg-second: #dfd3c3;
+  --bg-third: #c4b8a4;
+  --bg-fourth: #9f9687;
+  --bg-inverse: #14202b;
+  --bg-info: #d9ecff;
+  --bg-error: #f8d7da;
+  --bg-warning: #fff3cd;
+  --bg-success: #d4edda;
+  --zero: #14202b;
+  --default: #253342;
+  --inverse: #f8f4ee;
+  --primary: #0f6dff;
+  --secondary: #b66a2f;
+  --info: #0f6dff;
+  --error: #dc3545;
+  --warning: #b66a2f;
+  --success: #2d8d52;
+  --muted: #5f6f7d;
+  --white: #ffffff;
+  --black: #000000;
+}
+
+.dark {
+  --muted: #B4B4B4;
+  --bg-zero: #121212;
+  --bg-first: #232323;
+  --bg-second: #323232;
+  --bg-third: #424242;
+  --bg-fourth: #525252;
+  --bg-inverse: #DBDBDB;
+  --zero: #FFFFFF;
+  --default: #CFCFCF;
+  --inverse: #222222;
+}

@@ -1,0 +1,6 @@
+.build/
+.data/
+.playwright-cli/
+node_modules/
+public/assets/
+public/client/

@@ -1,0 +1,14 @@
+{
+  "name": "tabular-direct-postgresql-boundary-proof",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/proof.test.mjs"
+  },
+  "dependencies": {
+    "@stackpress/inquire": "0.10.8",
+    "@stackpress/inquire-pg": "0.10.8",
+    "pg": "8.16.3"
+  }
+}

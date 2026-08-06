@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noEmit": true,
+    "types": ["node"],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "bootstrap/**/*.ts",
+    "config/**/*.ts",
+    "entrypoints/**/*.ts",
+    "plugins/**/*.ts",
+    "plugins/**/*.tsx",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "global.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "proofs", "wireframes"]
+}

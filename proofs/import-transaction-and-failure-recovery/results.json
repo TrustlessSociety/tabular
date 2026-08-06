@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-07-31T09:31:04.616Z",
+  "node": "v26.3.0",
+  "proof": "P-006",
+  "disposition": "proved",
+  "signals": {
+    "googleEffectiveValuesOnly": true,
+    "xlsxCachedResultsOnly": true,
+    "missingCachesBlockWithCoordinates": true,
+    "csvTokensAndTypesPreserved": true,
+    "formulasNeverEvaluatedOrPersisted": true,
+    "duplicateStartAndStageIdempotent": true,
+    "changedSourceBlocksCommit": true,
+    "failedCommitRollsBack": true,
+    "ambiguousCommitRecoversByJobId": true,
+    "abandonOnlyAffectsStaging": true
+  },
+  "counts": {
+    "googleCells": 6,
+    "xlsxCells": 7,
+    "csvCells": 8,
+    "committedCells": 21
+  },
+  "limitation": "Uses API-shaped Google fixtures and generated XLSX/CSV files; it does not exercise live Google authorization, download, or Drive version APIs."
+}

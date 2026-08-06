@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tabular workflows</title>
+  <link rel="stylesheet" href="./lib/base/tokens.css">
+  <link rel="stylesheet" href="./lib/base/reset.css">
+  <link rel="stylesheet" href="./lib/base/base.css">
+  <link rel="stylesheet" href="./lib/icons.css">
+  <link rel="stylesheet" href="./lib/app.css">
+</head>
+<body>
+  <header class="workflow-header">
+    <div class="workflow-header__inner">
+      <a class="app-logo" href="./workflows.html" aria-label="Tabular workflow home">
+        <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+        <span>Tabular</span>
+      </a>
+      <span class="app-badge">Spreadsheet command surface</span>
+    </div>
+  </header>
+
+  <main class="workflow-main">
+    <section class="workflow-intro">
+      <p class="app-eyebrow">Workflow index</p>
+      <h1 class="wf-title">Manage each department's data in a familiar spreadsheet.</h1>
+      <p class="wf-copy">Choose a department, open one of its tables as a sheet, create a new table, or bring in exact values.</p>
+    </section>
+
+    <section class="workflow-grid" aria-label="Available workflows">
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="grid"></span></div>
+        <h2>Browse department tables</h2>
+        <p>Move between Operations and Finance, then open a table managed by that department.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/browse.html?department=operations">Browse tables <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="table"></span></div>
+        <h2>Create a table</h2>
+        <p>Create a table managed by Operations and define its first columns through familiar field choices.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/create-table.html?department=operations">Create table <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="rows"></span></div>
+        <h2>Work in the spreadsheet</h2>
+        <p>Use familiar menus and formatting controls, type into blank rows, and right-click cells, rows, or columns for focused actions.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/table.html?department=operations&amp;table=customer-orders">Open table <span data-wf-icon="arrow-right"></span></a>
+          <a class="app-button app-button--secondary" href="./pages/table.html?department=operations&amp;table=customer-orders&amp;state=error">Open cell error</a>
+        </div>
+      </article>
+
+      <article class="workflow-card">
+        <div class="workflow-card__icon"><span data-wf-icon="import"></span></div>
+        <h2>Import exact values</h2>
+        <p>Review inferred fields and fidelity warnings before committing values from CSV, XLSX, or Google Sheets.</p>
+        <div class="workflow-card__actions">
+          <a class="app-button" href="./pages/import.html?department=operations">Review import <span data-wf-icon="arrow-right"></span></a>
+        </div>
+      </article>
+    </section>
+
+    <footer class="workflow-footer">
+      <span>2 departments · 8 tables</span>
+      <span>4 workflow starting points</span>
+    </footer>
+  </main>
+
+  <script src="./lib/icons.js"></script>
+</body>
+</html>

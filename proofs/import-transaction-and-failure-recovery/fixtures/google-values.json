@@ -1,0 +1,84 @@
+{
+  "spreadsheetId": "proof-google-sheet",
+  "version": "drive-version-17",
+  "sheets": [
+    {
+      "properties": {
+        "title": "Values"
+      },
+      "data": [
+        {
+          "startRow": 0,
+          "startColumn": 0,
+          "rowData": [
+            {
+              "values": [
+                {
+                  "effectiveValue": {
+                    "stringValue": "Name"
+                  }
+                },
+                {
+                  "effectiveValue": {
+                    "stringValue": "Amount"
+                  }
+                }
+              ]
+            },
+            {
+              "values": [
+                {
+                  "effectiveValue": {
+                    "stringValue": "Alpha"
+                  }
+                },
+                {
+                  "effectiveValue": {
+                    "numberValue": 12.5
+                  }
+                }
+              ]
+            },
+            {
+              "values": [
+                {
+                  "effectiveValue": {
+                    "boolValue": true
+                  }
+                },
+                {
+                  "userEnteredValue": {
+                    "formulaValue": "=B2*2"
+                  },
+                  "effectiveValue": {
+                    "numberValue": 25
+                  }
+                }
+              ]
+            },
+            {
+              "values": [
+                {
+                  "userEnteredValue": {
+                    "formulaValue": "=NOW()"
+                  }
+                },
+                {
+                  "userEnteredValue": {
+                    "formulaValue": "=1/0"
+                  },
+                  "effectiveValue": {
+                    "errorValue": {
+                      "type": "DIVIDE_BY_ZERO",
+                      "message": "Division by zero"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

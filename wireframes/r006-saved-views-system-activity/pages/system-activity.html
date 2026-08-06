@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>System activity · Acme Inc.</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body data-page="system-activity">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar__start">
+        <a class="brand" href="./browse.html">
+          <span class="brand__mark"><span data-icon="grid"></span></span>
+          <span>Acme Inc.</span>
+        </a>
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><span data-icon="chevron-right"></span><span>System activity</span></nav>
+      </div>
+      <div class="topbar__actions">
+        <a class="utility-link" href="./saved-views.html"><span data-icon="table"></span> Customer orders</a>
+        <button class="icon-button" type="button" aria-label="Account menu"><span data-icon="user"></span></button>
+      </div>
+    </header>
+
+    <main class="activity-page">
+      <header class="page-heading">
+        <div><p class="eyebrow">Administration</p><h1>System activity</h1><p>Background work, delivery attempts, and operations that need attention.</p></div>
+        <button class="button" type="button" data-open-retention><span data-icon="history"></span> Retention: 90 days</button>
+      </header>
+
+      <section class="metric-grid" aria-label="Activity summary">
+        <article class="metric-card"><span>Running</span><strong>1</strong><small>Importing 248 records</small></article>
+        <article class="metric-card"><span>Queued</span><strong>1</strong><small>Row order maintenance</small></article>
+        <article class="metric-card metric-card--attention"><span>Needs attention</span><strong>1</strong><small>Import failed after 3 attempts</small></article>
+        <article class="metric-card"><span>Completed today</span><strong>14</strong><small>Across 6 files</small></article>
+      </section>
+
+      <section class="activity-section">
+        <div class="tabs" role="tablist" aria-label="Activity filters">
+          <button type="button" role="tab" aria-selected="true" data-activity-filter="all">All <span>5</span></button>
+          <button type="button" role="tab" aria-selected="false" data-activity-filter="active">Active <span>2</span></button>
+          <button type="button" role="tab" aria-selected="false" data-activity-filter="attention">Needs attention <span>1</span></button>
+          <button type="button" role="tab" aria-selected="false" data-activity-filter="complete">Completed <span>2</span></button>
+        </div>
+
+        <div class="activity-table-wrap">
+          <table class="activity-table">
+            <thead><tr><th>Operation</th><th>Target</th><th>Status</th><th>Progress</th><th>Updated</th><th><span class="sr-only">Open</span></th></tr></thead>
+            <tbody>
+              <tr tabindex="0" data-job-row="import-current" data-group="active">
+                <td><span class="row-icon"><span data-icon="import"></span></span><span><strong>Import values</strong><small>Q4 customer orders.csv</small></span></td>
+                <td>Operations / Customer orders</td><td><span class="status status--running">Running</span></td><td><span class="progress"><span style="width:64%"></span></span><small>159 of 248</small></td><td>Just now</td><td><button class="icon-button" type="button" aria-label="Open Import values"><span data-icon="chevron-right"></span></button></td>
+              </tr>
+              <tr tabindex="0" data-job-row="row-order" data-group="active">
+                <td><span class="row-icon"><span data-icon="rows"></span></span><span><strong>Row order maintenance</strong><small>Compact shared row positions</small></span></td>
+                <td>Operations / Customer orders</td><td><span class="status">Queued</span></td><td><small>Starts after current writes</small></td><td>1 min ago</td><td><button class="icon-button" type="button" aria-label="Open Row order maintenance"><span data-icon="chevron-right"></span></button></td>
+              </tr>
+              <tr tabindex="0" data-job-row="import-q3" data-group="attention">
+                <td><span class="row-icon"><span data-icon="alert"></span></span><span><strong>Import values</strong><small>Q3 orders.csv</small></span></td>
+                <td>Operations / Q3 orders</td><td><span class="status status--attention">Dead letter</span></td><td><small>3 attempts</small></td><td>18 min ago</td><td><button class="icon-button" type="button" aria-label="Open failed Import values"><span data-icon="chevron-right"></span></button></td>
+              </tr>
+              <tr tabindex="0" data-job-row="publish-view" data-group="complete">
+                <td><span class="row-icon"><span data-icon="users"></span></span><span><strong>Publish shared view</strong><small>Ready to ship</small></span></td>
+                <td>Operations / Customer orders</td><td><span class="status status--complete">Completed</span></td><td><small>1 PostgreSQL view</small></td><td>42 min ago</td><td><button class="icon-button" type="button" aria-label="Open Publish shared view"><span data-icon="chevron-right"></span></button></td>
+              </tr>
+              <tr tabindex="0" data-job-row="export" data-group="complete">
+                <td><span class="row-icon"><span data-icon="download"></span></span><span><strong>Export CSV</strong><small>Unpaid orders</small></span></td>
+                <td>Operations / Customer orders</td><td><span class="status status--complete">Completed</span></td><td><small>126 records</small></td><td>1 hr ago</td><td><button class="icon-button" type="button" aria-label="Open Export CSV"><span data-icon="chevron-right"></span></button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" data-activity-empty hidden><span data-icon="check"></span><h2>No matching activity</h2><p>There are no operations in this state.</p></div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="detail-panel" data-job-panel aria-labelledby="job-panel-title" hidden>
+      <header class="detail-panel__header"><div><p class="eyebrow" data-job-kind>Operation</p><h2 id="job-panel-title" data-job-title>Import values</h2></div><button class="icon-button" type="button" data-close-job aria-label="Close details"><span data-icon="close"></span></button></header>
+      <div class="detail-panel__body" data-job-content></div>
+      <footer class="detail-panel__footer" data-job-actions></footer>
+    </aside>
+  </div>
+
+  <dialog class="dialog dialog--small" data-retention-dialog aria-labelledby="retention-title">
+    <form method="dialog" data-retention-form>
+      <header class="dialog__header"><div><p class="eyebrow">Administration</p><h2 id="retention-title">Activity retention</h2></div><button class="icon-button" type="button" data-close-retention aria-label="Close"><span data-icon="close"></span></button></header>
+      <div class="dialog__body"><p>Keep Tabular job and delivery activity available to administrators.</p><label class="field"><span>Retention period</span><select name="retention"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="180">180 days</option><option value="365">365 days</option></select></label></div>
+      <footer class="dialog__footer"><button class="button" type="button" data-close-retention>Cancel</button><button class="button button--primary" type="submit">Save retention</button></footer>
+    </form>
+  </dialog>
+
+  <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+  <script src="../app.js"></script>
+</body>
+</html>

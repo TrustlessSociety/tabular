@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operations tables · Tabular</title>
+  <link rel="stylesheet" href="../lib/base/tokens.css">
+  <link rel="stylesheet" href="../lib/base/reset.css">
+  <link rel="stylesheet" href="../lib/base/base.css">
+  <link rel="stylesheet" href="../lib/icons.css">
+  <link rel="stylesheet" href="../lib/app.css">
+</head>
+<body>
+  <div class="app-shell" data-app-shell data-nav-open="false">
+    <aside class="app-sidebar" id="data-navigation">
+      <div class="app-sidebar__header">
+        <a class="app-logo" href="../workflows.html">
+          <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+          <span>Tabular</span>
+        </a>
+        <button class="app-button app-button--ghost app-button--icon app-sidebar__close" type="button" data-nav-close aria-label="Close data navigation">
+          <span data-wf-icon="close"></span>
+        </button>
+      </div>
+
+      <div class="app-sidebar__body">
+        <nav class="object-switcher" aria-label="Departments and tables">
+          <a class="object-switcher__row" href="./browse.html?department=operations" data-department-link="operations" aria-current="page">
+            <span class="object-switcher__chevron"><span data-wf-icon="chevron-down"></span></span>
+            <strong>Operations</strong>
+            <span class="object-switcher__count">5</span>
+          </a>
+          <div class="object-switcher__nested">
+            <a class="object-switcher__row" href="./table.html?department=operations&amp;table=customer-orders">
+              <span data-wf-icon="table"></span>
+              <span>Customer orders</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=operations&amp;table=inventory">
+              <span data-wf-icon="table"></span>
+              <span>Inventory</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=operations&amp;table=vendors">
+              <span data-wf-icon="table"></span>
+              <span>Vendors</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=operations&amp;table=stock-movements">
+              <span data-wf-icon="table"></span>
+              <span>Stock movements</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=operations&amp;table=purchase-requests">
+              <span data-wf-icon="table"></span>
+              <span>Purchase requests</span>
+            </a>
+          </div>
+
+          <a class="object-switcher__row" href="./browse.html?department=finance" data-department-link="finance">
+            <span class="object-switcher__chevron"><span data-wf-icon="chevron-down"></span></span>
+            <strong>Finance</strong>
+            <span class="object-switcher__count">3</span>
+          </a>
+          <div class="object-switcher__nested">
+            <a class="object-switcher__row" href="./table.html?department=finance&amp;table=invoices">
+              <span data-wf-icon="table"></span>
+              <span>Invoices</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=finance&amp;table=expenses">
+              <span data-wf-icon="table"></span>
+              <span>Expenses</span>
+            </a>
+            <a class="object-switcher__row" href="./table.html?department=finance&amp;table=budgets">
+              <span data-wf-icon="table"></span>
+              <span>Budgets</span>
+            </a>
+          </div>
+        </nav>
+
+        <p class="sidebar-label">Recent</p>
+        <nav class="object-switcher" aria-label="Recent tables">
+          <a class="object-switcher__row" href="./table.html?department=operations&amp;table=customer-orders">
+            <span data-wf-icon="history"></span>
+            <span>Customer orders</span>
+          </a>
+          <a class="object-switcher__row" href="./table.html?department=finance&amp;table=invoices">
+            <span data-wf-icon="history"></span>
+            <span>Invoices</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="app-sidebar__footer">
+        <a class="object-switcher__row" href="../workflows.html">
+          <span data-wf-icon="grid"></span>
+          <span>All workflows</span>
+        </a>
+      </div>
+    </aside>
+
+    <header class="app-topbar">
+      <div class="app-topbar__start">
+        <button class="app-button app-button--ghost app-button--icon app-topbar__menu" type="button" data-nav-trigger aria-controls="data-navigation" aria-label="Open data navigation">
+          <span data-wf-icon="menu"></span>
+        </button>
+        <nav class="crumbs" aria-label="Current department">
+          <strong data-department-crumb>Operations</strong>
+        </nav>
+      </div>
+      <div class="app-topbar__end">
+        <button class="app-button app-button--ghost app-button--icon" type="button" aria-label="Account menu"><span data-wf-icon="user"></span></button>
+      </div>
+    </header>
+
+    <main class="app-main app-main--padded" data-department-browser>
+      <section class="browse-head">
+        <div>
+          <p class="app-eyebrow">Department</p>
+          <h1 data-department-title>Operations</h1>
+          <p class="wf-copy" data-department-copy>Tables managed by Operations.</p>
+        </div>
+        <div class="browse-head__actions">
+          <a class="app-button app-button--secondary" href="./import.html?department=operations" data-department-action="import"><span data-wf-icon="import"></span> Import</a>
+          <a class="app-button" href="./create-table.html?department=operations" data-department-action="create"><span data-wf-icon="add"></span> New table</a>
+        </div>
+      </section>
+
+      <section aria-labelledby="tables-title">
+        <div class="browse-toolbar">
+          <div class="app-search">
+            <span data-wf-icon="search"></span>
+            <input class="app-input" type="search" placeholder="Search tables" aria-label="Search tables" data-object-search>
+          </div>
+          <span class="app-meta" data-object-count>5 tables</span>
+        </div>
+
+        <div class="browse-section">
+          <div class="browse-section__header">
+            <h2 id="tables-title">Tables</h2>
+          </div>
+
+          <div class="object-list" data-object-list data-department-list="operations">
+            <a class="object-list__row" href="./table.html?department=operations&amp;table=customer-orders" data-object-row data-search="customer orders public customer_orders">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Customer orders</strong><small>public.customer_orders</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="7 columns by 248 records">7 x 248</span>
+              <span class="object-list__cell object-list__cell--updated">Edited 12 min ago</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=operations&amp;table=inventory" data-object-row data-search="inventory public inventory">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Inventory</strong><small>public.inventory</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="11 columns by 1,482 records">11 x 1,482</span>
+              <span class="object-list__cell object-list__cell--updated">Edited 1 hr ago</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=operations&amp;table=vendors" data-object-row data-search="vendors public vendors">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Vendors</strong><small>public.vendors</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="9 columns by 63 records">9 x 63</span>
+              <span class="object-list__cell object-list__cell--updated">Edited yesterday</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=operations&amp;table=stock-movements" data-object-row data-search="stock movements public stock_movements">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Stock movements</strong><small>public.stock_movements</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="8 columns by 4,209 records">8 x 4,209</span>
+              <span class="object-list__cell object-list__cell--updated">Edited 3 days ago</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=operations&amp;table=purchase-requests" data-object-row data-search="purchase requests public purchase_requests">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Purchase requests</strong><small>public.purchase_requests</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="12 columns by 176 records">12 x 176</span>
+              <span class="object-list__cell object-list__cell--updated">Edited Jul 20</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+          </div>
+
+          <div class="object-list" data-object-list data-department-list="finance" hidden>
+            <a class="object-list__row" href="./table.html?department=finance&amp;table=invoices" data-object-row data-search="invoices finance public invoices">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Invoices</strong><small>public.invoices</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="8 columns by 932 records">8 x 932</span>
+              <span class="object-list__cell object-list__cell--updated">Edited 18 min ago</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=finance&amp;table=expenses" data-object-row data-search="expenses finance public expenses">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Expenses</strong><small>public.expenses</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="7 columns by 1,284 records">7 x 1,284</span>
+              <span class="object-list__cell object-list__cell--updated">Edited 2 hrs ago</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+
+            <a class="object-list__row" href="./table.html?department=finance&amp;table=budgets" data-object-row data-search="budgets finance public budgets">
+              <span class="object-list__identity">
+                <span class="object-list__icon"><span data-wf-icon="table"></span></span>
+                <span><strong>Budgets</strong><small>public.budgets</small></span>
+              </span>
+              <span class="object-list__cell" aria-label="10 columns by 24 records">10 x 24</span>
+              <span class="object-list__cell object-list__cell--updated">Edited yesterday</span>
+              <span data-wf-icon="chevron-right"></span>
+            </a>
+          </div>
+
+          <div class="empty-state" data-object-empty hidden>
+            <span data-wf-icon="search"></span>
+            <strong>No matching tables</strong>
+            <p class="app-meta">Try a different table name.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <button class="app-backdrop" type="button" data-nav-close aria-label="Close data navigation" hidden></button>
+  </div>
+
+  <script src="../lib/icons.js"></script>
+  <script src="../lib/app.js"></script>
+</body>
+</html>

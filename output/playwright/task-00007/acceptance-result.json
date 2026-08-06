@@ -1,0 +1,98 @@
+{
+  "reviewedAt": "2026-08-02T05:41:00+08:00",
+  "authentication": "Test provider identities crossed durable PostgreSQL sessions and live role authority",
+  "unauthenticated": {
+    "status": 401,
+    "title": "Sign in required — Tabular",
+    "signInRequired": true
+  },
+  "ownerFolders": [
+    "Finance",
+    "Operations"
+  ],
+  "vendorStableId": "obj_fAaGEoiaxynsRnCDbYexTzWZWJHx_kc7OB8Wg5byA2Y",
+  "plannedRequestId": "ddl_L-0kaWMdsy_4rUOSbqQPHkgPHG3pbAaWOoq0znZE67s",
+  "savedView": {
+    "route": "view=ready",
+    "title": "Ready to ship — Customer orders — Tabular",
+    "breadcrumb": "Operations / Customer orders / Ready to ship",
+    "application": "Applied saved view ready"
+  },
+  "existingFileSettings": {
+    "displayName": "Customer order archive",
+    "temporaryFolder": "Finance",
+    "physicalApplyClaimed": false
+  },
+  "mixedAuthority": {
+    "sourceDeniedDestinationAllowedSettings": "permission_denied",
+    "sourceDeniedDestinationAllowedRename": "permission_denied",
+    "proof": "automated source-and-destination action tests"
+  },
+  "blank": {
+    "ariaRowCount": 1001,
+    "ariaColumnCount": 13,
+    "rowHeaderName": "Row number",
+    "coordinateHeaders": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L"
+    ]
+  },
+  "states": [
+    "loading recovered",
+    "error recovered",
+    "empty",
+    "reader denial followed into table"
+  ],
+  "focus": [
+    "modal contained",
+    "rename conflict restored",
+    "rename commit restored",
+    "tablist arrow navigated"
+  ],
+  "narrow": {
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "bodyWidth": 390,
+    "settingsBounds": {
+      "x": 24,
+      "y": 0,
+      "width": 366,
+      "height": 844
+    }
+  },
+  "eventRequests": {
+    "owner": 5,
+    "reader": 1,
+    "method": "POST",
+    "contentType": "application/json",
+    "origin": "http://127.0.0.1:3067",
+    "csrfPresent": true,
+    "sessionCookiePresent": true,
+    "responseStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "sessionValuesRecorded": false,
+    "csrfValueRecorded": false
+  },
+  "domSanity": {
+    "duplicateIds": [],
+    "unnamedButtons": 0,
+    "unnamedLinks": 0
+  },
+  "signals": []
+}

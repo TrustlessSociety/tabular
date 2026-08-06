@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>P-002 Virtual Grid Proof</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Spec 00001 · P-002</p>
+        <h1>Bounded virtual grid</h1>
+        <p>
+          A keyboard-operable proof surface for 100,000 rows by 200 columns.
+          Only the visible 12-by-8 window is mounted.
+        </p>
+      </header>
+
+      <section class="proof-summary" aria-label="Proof state">
+        <div>
+          <span>Logical cells</span>
+          <strong>20,000,000</strong>
+        </div>
+        <div>
+          <span>Mounted cells</span>
+          <strong id="mounted-count">96</strong>
+        </div>
+        <div>
+          <span>Active cell</span>
+          <strong id="active-label">R1 · C1</strong>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="jump-last" type="button">Jump to last cell</button>
+        <button id="copy-sample" type="button">Copy typed sample</button>
+      </div>
+
+      <p id="instructions">
+        Use arrow keys or Page Down to move. Press Enter to edit. Press
+        Control+End to jump to the final logical cell.
+      </p>
+
+      <div class="grid-shell">
+        <div
+          id="grid"
+          role="grid"
+          aria-label="Virtualized PostgreSQL table"
+          aria-describedby="instructions"
+          aria-rowcount="100001"
+          aria-colcount="200"
+        ></div>
+      </div>
+
+      <p id="state" role="status" aria-live="polite">
+        Ready at row 1, column 1.
+      </p>
+      <pre id="clipboard-state" aria-label="Clipboard payload state">No copy yet.</pre>
+    </main>
+    <script type="module" src="./grid.js"></script>
+  </body>
+</html>

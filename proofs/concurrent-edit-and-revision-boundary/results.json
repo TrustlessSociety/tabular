@@ -1,0 +1,58 @@
+{
+  "capturedAt": "2026-07-31T09:31:01.077Z",
+  "node": "v26.3.0",
+  "proof": "P-004",
+  "disposition": "proved",
+  "signals": {
+    "nonOverlappingRowsCommit": true,
+    "staleSameRowWriteConflicts": true,
+    "laterWorkBlocksUndo": true,
+    "permissionRecheckedOnUndo": true,
+    "undoRedoRoundTrip": true,
+    "postCommitPublicationOnly": true,
+    "boundedReconstructionMatches": true
+  },
+  "finalRows": [
+    {
+      "id": 1,
+      "label": "Alpha A",
+      "amount": 12
+    },
+    {
+      "id": 2,
+      "label": "Beta",
+      "amount": 25
+    }
+  ],
+  "publishedEvents": [
+    {
+      "type": "row.changed",
+      "actionId": 1,
+      "rowId": 1,
+      "version": 2
+    },
+    {
+      "type": "row.changed",
+      "actionId": 2,
+      "rowId": 2,
+      "version": 2
+    },
+    {
+      "type": "row.changed",
+      "actionId": 3,
+      "rowId": 1,
+      "version": 3
+    },
+    {
+      "type": "row.undo",
+      "actionId": 6,
+      "version": 3
+    },
+    {
+      "type": "row.redo",
+      "actionId": 7,
+      "version": 4
+    }
+  ],
+  "actionCount": 7
+}

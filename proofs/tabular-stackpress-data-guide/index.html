@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tabular P-002 Data Guide</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Tabular data guide home">Tabular <span>Data Guide</span></a>
+      <div class="run-state" aria-live="polite"><span class="dot"></span><span id="run-state">Loading evidence</span></div>
+    </header>
+    <main id="top">
+      <section class="intro" aria-labelledby="title">
+        <p class="eyebrow">SPEC 00002 · PROOF P-002</p>
+        <h1 id="title">One capability boundary.<br>PostgreSQL stays in charge.</h1>
+        <p class="lede">An executable implementation guide for catalog-driven tables, caller authority, safe mutations, recovery, and equal page/MCP behavior—tested with Stackpress and PGlite.</p>
+        <dl class="facts">
+          <div><dt>Runtime</dt><dd>Stackpress 0.10.8</dd></div>
+          <div><dt>Database</dt><dd>PGlite 0.3.15</dd></div>
+          <div><dt>Event</dt><dd>tabular.capability</dd></div>
+          <div><dt>Generated models</dt><dd>0 per user table</dd></div>
+        </dl>
+      </section>
+
+      <section class="boundary" aria-labelledby="boundary-title">
+        <div class="section-heading">
+          <p class="eyebrow">AUTHORITY ENVELOPE</p>
+          <h2 id="boundary-title">Every request crosses the same narrow path</h2>
+        </div>
+        <ol class="flow" aria-label="Capability request flow">
+          <li><span>01</span><strong>Surface adapter</strong><small>page or MCP</small></li>
+          <li><span>02</span><strong>Deny-default capability</strong><small>actor · operation · resource</small></li>
+          <li><span>03</span><strong>Caller role transaction</strong><small>SET LOCAL ROLE</small></li>
+          <li><span>04</span><strong>Native authority</strong><small>grants · RLS · constraints</small></li>
+          <li><span>05</span><strong>Journal + outbox</strong><small>redacted · post-commit</small></li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="rules-title">
+        <div class="section-heading split">
+          <div><p class="eyebrow">GUIDEBOOK RULES</p><h2 id="rules-title">What the Proof taught us</h2></div>
+          <p>These are implementation constraints discovered by making the fixture fail safely.</p>
+        </div>
+        <div class="rule-grid">
+          <article><b>01</b><h3>Catalog, don’t generate</h3><p>Dynamic user tables are discovered at runtime. Fixed Tabular records alone belong in generated schemas.</p></article>
+          <article><b>02</b><h3>Intersect authority</h3><p>The app can narrow access. PostgreSQL grants and forced RLS remain the final authority.</p></article>
+          <article><b>03</b><h3>Separate migration power</h3><p>A non-caller owner performs DDL, whole-table promotion, and shared-view publication.</p></article>
+          <article><b>04</b><h3>Version every commit</h3><p>Mutations carry an expected version; stale writers receive a conflict, never a silent overwrite.</p></article>
+          <article><b>05</b><h3>Persist invalid work</h3><p>Drafts and validation errors live in the Tabular schema without corrupting canonical records.</p></article>
+          <article><b>06</b><h3>Translate every PGlite claim</h3><p>Pool, network, server version, multi-worker, and operations claims wait for their real targets.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="coverage-title">
+        <div class="section-heading split">
+          <div><p class="eyebrow">COVERAGE</p><h2 id="coverage-title">Twelve product contracts</h2></div>
+          <p id="coverage-summary">Loading the executable coverage ledger…</p>
+        </div>
+        <div id="coverage" class="coverage" aria-live="polite"></div>
+      </section>
+
+      <section class="translation" aria-labelledby="translation-title">
+        <div class="section-heading">
+          <p class="eyebrow">PRODUCTION TRANSLATION</p>
+          <h2 id="translation-title">The Proof ends where production begins</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Proved here</th><th>Must be re-proved</th></tr></thead>
+            <tbody id="translations"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <footer><span>Tabular · Spec 00002</span><span id="captured-at">Fresh evidence required</span></footer>
+    <script type="module" src="./guide.js"></script>
+  </body>
+</html>

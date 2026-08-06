@@ -1,0 +1,143 @@
+{
+  "status": "passed",
+  "runtime": {
+    "application": "real local Stackpress web process",
+    "database": "PostgreSQL 18.4 disposable container",
+    "freshBrowser": true,
+    "desktopViewport": { "width": 1440, "height": 900 },
+    "narrowViewport": { "width": 390, "height": 844 }
+  },
+  "authentication": {
+    "unauthenticatedGridStatus": 401,
+    "unauthenticatedGridCode": "invalid_session",
+    "permissionFailureRetainedForm": true,
+    "columnPrivilegesEnforced": true
+  },
+  "liveGrid": {
+    "initialRows": 3,
+    "freshMount": "passed",
+    "exactNumericAndTemporalStrings": true,
+    "generatedValuesRefreshedFromPostgreSQL": true,
+    "fields": [
+      "Text",
+      "Number",
+      "Email",
+      "URL",
+      "Phone",
+      "Relation",
+      "Select",
+      "Price",
+      "Switch",
+      "Date and time"
+    ],
+    "linkedOutputUsesSpreadsheetSafeModifierActivation": true
+  },
+  "drafts": {
+    "databaseRejectionRetainedRawValue": true,
+    "databaseIssueRecoveredAfterReload": true,
+    "persistentCorrectionPromoted": true,
+    "rapidCorrectionsSerializedBehindOneCreate": true,
+    "networkFailureRetainedRawValue": true,
+    "networkDraftCanceled": true,
+    "activeDraftsInDatabase": 0,
+    "promotedDraftsInDatabase": 2,
+    "abandonedDraftsInDatabase": 1
+  },
+  "ranges": {
+    "contiguousRectangularSelection": true,
+    "scalarCopyPaste": "passed",
+    "fill": "passed",
+    "undoRedo": "passed",
+    "logicalSelectionPreserved": true
+  },
+  "rows": {
+    "insertThroughPersistentPromotion": "passed",
+    "relationTupleAppliedAtomically": true,
+    "serverDefaults": "passed",
+    "rowErrorPopover": "passed",
+    "onlyFailingInsertCellsProjected": true,
+    "errorExplanationsBoundedAndMutuallyExclusive": true,
+    "deleteConfirmation": "passed",
+    "deleteUndoRedo": "passed",
+    "deleteFocusRestoration": "passed"
+  },
+  "columns": {
+    "textRequiredDefault": "passed",
+    "displayRename": "passed",
+    "number": "passed",
+    "selectOptions": "passed",
+    "generatedReadOnly": "passed",
+    "inlineBlankHeaderNaming": "passed",
+    "advancedStartsCollapsed": true,
+    "appliedColumnCreates": 4,
+    "appliedColumnConfigures": 1
+  },
+  "relation": {
+    "keylessTargetRejected": true,
+    "target": "crm.customers",
+    "sourceArity": 2,
+    "targetArity": 2,
+    "nonAdjacentSourceMapping": true,
+    "independentPickerAndOutputTemplates": true,
+    "existingReferenceBeyondFirst50Hydrated": true,
+    "remoteTypedSearchBeyondFirst50": true,
+    "liveTargetLabelRefresh": true,
+    "rlsRestrictedTargetExcluded": true,
+    "appliedRelationCreates": 1
+  },
+  "focus": {
+    "columnPanelInitialFocus": "passed",
+    "columnPanelEscapeRestore": "passed",
+    "deleteDialogInitialFocus": "passed",
+    "deleteDialogEscapeRestore": "passed"
+  },
+  "narrow": {
+    "documentWidthBefore": 390,
+    "documentWidthAfter": 390,
+    "bodyWidthBefore": 390,
+    "bodyWidthAfter": 390,
+    "panel": { "x": 18, "y": 0, "width": 372, "height": 844 },
+    "action": { "x": 272.515625, "y": 800, "width": 103.484375, "height": 32 },
+    "primaryEdit": "passed",
+    "inlineHeaderNaming": "passed"
+  },
+  "transport": {
+    "authenticatedCsrfProtectedPosts": true,
+    "actionsObserved": [
+      "record.patch",
+      "range.patch",
+      "draft.create",
+      "draft.update",
+      "draft.promote",
+      "draft.delete",
+      "record.delete",
+      "history.undo",
+      "history.redo",
+      "column.create",
+      "column.configure",
+      "relation.create",
+      "ddl.confirm"
+    ],
+    "allSuccessfulReadsRotatedCsrf": true
+  },
+  "databaseAudit": {
+    "finalOrderCount": 3,
+    "finalQuantities": { "ord-001": "7", "ord-002": "6", "ord-003": "6" },
+    "finalUnitPrice": "7.250000000000000000",
+    "compositeForeignKey": "FOREIGN KEY (customer_tenant, customer_code) REFERENCES crm.customers(tenant_id, customer_code)",
+    "relationTargetRowCount": 61,
+    "allSixDdlRequestsApplied": true
+  },
+  "verification": {
+    "fullVerifyTests": 70,
+    "fullVerify": "passed",
+    "task00004PostgreSQL18": "passed",
+    "task00008PostgreSQL18": "passed"
+  },
+  "dom": {
+    "duplicateIds": [],
+    "unnamedButtons": 0,
+    "unnamedLinks": 0
+  },
+  "signals": []
+}

@@ -1,0 +1,91 @@
+{
+  "capturedAt": "2026-07-31T09:31:01.955Z",
+  "node": "v26.3.0",
+  "proof": "P-005",
+  "disposition": "proved",
+  "stackpressVersion": "0.10.8",
+  "database": "PGlite / PostgreSQL 17.5 semantics",
+  "signals": {
+    "sharedNamedEvent": "tabular.table.capability",
+    "pageApiOutcomeParity": true,
+    "denyDefaultApplicationPolicy": true,
+    "forcedRlsFiltersReads": true,
+    "forcedRlsDeniesCrossOwnerWrites": true,
+    "forcedRlsAppliesToTableOwner": true,
+    "roleResetAfterTransaction": true,
+    "redactedAudit": true
+  },
+  "limitation": "Does not prove server PostgreSQL connection-pool role reset, network identity propagation, or PostgreSQL 18 behavior.",
+  "audit": [
+    {
+      "actor": "alice",
+      "surface": "page",
+      "operation": "read",
+      "outcome": "authorized",
+      "target_id": null,
+      "details": {
+        "source": "application-and-postgresql"
+      }
+    },
+    {
+      "actor": "alice",
+      "surface": "api",
+      "operation": "read",
+      "outcome": "authorized",
+      "target_id": null,
+      "details": {
+        "source": "application-and-postgresql"
+      }
+    },
+    {
+      "actor": "alice",
+      "surface": "page",
+      "operation": "update",
+      "outcome": "authorized",
+      "target_id": 1,
+      "details": {
+        "source": "application-and-postgresql"
+      }
+    },
+    {
+      "actor": "alice",
+      "surface": "api",
+      "operation": "update",
+      "outcome": "authorized",
+      "target_id": 1,
+      "details": {
+        "source": "application-and-postgresql"
+      }
+    },
+    {
+      "actor": "charlie",
+      "surface": "page",
+      "operation": "update",
+      "outcome": "denied",
+      "target_id": 1,
+      "details": {
+        "source": "application-policy"
+      }
+    },
+    {
+      "actor": "bob",
+      "surface": "api",
+      "operation": "update",
+      "outcome": "denied",
+      "target_id": 1,
+      "details": {
+        "source": "postgresql-policy"
+      }
+    },
+    {
+      "actor": "bob",
+      "surface": "api",
+      "operation": "read",
+      "outcome": "authorized",
+      "target_id": null,
+      "details": {
+        "source": "application-and-postgresql"
+      }
+    }
+  ]
+}

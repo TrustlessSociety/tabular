@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Import values · Tabular</title>
+  <link rel="stylesheet" href="../lib/base/tokens.css">
+  <link rel="stylesheet" href="../lib/base/reset.css">
+  <link rel="stylesheet" href="../lib/base/base.css">
+  <link rel="stylesheet" href="../lib/icons.css">
+  <link rel="stylesheet" href="../lib/app.css">
+</head>
+<body>
+  <header class="focused-topbar">
+    <a class="app-logo" href="../workflows.html">
+      <span class="app-logo__mark"><span data-wf-icon="grid"></span></span>
+      <span>Tabular</span>
+    </a>
+    <span class="app-meta"><span data-department-name>Operations</span> department</span>
+    <a class="app-button app-button--ghost app-button--icon" href="./browse.html?department=operations" data-department-return aria-label="Close import">
+      <span data-wf-icon="close"></span>
+    </a>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-wrap">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="./browse.html?department=operations" data-department-return data-department-name>Operations</a>
+        <span data-wf-icon="chevron-right"></span>
+        <strong>Import values</strong>
+      </nav>
+
+      <section class="builder-head">
+        <p class="app-eyebrow">One-time import</p>
+        <h1>Bring values into <span data-department-name>Operations</span></h1>
+        <p class="wf-copy">Review the source, inferred fields, and value fidelity before creating a department table.</p>
+      </section>
+
+      <div class="import-layout" data-import-wizard data-step="1">
+        <ol class="import-steps" aria-label="Import progress">
+          <li class="import-step" data-step-indicator="1" data-active="true">
+            <span class="import-step__number">1</span>
+            <span>Choose source</span>
+          </li>
+          <li class="import-step" data-step-indicator="2">
+            <span class="import-step__number">2</span>
+            <span>Preview values</span>
+          </li>
+          <li class="import-step" data-step-indicator="3">
+            <span class="import-step__number">3</span>
+            <span>Import</span>
+          </li>
+        </ol>
+
+        <section class="import-panel">
+          <div data-import-screen="1">
+            <div class="import-panel__header">
+              <h2>Choose a source</h2>
+              <p class="wf-copy">This is a one-time cutover. Tabular will not keep the source synchronized.</p>
+            </div>
+            <div class="import-panel__body">
+              <div class="source-grid" role="group" aria-label="Import source">
+                <button class="source-card" type="button" data-import-source="csv" aria-pressed="true">
+                  <span class="source-card__icon"><span data-wf-icon="table"></span></span>
+                  <strong>CSV</strong>
+                  <span>Upload a comma-separated file and preserve each source token.</span>
+                </button>
+                <button class="source-card" type="button" data-import-source="xlsx" aria-pressed="false">
+                  <span class="source-card__icon"><span data-wf-icon="grid"></span></span>
+                  <strong>XLSX</strong>
+                  <span>Import cached values from an Excel workbook.</span>
+                </button>
+                <button class="source-card" type="button" data-import-source="google" aria-pressed="false">
+                  <span class="source-card__icon"><span data-wf-icon="link"></span></span>
+                  <strong>Google Sheets</strong>
+                  <span>Connect once and import the latest calculated values.</span>
+                </button>
+              </div>
+
+              <div class="source-summary" data-source-summary>
+                <span class="source-summary__icon"><span data-wf-icon="import"></span></span>
+                <span>
+                  <strong>Q3-orders.csv</strong>
+                  <span class="app-meta">248 rows · 6 columns · 38 KB</span>
+                </span>
+                <button class="app-button app-button--secondary app-button--compact" type="button">Choose file</button>
+              </div>
+
+              <div class="app-alert">
+                <span data-wf-icon="alert"></span>
+                <span><strong>Values only.</strong> Formulas, formatting, comments, notes, and workbook behavior are not recreated.</span>
+              </div>
+            </div>
+            <div class="import-panel__footer">
+              <a class="app-button app-button--secondary" href="./browse.html?department=operations" data-department-return>Cancel</a>
+              <button class="app-button" type="button" data-import-next>Preview values <span data-wf-icon="arrow-right"></span></button>
+            </div>
+          </div>
+
+          <div data-import-screen="2" hidden>
+            <div class="import-panel__header">
+              <h2>Preview values and fields</h2>
+              <p class="wf-copy">Confirm how source columns will become PostgreSQL columns.</p>
+            </div>
+            <div class="import-panel__body">
+              <div class="source-summary">
+                <span class="source-summary__icon"><span data-wf-icon="table"></span></span>
+                <span>
+                  <strong>Q3-orders.csv</strong>
+                  <span class="app-meta">248 rows · header row detected · UTF-8</span>
+                </span>
+                <span class="app-badge app-badge--strong">Values ready</span>
+              </div>
+
+              <div class="mapping-list" aria-label="Column mapping">
+                <div class="mapping-row mapping-row--header">
+                  <span>Source column</span>
+                  <span>Field</span>
+                  <span>PostgreSQL storage</span>
+                </div>
+                <div class="mapping-row">
+                  <strong>Customer</strong>
+                  <select class="app-select" aria-label="Customer field type"><option>Text</option><option>Relation</option></select>
+                  <span class="app-code">text</span>
+                </div>
+                <div class="mapping-row">
+                  <strong>Email</strong>
+                  <select class="app-select" aria-label="Email field type"><option>Email</option><option>Text</option></select>
+                  <span class="app-code">text</span>
+                </div>
+                <div class="mapping-row">
+                  <strong>Status</strong>
+                  <select class="app-select" aria-label="Status field type"><option>Select</option><option>Text</option></select>
+                  <span class="app-code">text + check</span>
+                </div>
+                <div class="mapping-row">
+                  <strong>Total</strong>
+                  <select class="app-select" aria-label="Total field type"><option>Price</option><option>Number</option></select>
+                  <span class="app-code">numeric</span>
+                </div>
+              </div>
+
+              <div class="preview-wrap">
+                <table class="preview-table">
+                  <thead>
+                    <tr><th>Customer</th><th>Email</th><th>Status</th><th>Total</th><th>Paid</th><th>Ordered at</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Northstar Market</td><td>ap@northstar.co</td><td>Processing</td><td>1,280.00</td><td>true</td><td>2026-07-24 10:32</td></tr>
+                    <tr><td>Harbor Goods</td><td>orders@harborgoods.ph</td><td>Ready</td><td>845.50</td><td>false</td><td>2026-07-24 09:18</td></tr>
+                    <tr><td>Acacia Retail</td><td>team@acaciaretail.com</td><td>Shipped</td><td>2,410.00</td><td>true</td><td>2026-07-23 15:04</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="warning-list">
+                <div class="app-alert">
+                  <span data-wf-icon="alert"></span>
+                  <span><strong>3 formula cells use cached values.</strong> Their formula definitions will not be imported.</span>
+                </div>
+                <div class="app-alert">
+                  <span data-wf-icon="alert"></span>
+                  <span><strong>2 date tokens need confirmation.</strong> They are displayed using the source token and inferred value.</span>
+                </div>
+              </div>
+            </div>
+            <div class="import-panel__footer">
+              <button class="app-button app-button--secondary" type="button" data-import-back><span data-wf-icon="arrow-left"></span> Back</button>
+              <button class="app-button" type="button" data-import-next>Review import <span data-wf-icon="arrow-right"></span></button>
+            </div>
+          </div>
+
+          <div data-import-screen="3" hidden>
+            <div class="import-panel__header">
+              <h2>Ready to import</h2>
+              <p class="wf-copy">Tabular will create one table and commit 248 values-only records.</p>
+            </div>
+            <div class="import-panel__body">
+              <div data-import-ready>
+                <div class="builder-form-grid">
+                  <label class="app-field">
+                    <span class="app-label">Table name</span>
+                    <input class="app-input app-code" value="q3_orders" aria-label="Imported table name">
+                  </label>
+                  <label class="app-field">
+                    <span class="app-label">Department</span>
+                    <select class="app-select" aria-label="Department responsible for imported table"><option data-department-name>Operations</option></select>
+                  </label>
+                </div>
+
+                <div class="summary-block">
+                  <h3>Import summary</h3>
+                  <div class="mapping-list">
+                    <div class="mapping-row"><strong>Records</strong><span>248 exact-value rows</span><span class="app-badge">Ready</span></div>
+                    <div class="mapping-row"><strong>Columns</strong><span>6 mapped fields</span><span class="app-badge">Ready</span></div>
+                    <div class="mapping-row"><strong>Warnings</strong><span>5 attributable items</span><span class="app-badge">Reviewable</span></div>
+                  </div>
+                </div>
+
+                <div class="app-alert">
+                  <span data-wf-icon="database"></span>
+                  <span><span data-department-name>Operations</span> will manage this table. Advanced data source: <strong class="app-code">public.q3_orders</strong>.</span>
+                </div>
+              </div>
+
+              <div data-import-progress hidden>
+                <div class="source-summary">
+                  <span class="source-summary__icon"><span data-wf-icon="import"></span></span>
+                  <span>
+                    <strong>Importing Q3-orders.csv</strong>
+                    <span class="app-meta">Validating typed values and preparing one transaction</span>
+                  </span>
+                </div>
+                <div class="progress-bar" aria-label="Import progress"><span></span></div>
+              </div>
+
+              <div class="import-success" data-import-success hidden>
+                <div class="import-success__icon"><span data-wf-icon="check"></span></div>
+                <h2>248 records imported</h2>
+                <p class="wf-copy">The new table is ready in <span data-department-name>Operations</span>.</p>
+                <div class="workflow-card__actions import-success__actions">
+                  <a class="app-button" href="./table.html?imported=1&amp;department=operations" data-department-table-link>Open imported table <span data-wf-icon="arrow-right"></span></a>
+                  <a class="app-button app-button--secondary" href="./browse.html?department=operations" data-department-return>Back to tables</a>
+                </div>
+              </div>
+            </div>
+            <div class="import-panel__footer" data-import-final-actions>
+              <button class="app-button app-button--secondary" type="button" data-import-back><span data-wf-icon="arrow-left"></span> Back</button>
+              <button class="app-button" type="button" data-import-run><span data-wf-icon="import"></span> Import values</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="../lib/icons.js"></script>
+  <script src="../lib/app.js"></script>
+</body>
+</html>
