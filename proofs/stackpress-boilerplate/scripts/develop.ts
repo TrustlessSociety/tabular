@@ -46,8 +46,8 @@ async function main() {
   //add routes
   await server.resolve('route');
   //start the server
-  server.create().listen(3000, () => {
-    cli.control.system('Server is running on port 3000');
+  server.create().listen(3020, () => {
+    cli.control.system('Server is running on port 3020');
     cli.control.system('------------------------------');
   });
 }
