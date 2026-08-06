@@ -1,0 +1,37 @@
+{
+  "name": "stackpress-boilerplate",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "plugins": [
+    "./plugins/app/plugin",
+    "./plugins/store/plugin",
+    "./plugins/home/plugin"
+  ],
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "dev": "tsx scripts/develop.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.3.15",
+    "@stackpress/ingest": "0.10.8",
+    "@stackpress/inquire": "0.10.8",
+    "@stackpress/inquire-pglite": "0.10.8",
+    "@stackpress/lib": "0.10.8",
+    "r22n": "1.0.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.4",
+    "reactus": "0.10.8",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "unocss": "66.6.6",
+    "vite": "7.3.1",
+    "vite-tsconfig-paths": "6.0.3"
+  }
+}
