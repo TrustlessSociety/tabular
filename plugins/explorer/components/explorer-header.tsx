@@ -1,5 +1,5 @@
 //client
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 
 /**
  * Render the explorer header component.

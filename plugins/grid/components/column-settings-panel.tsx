@@ -13,7 +13,7 @@ import type {
   PlannedFileDdl
 } from '../../files/helpers/contracts.js';
 import type { GridColumn } from '../helpers/contracts.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import {
   confirmGridDdl,
   loadFileDescription,
@@ -72,7 +72,7 @@ export function ColumnSettingsPanel({
   const [plan, setPlan] = useState<PlannedFileDdl>();
   const [physicalNameOverridden, setPhysicalNameOverridden] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
-  const [form, setForm] = useState<ColumnForm>(() => initialForm(selected, file));
+  const [form, setForm] = useState<ColumnForm>(() => initialForm(selected));
   const targets = useMemo(() => folders.flatMap((folder) => folder.files.map((candidate) => ({
     ...candidate,
     folderName: folder.displayName
@@ -83,7 +83,7 @@ export function ColumnSettingsPanel({
 
   useEffect(() => {
     if (!open) return;
-    setForm(initialForm(selected, file));
+    setForm(initialForm(selected));
     setPlan(undefined);
     setError(undefined);
     setPhysicalNameOverridden(false);
@@ -446,7 +446,7 @@ export function ColumnSettingsPanel({
 /**
  * Return the initial form result.
  */
-function initialForm(column: GridColumn | undefined, file: ExplorerFile): ColumnForm {
+function initialForm(column: GridColumn | undefined): ColumnForm {
   const name = column?.label || 'New column';
   const field = (column?.field || fieldForGridKind(column?.kind)) as FileFieldKind;
   return {

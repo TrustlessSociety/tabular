@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 //client
-import type { GridEditDraft } from '../../grid/helpers/editing.js';
+import type { GridEditDraft } from '../helpers/editing.js';
 import {
   DraftPersistenceRegistry,
   DraftPersistenceSequencer

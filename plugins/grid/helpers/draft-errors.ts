@@ -1,6 +1,6 @@
 //client
-import type { GridCellIssue, GridRow } from '../../grid/helpers/contracts.js';
-import type { GridEditDraft } from '../../grid/helpers/editing.js';
+import type { GridCellIssue, GridRow } from './contracts.js';
+import type { GridEditDraft } from './editing.js';
 
 /**
  * A schema-change issue describes the retained draft envelope, not the typed

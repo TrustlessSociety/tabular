@@ -8,13 +8,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 //client
 import type { CommandContext } from '../../commands/helpers/contracts.js';
-import type { IconName } from '../components/icon.js';
-import { GridCanvas, displaySelection } from '../../grid/components/grid-canvas.js';
-import { REVIEW_COLUMNS, createReviewRows } from '../../grid/tests/fixtures.js';
+import type { IconName } from '../../app/components/icon.js';
+import { GridCanvas, displaySelection } from '../components/grid-canvas.js';
+import { REVIEW_COLUMNS, createReviewRows } from './fixtures.js';
 import { SpreadsheetMenuBar } from '../../commands/components/command-surface.js';
-import { Icon } from '../components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import { SelectionInspector } from '../components/selection-inspector.js';
-import { EmphasisButton } from '../components/emphasis-button.js';
+import { EmphasisButton } from '../../app/components/emphasis-button.js';
 
 test('shared icon vocabulary renders decorative current-color SVGs without font glyphs', () => {
   const names: IconName[] = [

@@ -3,8 +3,8 @@ import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 
 //client
-import type { GridColumn, LogicalGridSelection } from '../../grid/helpers/contracts.js';
-import { Icon } from './icon.js';
+import type { GridColumn, LogicalGridSelection } from '../helpers/contracts.js';
+import { Icon } from '../../app/components/icon.js';
 
 //The selection inspector props contract exported for module callers
 export type SelectionInspectorProps = {

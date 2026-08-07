@@ -2,8 +2,8 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 //client
-import type { IconName } from '../../ui/components/icon.js';
-import { Icon } from '../../ui/components/icon.js';
+import type { IconName } from '../../app/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 
 //The activity filter contract exported for module callers
 export type ActivityFilter = 'all' | 'active' | 'attention' | 'completed';

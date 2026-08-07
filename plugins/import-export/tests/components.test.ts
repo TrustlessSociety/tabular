@@ -286,7 +286,7 @@ test('error, progress, success, and cancellation stay explicit and recoverable',
 });
 
 test('responsive styles preserve the bounded 1040 and 390 pixel layouts', () => {
-  const css = readFileSync(new URL('../views/import-export.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../../public/styles/import.css', import.meta.url), 'utf8');
 
   assert.match(css, /@media \(max-width: 1040px\)/);
   assert.match(css, /@media \(max-width: 390px\)/);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 //client
-import type { GridColumn } from '../../grid/helpers/contracts.js';
+import type { GridColumn } from '../helpers/contracts.js';
 import {
   applyBlankColumnInsertions,
   applyColumnInsertion,

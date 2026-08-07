@@ -7,7 +7,7 @@ import type {
   SavedViewAccess,
   SavedViewCapabilities
 } from '../helpers/contracts.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 
 //The saved view includes contract exported for module callers
 export type SavedViewIncludes = {

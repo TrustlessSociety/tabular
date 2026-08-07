@@ -1,5 +1,5 @@
 //client
-import type { GridColumn } from '../../grid/helpers/contracts.js';
+import type { GridColumn } from './contracts.js';
 
 //The column insertion request contract exported for module callers
 export type ColumnInsertionRequest = {

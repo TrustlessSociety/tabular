@@ -1,7 +1,6 @@
 //modules
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import 'tabulator-tables/dist/css/tabulator.min.css';
 
 //client
 import type { PresentationToolbarState } from '../../commands/components/command-surface.js';
@@ -14,15 +13,14 @@ import type {
 } from '../../commands/helpers/contracts.js';
 import type { TableSettingsDraft } from '../../explorer/components/table-settings-panel.js';
 import type {
-  AuthRequiredPageProps,
   ExplorerFile,
-  ExplorerPageProps,
-  ImportEntryPageProps,
   TablePageProps
 } from '../../explorer/helpers/contracts.js';
+import type { BrowserProviderProjection } from '../../app/helpers/projection.js';
+import Provider from '../../app/components/Provider.js';
 import type { FileDescription, PlannedFileDdl } from '../../files/helpers/contracts.js';
-import type { GridCommand } from '../../grid/components/grid-canvas.js';
-import type { GridGesture } from '../../grid/components/grid-canvas.js';
+import type { GridCommand } from '../components/grid-canvas.js';
+import type { GridGesture } from '../components/grid-canvas.js';
 import type {
   GridCellIssue,
   GridCellPresentation,
@@ -33,9 +31,8 @@ import type {
   GridRow,
   GridSort,
   LogicalGridSelection
-} from '../../grid/helpers/contracts.js';
-import type { GridEditDraft, GridHistoryFrame } from '../../grid/helpers/editing.js';
-import type { ActivityPageProps } from '../../operations/pages/contracts.js';
+} from '../helpers/contracts.js';
+import type { GridEditDraft, GridHistoryFrame } from '../helpers/editing.js';
 import type { RealtimeState } from '../../realtime/events/controller.js';
 import type { SavedViewIncludes } from '../../saved-views/components/saved-views-dialog.js';
 import type {
@@ -44,10 +41,10 @@ import type {
   SavedViewDefinition
 } from '../../saved-views/helpers/contracts.js';
 import type { BlankColumnInsertion, ColumnInsertionRequest } from '../helpers/column-insertion.js';
-import { GridCanvas } from '../../grid/components/grid-canvas.js';
-import { ColumnSettingsPanel } from '../../grid/components/column-settings-panel.js';
-import { GRID_HEADER_ROW_ID } from '../../grid/helpers/contracts.js';
-import { spreadsheetRowNumber } from '../../grid/helpers/selection.js';
+import { GridCanvas } from '../components/grid-canvas.js';
+import { ColumnSettingsPanel } from '../components/column-settings-panel.js';
+import { GRID_HEADER_ROW_ID } from '../helpers/contracts.js';
+import { spreadsheetRowNumber } from '../helpers/selection.js';
 import {
   applyGridDraft,
   applyMutationVersions,
@@ -67,7 +64,7 @@ import {
   stageScalarRange,
   updateInsertDraft,
   updateInsertRelationDraft
-} from '../../grid/helpers/editing.js';
+} from '../helpers/editing.js';
 import {
   dispatchGridCapability,
   confirmGridDdl,
@@ -76,7 +73,7 @@ import {
   loadGridResource,
   loadRelationOptions,
   planGridDdl
-} from '../../grid/events/actions.js';
+} from '../events/actions.js';
 import { TableSettingsPanel } from '../../explorer/components/table-settings-panel.js';
 import { FileCreateDialog } from '../../explorer/components/file-ddl-confirmation.js';
 import {
@@ -85,10 +82,8 @@ import {
   waitForExplorerDdl
 } from '../../explorer/events/actions.js';
 import { normalizePhysicalName } from '../../explorer/helpers/model.js';
-import ExplorerPage from '../../explorer/views/explorer.js';
-import { ImportPage } from '../../import-export/views/import-page.js';
 import { downloadAuthorizedCsv } from '../../import-export/events/actions.js';
-import { Icon } from '../components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import {
   SpreadsheetMenuBar,
   FormattingToolbar
@@ -130,19 +125,9 @@ import {
 } from '../../saved-views/events/actions.js';
 import { SavedViewsDialog } from '../../saved-views/components/saved-views-dialog.js';
 import { RealtimeController } from '../../realtime/events/controller.js';
-import ActivityPage from '../../operations/views/activity-page.js';
-import '../../explorer/views/explorer.css';
-import '../../commands/views/commands.css';
-import './workbench.css';
-import '../../saved-views/views/saved-views.css';
-import '../../import-export/views/import-export.css';
-import '../../operations/views/activity.css';
-import '../../identity/views/authentication.css';
 
 //The workbench page props contract exported for module callers
 export type WorkbenchPageProps = TablePageProps;
-//The app page props contract exported for module callers
-export type AppPageProps = ExplorerPageProps | TablePageProps | ImportEntryPageProps | AuthRequiredPageProps | ActivityPageProps;
 
 type RemoteDraftHandle = { id: string, version: number, };
 type DraftState = 'none' | 'pending' | 'invalid' | 'failed' | 'stale';
@@ -191,13 +176,13 @@ const BLANK_ROWS: GridRow[] = Array.from({ length: 1000 }, (_, index) => ({
 /**
  * Render the head component.
  */
-export function Head({ styles = [], surface = 'table' }: { styles?: string[], surface?: AppPageProps['surface'], }) {
+export function Head({ styles = [] }: { styles?: string[], }) {
   return (
     <>
-      <title>{surface === 'explorer' ? 'Files — Tabular' : surface === 'import-entry' ? 'Import values — Tabular' : surface === 'activity' ? 'System activity — Tabular' : surface === 'auth-required' ? 'Sign in required — Tabular' : 'Tabular spreadsheet'}</title>
-      <meta name="description" content={surface === 'explorer' ? 'Browse PostgreSQL-backed Tabular files' : surface === 'import-entry' ? 'Start a values-only import' : surface === 'activity' ? 'Monitor and recover authorized Tabular background operations' : 'Tabular direct PostgreSQL spreadsheet workbench'} />
+      <title>Tabular spreadsheet</title>
+      <meta name="description" content="Tabular direct PostgreSQL spreadsheet workbench" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      {styles.map((href) => (
+      {[...styles, '/styles/base.css', '/styles/grid.css', '/styles/commands.css', '/styles/saved-views.css', '/styles/tabulator.css'].map((href) => (
         <link key={href} rel="stylesheet" type="text/css" href={href} />
       ))}
     </>
@@ -205,62 +190,13 @@ export function Head({ styles = [], surface = 'table' }: { styles?: string[], su
 }
 
 /**
- * Render the app page component.
+ * Adapt the server-owned table data and Provider projection to the grid page.
  */
-export default function AppPage(props: AppPageProps) {
-  //select the server-approved surface without adding client-side route state
-  if (props.surface === 'auth-required') {
-    return (
-      <AuthenticationRequiredPage {...props} />
-    );
-  }
-  if (props.surface === 'explorer') {
-    return (
-      <ExplorerPage {...props} />
-    );
-  }
-  if (props.surface === 'import-entry') {
-    return (
-      <ImportPage {...props} />
-    );
-  }
-  if (props.surface === 'activity') {
-    return (
-      <ActivityPage {...props} />
-    );
-  }
-  return (
-    <WorkbenchPage {...props} />
-  );
-}
-
-/**
- * Render the authentication required page component.
- */
-export function AuthenticationRequiredPage(props: AuthRequiredPageProps) {
-  return (
-    <div className="explorer-shell">
-      <header className="explorer-topbar">
-        <span className="explorer-brand">
-          <span className="explorer-brand-mark"><Icon name="grid" /></span>
-          <strong>Tabular</strong>
-        </span>
-      </header>
-      <main className="explorer-main">
-        <section className="explorer-state" aria-labelledby="authentication-required-title">
-          <Icon name="account" />
-          <h1 id="authentication-required-title">Sign in required</h1>
-          <p>An authenticated Tabular session is required before files or database metadata can be shown.</p>
-          <button type="button" disabled aria-disabled="true">Identity provider not configured</button>
-        </section>
-      </main>
-      <footer className="explorer-status">
-        <span><i data-status={props.status} />Protected application boundary</span>
-        <output>Live provider configuration is a deployment input</output>
-        <span>v{props.version}</span>
-      </footer>
-    </div>
-  );
+export default function TableView({ data, provider }: {
+  data: WorkbenchPageProps,
+  provider: BrowserProviderProjection,
+}) {
+  return <Provider {...provider}><WorkbenchPage {...data} /></Provider>;
 }
 
 /**
@@ -3272,7 +3208,7 @@ function actionIssueMessage(error: { issues?: unknown[], }, columns: readonly Gr
 function enrichGridColumns(
   columns: GridColumn[],
   description: FileDescription,
-  folders: ExplorerPageProps['snapshot']['folders']
+  folders: TablePageProps['snapshot']['folders']
 ) {
   const primaryOrUnique = description.constraints.filter((constraint) =>
     constraint.kind === 'p' || constraint.kind === 'u'

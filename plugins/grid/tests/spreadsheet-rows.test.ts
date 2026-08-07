@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 //client
-import type { GridRow } from '../../grid/helpers/contracts.js';
+import type { GridRow } from '../helpers/contracts.js';
 import {
   committedRowIdsInVisibleOrder,
   padSpreadsheetRows,

@@ -1,5 +1,5 @@
 //client
-import type { GridRow } from '../../grid/helpers/contracts.js';
+import type { GridRow } from './contracts.js';
 
 const ROW_RANK_GAP = 1_000_000n;
 const MAX_ROW_RANK = 10n ** 24n - 1n;

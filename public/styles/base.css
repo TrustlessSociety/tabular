@@ -1,0 +1,88 @@
+/* Global: workbench tokens, resets, and accessibility helpers */
+
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #F6F7F8;
+  color: #20242A;
+  --paper: #FFFFFF;
+  --canvas: #F6F7F8;
+  --subtle: #F0F2F4;
+  --rule: #D9DDE3;
+  --rule-strong: #BDC3CB;
+  --ink: #20242A;
+  --muted: #66707B;
+  --focus: #2563EB;
+  --focus-wash: #EFF5FF;
+  --danger: #B42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+body,
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+[tabindex]:focus-visible,
+.tabulator-cell:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.sr-only {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 10px;
+  border: 1px solid var(--focus);
+  background: var(--paper);
+  color: var(--focus);
+  transform: translateY(-140%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

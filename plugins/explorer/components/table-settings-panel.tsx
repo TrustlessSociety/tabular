@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 //client
 import type { ExplorerFile, ExplorerFolder } from '../helpers/contracts.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import { derivePhysicalName } from '../events/actions.js';
 
 //The table settings draft contract exported for module callers

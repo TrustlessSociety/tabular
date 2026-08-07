@@ -3,14 +3,14 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 //client
-import type { IconName } from '../../ui/components/icon.js';
+import type { IconName } from '../../app/components/icon.js';
 import type {
   CommandContext,
   CommandId,
   CommandMenuEntry,
   CommandState
 } from '../helpers/contracts.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import { COMMAND_MENUS, commandState } from '../helpers/registry.js';
 
 //The presentation toolbar state contract exported for module callers

@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { useId } from 'react';
 
 //client
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 
 //The import source kind contract exported for module callers
 export type ImportSourceKind = 'csv' | 'xlsx' | 'google-sheets';
