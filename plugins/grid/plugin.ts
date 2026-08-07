@@ -12,7 +12,12 @@ import { CAPABILITY_SERVICE } from '../capability/helpers/service.js';
 import { EXPLORER_SERVICE } from '../explorer/helpers/service.js';
 import { FILES_SERVICE } from '../files/helpers/service.js';
 import { SAVED_VIEWS_SERVICE } from '../saved-views/helpers/service.js';
-import { registerGridRoutes } from './pages/routes.js';
+
+export const GRID_ROUTES = [
+  '/pages/table.html',
+  '/events/grid',
+  '/events/grid-relation'
+] as const;
 
 /**
  * Register the grid plugin with the application server.
@@ -38,16 +43,11 @@ export default function gridPlugin(
   }
   const service = createGridPluginService(identity, capability);
   if (runtime.processKind === 'web') {
-    registerGridRoutes(
-      server,
-      runtime,
-      identity,
-      explorer,
-      capability,
-      files,
-      savedViews,
-      service
-    );
+    server.import.get('/pages/table.html', () => import('./pages/table.js'), 1);
+    server.view.get('/pages/table.html', '@/plugins/grid/views/table');
+    server.import.get('/events/grid', () => import('./pages/events-grid-get.js'), 1);
+    server.import.get('/events/grid-relation', () => import('./pages/events-grid-relation.js'), 1);
+    server.import.post('/events/grid', () => import('./pages/events-grid-post.js'), 1);
   }
   server.register(GRID_SERVICE, service);
   runtime.pluginOrder.push(GRID_SERVICE);

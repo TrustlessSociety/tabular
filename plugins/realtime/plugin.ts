@@ -9,7 +9,8 @@ import {
   RealtimePluginService
 } from './helpers/service.js';
 import { OPERATIONS_SERVICE } from '../operations/helpers/service.js';
-import { registerRealtimeRoutes } from './pages/routes.js';
+
+export const REALTIME_ROUTES = ['/events'] as const;
 
 /**
  * Register the realtime plugin with the application server.
@@ -32,7 +33,7 @@ export default function realtimePlugin(
   }
   const service = new RealtimePluginService(identity, runtime.config.sse);
   if (runtime.processKind === 'web') {
-    registerRealtimeRoutes(server, runtime.config, identity, service, operations);
+    server.import.get(runtime.config.sse.route, () => import('./pages/events.js'));
   }
   server.register(REALTIME_SERVICE, service);
   runtime.pluginOrder.push(REALTIME_SERVICE);

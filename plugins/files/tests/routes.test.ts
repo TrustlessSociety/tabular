@@ -3,19 +3,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 //client
-import type { ApplicationServer } from '../../../bootstrap/application.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { FilesPluginService } from '../helpers/service.js';
-import { registerFilesRoutes } from '../pages/routes.js';
-
-//The structural route test double supplies dynamic config and service maps,
-// so it cannot name the complete Stackpress server generics
-type DynamicServerDouble = ApplicationServer;
+import eventsFiles from '../pages/events-files.js';
 
 test('file route describes files and reports owner-scoped DDL status through distinct queries', async () => {
   const harness = routeHarness();
-  await harness.get['/events/files']!({
+  await harness.handler({
     req: request(`/events/files?fileId=obj_${'f'.repeat(43)}`),
     res: harness.response
   });
@@ -25,7 +20,7 @@ test('file route describes files and reports owner-scoped DDL status through dis
     id: `obj_${'f'.repeat(43)}`
   });
 
-  await harness.get['/events/files']!({
+  await harness.handler({
     req: request(`/events/files?ddlRequestId=ddl_${'d'.repeat(43)}`),
     res: harness.response
   });
@@ -41,21 +36,21 @@ test('file route describes files and reports owner-scoped DDL status through dis
 test('file route rejects ambiguous and expanded query envelopes', async () => {
   const harness = routeHarness();
   await assert.rejects(
-    harness.get['/events/files']!({
+    harness.handler({
       req: request(`/events/files?fileId=obj_${'f'.repeat(43)}&ddlRequestId=ddl_${'d'.repeat(43)}`),
       res: harness.response
     }),
     (error: unknown) => boundedInvalidQuery(error)
   );
   await assert.rejects(
-    harness.get['/events/files']!({
+    harness.handler({
       req: request(`/events/files?ddlRequestId=ddl_${'d'.repeat(43)}&identityId=id_attacker`),
       res: harness.response
     }),
     (error: unknown) => boundedInvalidQuery(error)
   );
   await assert.rejects(
-    harness.get['/events/files']!({
+    harness.handler({
       req: request(`/events/files?ddlRequestId=ddl_${'d'.repeat(43)}&ddlRequestId=ddl_${'e'.repeat(43)}`),
       res: harness.response
     }),
@@ -79,15 +74,6 @@ function boundedInvalidQuery(error: unknown) {
  * Return the route harness result.
  */
 function routeHarness() {
-  type Request = ReturnType<typeof request>;
-  type Handler = (context: { req: Request, res: typeof response, }) => Promise<void>;
-  const get: Record<string, Handler> = {};
-  const server = {
-    /**
-     * Capture one registered GET route handler by pathname.
-     */
-    get(path: string, handler: Handler) { get[path] = handler; }
-  } as unknown as DynamicServerDouble;
   const principal: BrowserPrincipal = {
     transport: 'browser',
     sessionId: `sess_${'s'.repeat(32)}`,
@@ -120,8 +106,18 @@ function routeHarness() {
   } as unknown as FilesPluginService;
   response.headers = new Headers();
   response.jsonBody = undefined;
-  registerFilesRoutes(server, identity, files);
-  return { get, principal, calls, response };
+  const plugins = new Map<string, unknown>([
+    ['tabular.identity', identity],
+    ['tabular.files', files]
+  ]);
+  return {
+    handler: async (context: { req: ReturnType<typeof request>, res: typeof response, }) => {
+      await eventsFiles({ ...context, ctx: { plugin: <T>(name: string) => plugins.get(name) as T } } as never);
+    },
+    principal,
+    calls,
+    response
+  };
 }
 
 const response = {

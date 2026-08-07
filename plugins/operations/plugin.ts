@@ -9,7 +9,11 @@ import {
   OPERATIONS_SERVICE,
   OperationsPluginService
 } from './helpers/service.js';
-import { registerOperationsRoutes } from './pages/routes.js';
+
+export const OPERATIONS_ROUTES = [
+  '/pages/system-activity.html',
+  '/events/operations'
+] as const;
 
 /**
  * Register the operations plugin with the application server.
@@ -32,10 +36,11 @@ export default function operationsPlugin(
   }
   const service = new OperationsPluginService(runtime, database, identity);
   if (runtime.processKind === 'web') {
-    registerOperationsRoutes(server, runtime, identity, service);
+    server.import.get('/pages/system-activity.html', () => import('./pages/system-activity.js'), 1);
+    server.view.get('/pages/system-activity.html', '@/plugins/operations/views/activity');
+    server.import.get('/events/operations', () => import('./pages/events-operations-get.js'), 1);
+    server.import.post('/events/operations', () => import('./pages/events-operations-post.js'), 1);
   }
   server.register(OPERATIONS_SERVICE, service);
   runtime.pluginOrder.push(OPERATIONS_SERVICE);
 }
-
-export { OPERATIONS_ROUTES } from './pages/routes.js';

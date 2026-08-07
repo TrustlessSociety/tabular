@@ -17,12 +17,15 @@ import {
   IMPORT_EXPORT_SERVICE,
   ImportExportPluginService
 } from './helpers/service.js';
-import {
-  IMPORT_EXPORT_ROUTES,
-  registerImportExportRoutes
-} from './pages/routes.js';
-import { registerRawImportSourceHandler } from './pages/raw-upload.js';
+import { registerRawImportSourceHandler } from './helpers/raw-upload.js';
 import { ImportExportRepository } from './helpers/repository.js';
+
+export const IMPORT_EXPORT_ROUTES = [
+  '/pages/import.html',
+  '/events/import-export',
+  '/events/import-source',
+  '/events/import-google-callback'
+] as const;
 
 /**
  * Register the import export plugin with the application server.
@@ -73,11 +76,13 @@ export default function importExportPlugin(
     }
   });
   if (runtime.processKind === 'web') {
-    registerImportExportRoutes(server, runtime, identity, service);
+    server.import.get('/pages/import.html', () => import('./pages/import.js'));
+    server.view.get('/pages/import.html', '@/plugins/import-export/views/import');
+    server.import.get('/events/import-google-callback', () => import('./pages/events-import-google-callback.js'));
+    server.import.get('/events/import-export', () => import('./pages/events-import-export-get.js'));
+    server.import.post('/events/import-export', () => import('./pages/events-import-export-post.js'));
     registerRawImportSourceHandler(runtime.rawHandlers, identity, service);
   }
   server.register(IMPORT_EXPORT_SERVICE, service);
   runtime.pluginOrder.push(IMPORT_EXPORT_SERVICE);
 }
-
-export { IMPORT_EXPORT_ROUTES };

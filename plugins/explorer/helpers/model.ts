@@ -4,7 +4,6 @@ import type {
   ExplorerFile,
   ExplorerFolder,
   ExplorerFolderPermissions,
-  ExplorerSavedView,
   ExplorerSnapshot
 } from './contracts.js';
 

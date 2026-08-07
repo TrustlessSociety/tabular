@@ -1,0 +1,47 @@
+//client
+import type { ApplicationHttpAction } from '../../../bootstrap/application.js';
+import { ApplicationError } from '../../../bootstrap/errors.js';
+import { FILES_SERVICE, type FilesPluginService } from '../helpers/service.js';
+import { IDENTITY_SERVICE, type IdentityPluginService } from '../../identity/helpers/service.js';
+
+const eventsFiles: ApplicationHttpAction = async ({ req, res, ctx }) => {
+  const identity = ctx.plugin<IdentityPluginService>(IDENTITY_SERVICE);
+  const files = ctx.plugin<FilesPluginService>(FILES_SERVICE);
+  const resumed = await identity.resumeBrowserSession(
+    req.session(identity.cookieName())
+  );
+  if (!resumed) {
+    res.json({
+      error: { code: 'invalid_session', message: 'The browser session is invalid' }
+    }, 401);
+    return;
+  }
+  const allowed = new Set(['fileId', 'ddlRequestId']);
+  if (
+    [...req.url.searchParams.keys()].some((key) => !allowed.has(key))
+    || [...allowed].some((key) => req.url.searchParams.getAll(key).length > 1)
+  ) {
+    throw invalidQuery();
+  }
+  const fileId = req.url.searchParams.get('fileId');
+  const ddlRequestId = req.url.searchParams.get('ddlRequestId');
+  if (Boolean(fileId) === Boolean(ddlRequestId)) throw invalidQuery();
+  const identifier = fileId || ddlRequestId;
+  if (!identifier || !/^[A-Za-z0-9_.:-]{1,80}$/.test(identifier)) {
+    throw invalidQuery();
+  }
+  res.headers.set('Cache-Control', 'no-store, private');
+  res.headers.set('X-Tabular-CSRF', resumed.csrfToken);
+  res.json({
+    status: 'ok',
+    data: ddlRequestId
+      ? await files.status(resumed.principal, ddlRequestId)
+      : await files.describe(resumed.principal, fileId!)
+  });
+};
+
+function invalidQuery() {
+  return new ApplicationError('invalid_query', 400, 'File query is invalid');
+}
+
+export default eventsFiles;

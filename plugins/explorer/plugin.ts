@@ -10,7 +10,12 @@ import { FILES_SERVICE } from '../files/helpers/service.js';
 import { IDENTITY_SERVICE } from '../identity/helpers/service.js';
 import { EXPLORER_SERVICE, ExplorerPluginService } from './helpers/service.js';
 import { SAVED_VIEWS_SERVICE } from '../saved-views/helpers/service.js';
-import { registerExplorerRoutes } from './pages/routes.js';
+
+export const EXPLORER_ROUTES = [
+  '/',
+  '/pages/browse.html',
+  '/events/explorer'
+] as const;
 
 /**
  * Register the explorer plugin with the application server.
@@ -33,7 +38,11 @@ export default function explorerPlugin(
   }
   const service = new ExplorerPluginService(catalog, files, savedViews);
   if (runtime.processKind === 'web') {
-    registerExplorerRoutes(server, runtime, identity, service);
+    server.import.get('/', () => import('./pages/index.js'), 1);
+    server.view.get('/', '@/plugins/explorer/views/index');
+    server.import.get('/pages/browse.html', () => import('./pages/browse.js'), 1);
+    server.view.get('/pages/browse.html', '@/plugins/explorer/views/index');
+    server.import.post('/events/explorer', () => import('./pages/events-explorer.js'), 1);
   }
   server.register(EXPLORER_SERVICE, service);
   runtime.pluginOrder.push(EXPLORER_SERVICE);

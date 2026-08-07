@@ -6,7 +6,7 @@ import test from 'node:test';
 import type { BrowserMutationPrincipal } from '../../identity/helpers/contracts.js';
 import { ExplorerPluginService } from '../helpers/service.js';
 import { createExplorerSnapshot } from './fixtures.js';
-import { EXPLORER_ROUTES } from '../pages/routes.js';
+import { EXPLORER_ROUTES } from '../plugin.js';
 
 test('explorer owns its page and action routes', () => {
   assert.deepEqual(EXPLORER_ROUTES, [

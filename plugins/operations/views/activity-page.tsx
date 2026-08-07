@@ -5,8 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeState } from '../../realtime/events/controller.js';
 import type { ActivityFilter, ActivityItem } from '../components/activity-center.js';
 import type { OperationBrowserAction } from '../events/actions.js';
-import type { ActivityPageProps, ActivitySnapshot } from '../pages/contracts.js';
-import { Icon } from '../../ui/components/icon.js';
+import type { ActivityPageProps, ActivitySnapshot } from '../helpers/page-contracts.js';
+import { Icon } from '../../app/components/icon.js';
 import { RealtimeController } from '../../realtime/events/controller.js';
 import { ActivityCenter, summarizeActivity } from '../components/activity-center.js';
 import {

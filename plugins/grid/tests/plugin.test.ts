@@ -7,7 +7,8 @@ import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import { createApplication } from '../../../bootstrap/application.js';
 import { loadGridResource } from '../events/actions.js';
 import { createGridPluginService } from '../helpers/service.js';
-import { GRID_ROUTES, resolveGridReadQuery } from '../pages/routes.js';
+import { resolveGridReadQuery } from '../helpers/routes.js';
+import { GRID_ROUTES } from '../plugin.js';
 import gridPlugin from '../plugin.js';
 
 const PRINCIPAL: BrowserPrincipal = {

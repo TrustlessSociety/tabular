@@ -12,7 +12,7 @@ import type {
   CapabilityTargetAdapter
 } from '../helpers/contracts.js';
 import { createApplication } from '../../../bootstrap/application.js';
-import { AuthorizedExecutionContext, McpAuthorizedExecutionContext } from '../helpers/contracts.js';
+import { McpAuthorizedExecutionContext } from '../helpers/contracts.js';
 import { DatabaseExecutor as Executor } from '../../database/helpers/executor.js';
 import { WebCapabilityAdapter } from '../events/web-adapter.js';
 import { McpShapedCapabilityAdapter } from '../events/mcp-shaped-adapter.js';

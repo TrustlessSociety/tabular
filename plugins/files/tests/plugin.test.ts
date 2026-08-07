@@ -5,7 +5,7 @@ import test from 'node:test';
 //client
 import { createApplication } from '../../../bootstrap/application.js';
 import filesPlugin from '../plugin.js';
-import { FILES_ROUTES } from '../pages/routes.js';
+import { FILES_ROUTES } from '../plugin.js';
 
 test('files plugin registers between capability and app with a stable service', async () => {
   const application = await createApplication({
@@ -18,7 +18,7 @@ test('files plugin registers between capability and app with a stable service', 
   assert.equal(application.app.plugin('tabular.files'), application.files);
   assert.deepEqual(application.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog',
-    'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export', 'tabular.explorer', 'tabular.ui', 'tabular.grid',
+    'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export', 'tabular.explorer', 'tabular.grid',
     'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
   assert.throws(

@@ -9,7 +9,8 @@ import {
   SAVED_VIEWS_SERVICE,
   SavedViewsPluginService
 } from './helpers/service.js';
-import { registerSavedViewRoutes } from './pages/routes.js';
+
+export const SAVED_VIEW_ROUTES = ['/events/saved-views'] as const;
 
 /**
  * Register the saved views plugin with the application server.
@@ -31,7 +32,10 @@ export default function savedViewsPlugin(
     );
   }
   const service = new SavedViewsPluginService(identity, capability);
-  if (runtime.processKind === 'web') registerSavedViewRoutes(server, identity, service);
+  if (runtime.processKind === 'web') {
+    server.import.get('/events/saved-views', () => import('./pages/events-saved-views-get.js'));
+    server.import.post('/events/saved-views', () => import('./pages/events-saved-views-post.js'));
+  }
   server.register(SAVED_VIEWS_SERVICE, service);
   runtime.pluginOrder.push(SAVED_VIEWS_SERVICE);
 }

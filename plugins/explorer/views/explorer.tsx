@@ -13,7 +13,7 @@ import type {
   ImportEntryPageProps
 } from '../helpers/contracts.js';
 import { CommandContextMenu } from '../../commands/components/context-menu.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import { TableSettingsPanel } from '../components/table-settings-panel.js';
 import {
   applyExplorerDdlPlan,

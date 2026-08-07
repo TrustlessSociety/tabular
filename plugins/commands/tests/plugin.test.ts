@@ -8,7 +8,7 @@ import { createApplication } from '../../../bootstrap/application.js';
 import commandsPlugin from '../plugin.js';
 import { COMMANDS_SERVICE, createCommandsPluginService } from '../helpers/service.js';
 
-test('commands plugin registers one stable presentation-only service after UI and grid', async () => {
+test('commands plugin registers one stable presentation-only service after grid', async () => {
   //Bootstrap through the public application composition so the test exercises
   //the same manifest ordering as every production entrypoint.
   const application = await createApplication({
@@ -27,7 +27,7 @@ test('commands plugin registers one stable presentation-only service after UI an
     storageBoundary: 'no-postgresql-schema-or-value-mutation'
   });
   assert.ok(
-    application.runtime.pluginOrder.indexOf('tabular.ui')
+    application.runtime.pluginOrder.indexOf('tabular.grid')
       < application.runtime.pluginOrder.indexOf(COMMANDS_SERVICE)
   );
   assert.ok(
@@ -55,7 +55,7 @@ test('commands service factory is deterministic and plugin prerequisites fail cl
 
   assert.throws(
     () => commandsPlugin(incompleteServer),
-    /tabular\.runtime, tabular\.ui, and tabular\.grid must register before tabular\.commands/
+    /tabular\.runtime and tabular\.grid must register before tabular\.commands/
   );
   assert.deepEqual(registrations, []);
 });

@@ -9,9 +9,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 //client
 import type { ActivityItem } from '../components/activity-center.js';
-import type { ActivityPageProps } from '../pages/contracts.js';
+import type { ActivityPageProps } from '../helpers/page-contracts.js';
 import { ActivityCenter, activityGroup, summarizeActivity } from '../components/activity-center.js';
-import { presentOperationActivity } from '../pages/presenter.js';
+import { presentOperationActivity } from '../helpers/presenter.js';
 import ActivityPage from '../views/activity-page.js';
 
 const createdAt = '2026-08-02T08:00:00.000Z';
@@ -287,7 +287,7 @@ test('server activity presentation keeps only authorized redacted fields and res
 test('activity stylesheet stacks at phone width without document-level horizontal scrolling', () => {
   //read the shipped stylesheet so the assertion covers the real responsive
   // artifact without depending on a browser layout engine
-  const css = readFileSync(new URL('../views/activity.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../../public/styles/activity.css', import.meta.url), 'utf8');
 
   //allow ordinary style formatting while requiring the exact mobile ownership
   // and overflow behaviors that prevent document-level horizontal scrolling

@@ -3,19 +3,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 //client
-import type {
-  ApplicationRuntimeService,
-  ApplicationServer
-} from '../../../bootstrap/application.js';
+import type { ApplicationRuntimeService } from '../../../bootstrap/application.js';
 import type { BrowserPrincipal } from '../../identity/helpers/contracts.js';
 import type { IdentityPluginService } from '../../identity/helpers/service.js';
 import type { OperationActivity, OperationActivityList } from '../helpers/contracts.js';
-import type { OperationsRouteService } from '../pages/routes.js';
-import { operationAction, registerOperationsRoutes } from '../pages/routes.js';
-
-//The structural route test double supplies dynamic config and service maps,
-// so it cannot name the complete Stackpress server generics
-type DynamicServerDouble = ApplicationServer;
+import type { OperationsRouteService } from '../helpers/routes.js';
+import { operationAction } from '../helpers/routes.js';
+import eventsOperationsGet from '../pages/events-operations-get.js';
+import eventsOperationsPost from '../pages/events-operations-post.js';
+import systemActivity from '../pages/system-activity.js';
 
 test('operation route accepts only opaque job-ID mutations', () => {
   assert.deepEqual(operationAction({
@@ -73,7 +69,7 @@ test('activity page route hydrates only the service-authorized snapshot and capa
   assert.equal(snapshot.canManageRetention, false);
   assert.equal(JSON.stringify(harness.rendered).includes(harness.principal.identityId), false);
   assert.equal(harness.response.code, 200);
-  assert.match(harness.response.body, /rendered/);
+  assert.equal(harness.response.body, '');
 });
 
 test('activity event routes pass only the authenticated principal and opaque job ID to service methods', async () => {
@@ -111,16 +107,6 @@ function routeHarness() {
   type Handler = (context: { req: ReturnType<typeof request>, res: typeof response, }) => Promise<void>;
   const get: Record<string, Handler> = {};
   const post: Record<string, Handler> = {};
-  const server = {
-    /**
-     * Capture one registered GET route handler by pathname.
-     */
-    get(path: string, handler: Handler) { get[path] = handler; },
-    /**
-     * Handle the post operation.
-     */
-    post(path: string, handler: Handler) { post[path] = handler; }
-  } as unknown as DynamicServerDouble;
   const principal: BrowserPrincipal = {
     transport: 'browser',
     sessionId: `sess_${'s'.repeat(32)}`,
@@ -131,18 +117,10 @@ function routeHarness() {
     idleExpiresAt: new Date('2030-01-01T00:00:00.000Z'),
     absoluteExpiresAt: new Date('2030-01-02T00:00:00.000Z')
   };
-  let rendered: Record<string, unknown> | undefined;
   const runtime = {
     lifecycle: { phase: 'ready' },
     resources: { readiness: async () => ({ ready: true }) },
-    config: { reactus: { entry: '@/plugins/ui/views/workbench' }, app: { version: '0.1.0' } },
-    reactus: {
-      render: async (_entry: string, props: Record<string, unknown>) => {
-        rendered = props;
-        return '<html>rendered</html>';
-      }
-    },
-    artifacts: { schemaVersion: 1, generatedAt: '2026-08-02T00:00:00.000Z', artifacts: [] }
+    config: { app: { version: '0.1.0' } }
   } as unknown as ApplicationRuntimeService;
   const identity = {
     cookieName: () => 'tabular_session',
@@ -189,7 +167,15 @@ function routeHarness() {
      */
     async retention() { return {}; }
   } as unknown as OperationsRouteService;
-  registerOperationsRoutes(server, runtime, identity, operations);
+  const plugins = new Map<string, unknown>([
+    ['tabular.runtime', runtime],
+    ['tabular.identity', identity],
+    ['tabular.operations', operations]
+  ]);
+  const ctx = { plugin: <T>(name: string) => plugins.get(name) as T };
+  get['/pages/system-activity.html'] = async (context) => { await systemActivity({ ...context, ctx } as never); };
+  get['/events/operations'] = async (context) => { await eventsOperationsGet({ ...context, ctx } as never); };
+  post['/events/operations'] = async (context) => { await eventsOperationsPost({ ...context, ctx } as never); };
   return {
     get,
     post,
@@ -199,7 +185,7 @@ function routeHarness() {
     /**
      * Return the rendered value.
      */
-    get rendered() { return rendered; }
+    get rendered() { return response.data.value as Record<string, unknown> | undefined; }
   };
 }
 
@@ -229,6 +215,11 @@ const response = {
   headers: new Headers(),
   code: 0,
   body: '',
+  data: {
+    value: undefined as unknown,
+    set(value: unknown) { this.value = value; },
+    get() { return this.value; }
+  },
   jsonBody: undefined as unknown,
   /**
    * Handle the JSON operation.
@@ -242,6 +233,9 @@ const response = {
    */
   html(value: string, code = 200) {
     this.body = value;
+    this.code = code;
+  },
+  statusCode(code: number) {
     this.code = code;
   }
 };

@@ -265,7 +265,7 @@ export class GoogleSheetsClient {
    */
   public async worksheetNames(accessToken: string, spreadsheetId: string) {
     const token = bearer(accessToken);
-    const id = providerId(spreadsheetId, 'Google spreadsheet identity');
+    const id = providerId(spreadsheetId);
     const query = new URLSearchParams({ fields: 'spreadsheetId,properties.title,sheets.properties(sheetId,title,index,gridProperties)' });
     const body = await this.googleJson<Record<string, unknown>>(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(id)}?${query}`,
@@ -288,7 +288,7 @@ export class GoogleSheetsClient {
     sheetName: string,
   }): Promise<GoogleSheetValues> {
     const token = bearer(input.accessToken);
-    const id = providerId(input.spreadsheetId, 'Google spreadsheet identity');
+    const id = providerId(input.spreadsheetId);
     const sheetName = boundedText(input.sheetName, 'Google worksheet name', 100);
     const before = await this.fileRevision(token, id);
     const names = await this.worksheetNames(token, id);
@@ -351,7 +351,7 @@ export class GoogleSheetsClient {
    */
   public async fileRevision(accessToken: string, spreadsheetId: string) {
     const token = bearer(accessToken);
-    const id = providerId(spreadsheetId, 'Google spreadsheet identity');
+    const id = providerId(spreadsheetId);
     const query = new URLSearchParams({ fields: 'id,name,modifiedTime,version,mimeType,trashed' });
     const body = await this.googleJson<Record<string, unknown>>(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?${query}`,
@@ -521,7 +521,7 @@ function spreadsheetChoice(value: unknown): GoogleSpreadsheetChoice {
   const entry = record(value, 'Google spreadsheet');
   if (entry.mimeType !== SHEETS_MEDIA_TYPE) providerInvalid();
   return {
-    id: providerId(entry.id, 'Google spreadsheet identity'),
+    id: providerId(entry.id),
     name: boundedText(entry.name, 'Google spreadsheet name', 255),
     modifiedTime: isoTime(entry.modifiedTime),
     version: boundedToken(String(entry.version), 'Google spreadsheet version', 80)
@@ -559,7 +559,7 @@ function bearer(value: string) {
 /**
  * Return the provider id result.
  */
-function providerId(value: unknown, label: string) {
+function providerId(value: unknown) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{10,256}$/.test(value)) providerInvalid();
   return value;
 }

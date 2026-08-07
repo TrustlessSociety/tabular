@@ -84,10 +84,10 @@ test('unsafe PostgreSQL roles fail after closing the authentication connection',
 });
 
 test('identity documents expose stable accessible sign-in and logout controls', () => {
-  const stylesheet = '/assets/workbench.css?v=0123456789abcdef';
+  const stylesheet = '/styles/identity.css?v=0123456789abcdef';
   const login = renderPostgreSqlLogin(stylesheet, true);
   assert.match(login, /class="auth-page"/);
-  assert.match(login, /href="\/assets\/workbench\.css\?v=0123456789abcdef" rel="stylesheet"/);
+  assert.match(login, /href="\/styles\/identity\.css\?v=0123456789abcdef" rel="stylesheet"/);
   assert.match(login, /id="postgres-login-form"/);
   assert.match(login, /for="postgres-role">PostgreSQL role/);
   assert.match(login, /autocomplete="current-password"/);

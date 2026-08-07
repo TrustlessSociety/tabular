@@ -7,7 +7,6 @@ import type { Value } from '@stackpress/inquire/types';
 //client
 import type {
   StableCatalogSnapshot,
-  StableColumn,
   StableObject,
   StableSchema
 } from '../../catalog/helpers/contracts.js';

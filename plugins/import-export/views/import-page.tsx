@@ -10,7 +10,7 @@ import type {
   ImportWizardStep
 } from '../components/import-wizard.js';
 import type { BrowserImportOperation, GoogleSpreadsheetChoice } from '../events/actions.js';
-import { Icon } from '../../ui/components/icon.js';
+import { Icon } from '../../app/components/icon.js';
 import { ImportWizard } from '../components/import-wizard.js';
 import {
   dispatchImportMutation,

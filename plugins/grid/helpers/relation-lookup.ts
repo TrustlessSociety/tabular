@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import type { Value } from '@stackpress/inquire/types';
 
 //client
-import type { StableColumn, StableObject, StableSchema } from '../../catalog/helpers/contracts.js';
+import type { StableColumn, StableObject } from '../../catalog/helpers/contracts.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   GridCellValue,
