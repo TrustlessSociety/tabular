@@ -21,7 +21,8 @@ export default function databasePlugin(
     runtime.config.database,
     runtime.resources,
     runtime.config.server.shutdownTimeoutMs,
-    runtime.config.environment.instanceId
+    runtime.config.environment.instanceId,
+    runtime.developmentDatabase
   );
   server.register(DATABASE_SERVICE, service);
   runtime.pluginOrder.push(DATABASE_SERVICE);

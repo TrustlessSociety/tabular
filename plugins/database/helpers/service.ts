@@ -2,6 +2,7 @@
 import type { RuntimeResources } from '../../../bootstrap/resources.js';
 import type { DatabaseConfig } from '../../../config/database.js';
 import type { PostgreSqlTransactionOptions } from './transactions.js';
+import type { DevelopmentDatabaseBackend } from './development-contracts.js';
 import { DatabaseExecutor } from './executor.js';
 import { runMigrations, verifyPostgreSqlMigrationState } from './migrator.js';
 import { ManagedPostgresPool } from './pool.js';
@@ -32,6 +33,8 @@ export class DatabasePluginService {
   };
   //The pools state retained by this class instance
   readonly #pools = new Map<DatabaseScope, ManagedPostgresPool>();
+  //The source-only development backend retained by this class instance
+  readonly #development?: DevelopmentDatabaseBackend;
 
   /**
    * Create a DatabasePluginService instance.
@@ -41,14 +44,32 @@ export class DatabasePluginService {
     private readonly config: DatabaseConfig,
     private readonly resources: RuntimeResources,
     private readonly shutdownTimeoutMs: number,
-    private readonly instanceId: string
-  ) {}
+    private readonly instanceId: string,
+    development?: DevelopmentDatabaseBackend
+  ) {
+    if (development && (
+      this.processKind !== 'web'
+      || this.config.webUrl
+    )) {
+      throw new Error(
+        'The PGlite development backend is available only for a URL-less development web process'
+      );
+    }
+    this.#development = development;
+    if (development) {
+      resources.register({
+        name: 'pglite-development-database',
+        ready: () => development.ready(),
+        close: () => development.close()
+      });
+    }
+  }
 
   /**
    * Handle the configured operation.
    */
   public configured(scope: DatabaseScope) {
-    return Boolean(this.url(scope));
+    return Boolean(this.url(scope)) || (scope === 'web' && Boolean(this.#development));
   }
 
   /**
@@ -63,7 +84,12 @@ export class DatabasePluginService {
     const existing = this.#pools.get(scope);
     if (existing) return existing;
     const connectionString = this.url(scope);
-    if (!connectionString) throw new Error(`PostgreSQL ${scope} authority is not configured`);
+    if (!connectionString) {
+      if (scope === 'web' && this.#development) {
+        throw new Error('PostgreSQL web authority is not configured; development uses PGlite');
+      }
+      throw new Error(`PostgreSQL ${scope} authority is not configured`);
+    }
     const pool = new ManagedPostgresPool({
       name: scope,
       connectionString,
@@ -83,6 +109,15 @@ export class DatabasePluginService {
    * Assert the ready.
    */
   public async assertReady(scope: DatabaseScope) {
+    if (this.#development) {
+      if (scope !== 'web') {
+        throw new Error(`The ${this.processKind} process cannot use development PGlite`);
+      }
+      if (!await this.#development.ready()) {
+        throw new Error('Development PGlite database is not ready');
+      }
+      return;
+    }
     const pool = this.openPool(scope);
     if (!await pool.ready()) throw new Error(`PostgreSQL ${scope} pool is not ready`);
     const migrations = await loadMigrations();
@@ -111,6 +146,12 @@ export class DatabasePluginService {
     options: PostgreSqlTransactionOptions<Result, FinalResult>,
     callback: (database: DatabaseExecutor) => Promise<Result>
   ) {
+    if (this.#development) {
+      if (scope !== 'web') {
+        throw new Error(`The ${this.processKind} process cannot use development PGlite`);
+      }
+      return this.#development.transaction(options, callback);
+    }
     return withPostgreSqlTransaction<Result, FinalResult>(this.openPool(scope), options, callback);
   }
 

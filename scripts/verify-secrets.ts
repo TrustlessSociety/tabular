@@ -16,7 +16,7 @@ const files = [
   ...explicitFiles.map((file) => path.join(projectRoot, file)),
   ...(await Promise.all(candidateRoots.map((root) => filesUnder(path.join(projectRoot, root))))).flat()
 ].filter((file) =>
-  !/\/tests\//.test(file)
+  !isTestPath(file)
   && file !== path.join(projectRoot, 'scripts/verify-secrets.ts')
 );
 
@@ -66,4 +66,14 @@ async function filesUnder(root: string): Promise<string[]> {
     return entry.isDirectory() ? filesUnder(absolute) : [absolute];
   }));
   return nested.flat();
+}
+
+/**
+ * Report whether a candidate file belongs to a test-only source path.
+ */
+function isTestPath(file: string) {
+  const relative = path.relative(projectRoot, file).replaceAll('\\', '/');
+  return relative === 'tests'
+    || relative.startsWith('tests/')
+    || relative.includes('/tests/');
 }

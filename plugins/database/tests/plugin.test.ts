@@ -20,14 +20,14 @@ test('database plugin registers a stable lazy service before app bootstrap compl
   await assert.rejects(() => application.database.migrate(), /Only the migrator process/);
   assert.deepEqual(application.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
   const service = application.app.plugin('tabular.database');
   await application.app.bootstrap();
   assert.equal(application.app.plugin('tabular.database'), service);
   assert.deepEqual(application.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
   assert.throws(() => databasePlugin(application.app), /already registered/);
 });

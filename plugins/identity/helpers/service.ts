@@ -8,6 +8,7 @@ import type { Response } from '@stackpress/ingest/http';
 import type { TabularConfig } from '../../../config/index.js';
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type { DatabasePluginService } from '../../database/helpers/service.js';
+import type { PostgreSqlLoginCredentials, VerifiedPostgreSqlSubject } from './postgresql-login.js';
 import type {
   AuthorizedCallback,
   AuthorizedFinalizeCallback,
@@ -46,6 +47,11 @@ const LOGIN_BLOCK_SECONDS = 900;
 
 type SessionResponse = Pick<Response, 'session' | 'headers'>;
 
+//The development login contract is injected only by the source PGlite entrypoint.
+export type DevelopmentLoginProvider = (
+  input: PostgreSqlLoginCredentials
+) => Promise<VerifiedPostgreSqlSubject>;
+
 /**
  * Provide identity plugin operations through one service boundary.
  */
@@ -58,8 +64,13 @@ export class IdentityPluginService {
    */
   public constructor(
     private readonly database: DatabasePluginService,
-    private readonly config: TabularConfig
-  ) {}
+    private readonly config: TabularConfig,
+    private readonly developmentLogin?: DevelopmentLoginProvider
+  ) {
+    if (developmentLogin && this.config.environment.mode !== 'development') {
+      throw new Error('The development login verifier is unavailable outside development');
+    }
+  }
 
   /**
    * Handle the provision identity role operation.
@@ -194,13 +205,17 @@ export class IdentityPluginService {
           blockSeconds: LOGIN_BLOCK_SECONDS
         })
       );
-      if (!allowed || !this.config.database.webUrl) throw new Error('Sign-in denied');
 
-      const provider = new PostgreSqlIdentityProvider(
-        this.config.database.connectionId,
-        this.config.database.webUrl,
-        this.config.database.statementTimeoutMs
-      );
+      const provider = this.developmentLogin
+        ? { verify: this.developmentLogin }
+        : this.config.database.webUrl
+          ? new PostgreSqlIdentityProvider(
+            this.config.database.connectionId,
+            this.config.database.webUrl,
+            this.config.database.statementTimeoutMs
+          )
+          : undefined;
+      if (!allowed || !provider) throw new Error('Sign-in denied');
       const subject = await provider.verify({
         roleName: input.roleName,
         password: input.password

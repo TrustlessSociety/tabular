@@ -42,7 +42,6 @@ assert.deepEqual(packageJson.plugins, [
   './plugins/saved-views/plugin',
   './plugins/import-export/plugin',
   './plugins/explorer/plugin',
-  './plugins/ui/plugin',
   './plugins/grid/plugin',
   './plugins/commands/plugin',
   './plugins/realtime/plugin',
@@ -69,6 +68,13 @@ async function filesUnder(root: string): Promise<string[]> {
     return entry.isDirectory() ? filesUnder(absolute) : [absolute];
   }));
   return nested.flat();
+}
+
+/**
+ * Normalize one project-relative source path for portable architecture checks.
+ */
+function relativePath(file: string) {
+  return path.relative(projectRoot, file).replaceAll('\\', '/');
 }
 
 const sourceRoots = ['bootstrap', 'config', 'entrypoints', 'plugins', 'scripts', 'tests'];
@@ -102,18 +108,37 @@ for (const file of sourceFiles) {
 }
 
 const browserFiles = sourceFiles.filter((file) =>
-  /\/plugins\/[^/]+\/(components|views)\//.test(file)
+  /plugins\/[^/]+\/(components|views)\//.test(relativePath(file))
 );
-const productionSourceFiles = sourceFiles.filter((file) =>
-  !/\/tests\//.test(file)
-  && !file.endsWith('.test.ts')
-  && !file.endsWith('.test.tsx')
-);
+const developmentOnlySourcePaths = new Set([
+  'scripts/develop.ts',
+  'scripts/develop-pglite.ts'
+]);
+const productionSourceFiles = sourceFiles.filter((file) => {
+  const relative = relativePath(file);
+  return !developmentOnlySourcePaths.has(relative)
+    && !relative.includes('/tests/')
+    && !file.endsWith('.test.ts')
+    && !file.endsWith('.test.tsx');
+});
 for (const file of productionSourceFiles) {
   const source = await fs.readFile(file, 'utf8');
   assert.doesNotMatch(source, /@electric-sql\/pglite|@stackpress\/inquire-pglite/,
     `${path.relative(projectRoot, file)} imports a test-only database adapter`);
 }
+const developmentSource = await fs.readFile(
+  path.join(projectRoot, 'scripts/develop-pglite.ts'),
+  'utf8'
+);
+assert.match(developmentSource, /import\(['"]@electric-sql\/pglite['"]\)/);
+assert.match(developmentSource, /import\(['"]@stackpress\/inquire-pglite\/Connection['"]\)/);
+const developmentEntrypoint = await fs.readFile(
+  path.join(projectRoot, 'scripts/develop.ts'),
+  'utf8'
+);
+assert.match(developmentEntrypoint, /NODE_ENV: 'development'/);
+assert.match(developmentEntrypoint, /!config\.database\.webUrl/);
+
 assert.ok(
   (await Promise.all(productionSourceFiles.map((file) => fs.readFile(file, 'utf8'))))
     .some((source) => /from\s+['"]@stackpress\/lib(?:\/|['"])/.test(source)),
@@ -157,7 +182,7 @@ for (const file of browserGraph) {
 }
 
 const pluginRoot = path.join(projectRoot, 'plugins/app');
-const allowedPluginEntries = new Set(['helpers', 'pages', 'plugin.ts', 'tests', 'views']);
+const allowedPluginEntries = new Set(['components', 'helpers', 'pages', 'plugin.ts', 'tests', 'views']);
 const pluginEntries = await fs.readdir(pluginRoot, { withFileTypes: true });
 for (const entry of pluginEntries) {
   assert.ok(allowedPluginEntries.has(entry.name), `Unexpected app plugin entry ${entry.name}`);
@@ -166,13 +191,14 @@ for (const entry of pluginEntries) {
   }
 }
 for (const [feature, allowedEntries] of [
-  ['ui', new Set(['components', 'helpers', 'plugin.ts', 'tests', 'views'])],
-  ['grid', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests'])],
+  ['grid', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests', 'views'])],
   ['commands', new Set(['components', 'events', 'helpers', 'plugin.ts', 'tests', 'views'])],
   ['explorer', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests', 'views'])],
   ['import-export', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests', 'views'])],
   ['operations', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests', 'views'])],
-  ['mcp', new Set(['events', 'helpers', 'plugin.ts', 'tests'])]
+  ['mcp', new Set(['events', 'helpers', 'plugin.ts', 'tests'])],
+  ['realtime', new Set(['events', 'helpers', 'pages', 'plugin.ts', 'tests'])],
+  ['saved-views', new Set(['components', 'events', 'helpers', 'pages', 'plugin.ts', 'tests', 'views'])]
 ] as const) {
   const featureRoot = path.join(projectRoot, 'plugins', feature);
   const entries = await fs.readdir(featureRoot, { withFileTypes: true });
@@ -239,23 +265,108 @@ for (const feature of ['identity', 'catalog']) {
     }
   }
 }
-const appRoutesSource = await fs.readFile(
-  path.join(projectRoot, 'plugins/app/pages/routes.ts'),
-  'utf8'
-);
 const appPluginSource = await fs.readFile(
   path.join(projectRoot, 'plugins/app/plugin.ts'),
   'utf8'
 );
 assert.doesNotMatch(
-  appRoutesSource,
-  /\/events\/(?:explorer|files|grid|grid-relation|import-source)|\/pages\/(?:browse|import|table)\.html/,
-  'App routes must remain limited to shell, health, assets, and fallback ownership'
+  appPluginSource,
+  /from\s+['"]\.\.\/(?:capability|commands|explorer|files|grid|identity|import-export|realtime|saved-views|)\//,
+  'App plugin must not resolve feature services'
 );
 assert.doesNotMatch(
   appPluginSource,
-  /from\s+['"]\.\.\/(?:capability|commands|explorer|files|grid|identity|import-export|realtime|saved-views|ui)\//,
-  'App plugin must not resolve feature services'
+  /from\s+['"]\.\/pages\//,
+  'App plugin must not eagerly import page handlers'
+);
+assert.doesNotMatch(
+  appPluginSource,
+  /pages\/routes/,
+  'App plugin must not use a route aggregator'
+);
+const pageFiles = (await filesUnder(path.join(projectRoot, 'plugins'))).filter((file) =>
+  relativePath(file).includes('/pages/') && /\.ts$/.test(file)
+);
+for (const file of pageFiles) {
+  const source = await fs.readFile(file, 'utf8');
+  assert.match(source, /export\s+default\s+(?:async\s+)?(?:function|class|[A-Za-z_$][\w$]*)/, `${relativePath(file)} must have one default page export`);
+  assert.equal(
+    (source.match(/\bexport\s+default\b/g) || []).length,
+    1,
+    `${relativePath(file)} must have exactly one default export`
+  );
+  assert.doesNotMatch(source, /\bexport\s+(?!default\b)/, `${relativePath(file)} must not export helper symbols`);
+}
+const forbiddenAggregators = [
+  'plugins/app/pages/routes.ts',
+  'plugins/catalog/pages/routes.ts',
+  'plugins/explorer/pages/routes.ts',
+  'plugins/files/pages/routes.ts',
+  'plugins/grid/pages/routes.ts',
+  'plugins/identity/pages/routes.ts',
+  'plugins/import-export/pages/routes.ts',
+  'plugins/operations/pages/routes.ts',
+  'plugins/realtime/pages/routes.ts',
+  'plugins/saved-views/pages/routes.ts',
+  'plugins/operations/pages/contracts.ts',
+  'plugins/operations/pages/presenter.ts',
+  'plugins/import-export/pages/raw-upload.ts'
+];
+for (const relative of forbiddenAggregators) {
+  await assert.rejects(() => fs.access(path.join(projectRoot, relative)), `${relative} must be removed from pages`);
+}
+const registeredPageImports: Array<[string, string, string]> = [
+  ['plugins/catalog/plugin.ts', 'get', '/api/catalog'],
+  ['plugins/explorer/plugin.ts', 'get', '/'],
+  ['plugins/explorer/plugin.ts', 'get', '/pages/browse.html'],
+  ['plugins/explorer/plugin.ts', 'post', '/events/explorer'],
+  ['plugins/files/plugin.ts', 'get', '/events/files'],
+  ['plugins/grid/plugin.ts', 'get', '/pages/table.html'],
+  ['plugins/grid/plugin.ts', 'get', '/events/grid'],
+  ['plugins/grid/plugin.ts', 'get', '/events/grid-relation'],
+  ['plugins/grid/plugin.ts', 'post', '/events/grid'],
+  ['plugins/identity/plugin.ts', 'get', '/auth/login'],
+  ['plugins/identity/plugin.ts', 'post', '/auth/login'],
+  ['plugins/identity/plugin.ts', 'get', '/auth/account'],
+  ['plugins/identity/plugin.ts', 'get', '/auth/session'],
+  ['plugins/identity/plugin.ts', 'post', '/auth/session/rotate'],
+  ['plugins/identity/plugin.ts', 'post', '/auth/logout'],
+  ['plugins/import-export/plugin.ts', 'get', '/pages/import.html'],
+  ['plugins/import-export/plugin.ts', 'get', '/events/import-google-callback'],
+  ['plugins/import-export/plugin.ts', 'get', '/events/import-export'],
+  ['plugins/import-export/plugin.ts', 'post', '/events/import-export'],
+  ['plugins/operations/plugin.ts', 'get', '/pages/system-activity.html'],
+  ['plugins/operations/plugin.ts', 'get', '/events/operations'],
+  ['plugins/operations/plugin.ts', 'post', '/events/operations'],
+  ['plugins/saved-views/plugin.ts', 'get', '/events/saved-views'],
+  ['plugins/saved-views/plugin.ts', 'post', '/events/saved-views']
+];
+for (const [owner, method, route] of registeredPageImports) {
+  const source = await fs.readFile(path.join(projectRoot, owner), 'utf8');
+  assert.match(source, new RegExp(`server\\.import\\.${method}\\(['"]${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`), `${owner} must lazily register ${method.toUpperCase()} ${route}`);
+  assert.doesNotMatch(source, /from\s+['"]\.\/pages\//, `${owner} must not eagerly import page handlers`);
+}
+const renderedRouteViews: Array<[string, string]> = [
+  ['plugins/explorer/plugin.ts', "server.view.get('/'"],
+  ['plugins/explorer/plugin.ts', "server.view.get('/pages/browse.html'"],
+  ['plugins/grid/plugin.ts', "server.view.get('/pages/table.html'"],
+  ['plugins/identity/plugin.ts', "server.view.get('/auth/login'"],
+  ['plugins/identity/plugin.ts', "server.view.get('/auth/account'"],
+  ['plugins/import-export/plugin.ts', "server.view.get('/pages/import.html'"],
+  ['plugins/operations/plugin.ts', "server.view.get('/pages/system-activity.html'"]
+];
+for (const [owner, registration] of renderedRouteViews) {
+  const source = await fs.readFile(path.join(projectRoot, owner), 'utf8');
+  assert.equal(source.split(registration).length - 1, 1, `${owner} must pair ${registration} exactly once`);
+}
+assert.doesNotMatch(
+  await fs.readFile(path.join(projectRoot, 'config/reactus.ts'), 'utf8'),
+  /\bentry\s*:/,
+  'Reactus config must not expose a singleton entry'
+);
+await assert.rejects(
+  () => fs.access(path.join(projectRoot, 'plugins/ui')),
+  'The global UI plugin must be removed'
 );
 const bootstrapSource = await fs.readFile(
   path.join(projectRoot, 'bootstrap/application.ts'),
@@ -267,17 +378,6 @@ assert.doesNotMatch(
   /plugins\/[^/'"]+\/pages/,
   'Application bootstrap must not import feature HTTP handlers'
 );
-for (const [owner, expectedRoutes] of [
-  ['plugins/explorer/pages/routes.ts', ['/events/explorer', '/pages/browse.html']],
-  ['plugins/grid/pages/routes.ts', ['/events/grid', '/events/grid-relation', '/pages/table.html']],
-  ['plugins/files/pages/routes.ts', ['/events/files']],
-  ['plugins/import-export/pages/raw-upload.ts', ['/events/import-source']]
-] as const) {
-  const source = await fs.readFile(path.join(projectRoot, owner), 'utf8');
-  for (const route of expectedRoutes) {
-    assert.ok(source.includes(route), `${owner} must own ${route}`);
-  }
-}
 await assert.rejects(
   () => fs.access(path.join(projectRoot, 'schema.idea')),
   'Production root must not contain schema.idea'
@@ -302,5 +402,6 @@ process.stdout.write(JSON.stringify({
   forbiddenPackages: 'absent',
   browserImports: 'transitive graph server-free',
   routeOwnership: 'feature-owned',
-  rawHandlers: 'registered bootstrap seam'
+  rawHandlers: 'registered bootstrap seam',
+  developmentRuntime: 'source-only dynamic PGlite gate'
 }, null, 2) + '\n');
