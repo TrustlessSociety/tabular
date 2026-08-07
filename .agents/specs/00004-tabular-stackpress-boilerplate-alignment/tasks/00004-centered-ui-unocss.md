@@ -93,19 +93,45 @@ runtime path. Therefore no screenshot or browser-console claim is made here.
 
 ## Acceptance Notes
 
-Acceptance remains a later browser-agent review at desktop and 390x844:
+Browser acceptance run 2026-08-08 against the development PGlite substrate
+(`npm run dev`, `database: pglite-development`, no `TABULAR_*_DATABASE_URL`
+set). Driver was the repository's own harness,
+`scripts/release/browser-acceptance.mjs`, on real headless
+Chrome/150.0.7871.189 with fresh contexts, no session injection, and no direct
+service calls. Verdict: **PARTIAL - not accepted.**
 
-1. Sign in through `/auth/login`, then review `/pages/table.html?folder=operations&table=customer-orders` at desktop and 390x844.
-2. In the grid, review loaded customer-order content, active-cell focus,
-   range/row/column selection, horizontal grid-only overflow, draft/error
-   presentation, saved-view overlay, and column/settings panels.
-3. Exercise the command surface on the same route: open File, Edit, Format,
-   Data, View, and Help; verify submenu/palette anchoring, keyboard focus,
-   disabled/read-only states, and viewport clamping at both widths.
-4. Confirm `/`, `/pages/browse.html?folder=operations`,
-   `/pages/import.html?folder=operations`, and
-   `/pages/system-activity.html` retain their seeded content, responsive shell,
-   navigation, and zero document-level horizontal overflow at 390x844.
+Covered by real browser interaction:
+
+- `desktop:explorer-to-live-postgresql-grid` - signed in through the visible
+  login form at 1280x800, walked the Explorer to
+  `/pages/table.html?folder=operations&table=customer-orders`, and the grid
+  reached `.grid-stage[data-grid-ready="true"]` with seeded Operations content.
+- `two-session:visible-edit-and-live-sse-sync` - a visible grid edit in one
+  session propagated to a second session over SSE, so grid interaction and
+  hydration survive the Wave D ownership move.
+- `narrow:390x844-folder` - at exactly 390x844 the Explorer and import surfaces
+  rendered with `document.scrollWidth <= window.innerWidth`, so there is no
+  document-level horizontal overflow at the mobile width.
+- Asset delivery observed directly on `/auth/login`: the UnoCSS bundle
+  `/assets/login-0pLFePTh.css`, the flat exceptions `/styles/base.css` and
+  `/styles/identity.css`, and the hydration client `/client/login-1CSXh7FO.js`
+  all returned real bytes with no 404 and an empty browser console.
+
+Not covered, so the acceptance criteria are not met:
+
+- The command surface was not exercised at either width. File, Edit, Format,
+  Data, View, and Help menus, submenu/palette anchoring, keyboard focus,
+  disabled/read-only states, and viewport clamping remain unreviewed.
+- The grid route itself was not opened at 390x844; the narrow journey covers
+  the Explorer and import surfaces only.
+- Column/table settings panels, the saved-view overlay, and draft/error
+  presentation were not opened.
+- No screenshots were captured and no per-route console/contrast/clipping
+  review was performed at either width.
+
+The Paseo in-app browser was not usable for this review: tabs were created but
+never painted, so no screenshot or React interaction was possible. That is a
+tooling limitation, not an application defect.
 
 ## Verification
 

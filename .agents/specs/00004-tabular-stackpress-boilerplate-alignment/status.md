@@ -2,12 +2,13 @@
 
 ## Current State
 
-Status refreshed 2026-08-07 against `tasks/status.md`.
+Status refreshed 2026-08-08 against `tasks/status.md`.
 
 - Spec state: **Frozen 2026-08-06** by explicit user authorization.
-- Implementation plan: accepted 2026-08-06. Tasks 00001, 00002, 00003, and
-  00004 are verified; Task 00005 is open and now unblocked. Task 00006 is
-  user-authorized work added after the Freeze baseline and is verified.
+- Implementation plan: accepted 2026-08-06. All sprint tasks are implemented
+  and verified. Task 00005 is implemented and its signed-out ordinary-origin
+  browser acceptance passed. Task 00006 is user-authorized work added after the
+  Freeze baseline and is verified.
 - Proof state: P-001 is guide evidence; P-002 is proved within its slice.
 - Context promotion: reviewed and skipped. The restructuring remains spec-local
   until production implementation validates it.
@@ -31,14 +32,18 @@ Freeze Authorization in `decisions.md`. They do not reopen the frozen design:
 | P-002 composition proof | Complete | Run as a regression in rendering/artifact work |
 | Context-promotion review | Complete | Revisit after production implementation |
 | Freeze Spec 00004 | Complete | Reopen only with user approval |
-| Implementation sprint | In progress | Start Task 00005 |
-| Task 00004 acceptance | Outstanding | Browser-agent review of grid and command surface at desktop and 390-by-844 |
+| Implementation sprint | Implemented | Close out remaining acceptance and production evidence |
+| Task 00004 acceptance | Partial | Command surface at both widths and the grid route at 390-by-844 remain unreviewed |
 | Task 00006 PGlite substrate | Complete | Preserve PostgreSQL authority; PostgreSQL integration gates still need a disposable target |
+| Task 00005 acceptance | Passed | Re-run the unmodified harness against a PostgreSQL target with a committed import |
 
 ## Next Authority Gate
 
-Task 00005 is the only open sprint task. Close it with the full verification
-set in `tasks/00005-release-recheck.md`, including fresh signed-out
-desktop/390-by-844 browser evidence and separate production-target proof for
-any production claim. The outstanding Task 00004 browser-agent acceptance
-review is still owed and may be collected alongside it.
+The sprint is implemented. Three items remain before any production claim:
+
+- Task 00004 acceptance is partial. The command surface was not exercised at
+  either width and the grid route was not opened at 390-by-844.
+- The `test:postgres:*` matrix needs a disposable PostgreSQL 18 target; it has
+  not been run.
+- Production-target evidence has not been collected, so no production-readiness
+  claim is supported.

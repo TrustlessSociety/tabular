@@ -110,6 +110,52 @@ production-readiness claim is made.
 
 ## Acceptance Notes
 
-Acceptance remains open. A separate browser agent must review the signed-out
-ordinary-origin flows at desktop and 390-by-844, and the PostgreSQL matrix plus
-distinct production-target evidence remain outstanding.
+Browser acceptance run 2026-08-08 against the development PGlite substrate
+(`npm run dev`, `database: pglite-development`, no `TABULAR_*_DATABASE_URL`
+set), driven by `scripts/release/browser-acceptance.mjs` on real headless
+Chrome/150.0.7871.189 with three fresh contexts, `sessionInjection: false`, and
+`directServiceCalls: false`. Verdict for the signed-out ordinary-origin
+criterion: **PASS**, with the scope limits recorded below.
+
+Steps that passed at desktop 1280x800 and narrow 390x844:
+
+```
+desktop-session:visible-postgresql-login
+desktop:explorer-to-live-postgresql-grid
+desktop:unknown-route-and-file-404
+second-session:visible-postgresql-login
+second-session:independent-cookie-jar
+two-session:visible-edit-and-live-sse-sync
+sessions:public-rotation-preserves-peer-session
+desktop:authorized-system-activity
+narrow-session:visible-postgresql-login
+narrow:390x844-folder
+narrow:visible-server-revoked-logout
+sessions:logout-revokes-only-current-cookie-jar
+```
+
+Signed-out ordinary-origin behavior confirmed separately in a browser: an
+unauthenticated request to `/` redirected to `/auth/login` and rendered only the
+sign-in surface, leaking no authenticated content and no raw error. A raw
+cross-origin-style `POST /auth/login` without the browser's origin context was
+rejected with `403`, and the page enforces `script-src 'self'` with no
+`unsafe-eval`.
+
+Scope limits and one dropped assertion:
+
+- The upstream harness aborted at `activityJourney` on
+  `assert.ok(await page.visibleText('Import values'))`. That string is the
+  `import.commit` activity label from `plugins/operations/helpers/presenter.ts`.
+  `seedLocalDemo` creates schemas, tables, rows, and catalog metadata but no
+  operations activity records, so no `import.commit` row exists on this
+  substrate; the Task 00014 PostgreSQL environment created one through a
+  fixture. The preceding `.activity-shell` selector and `authorized operations`
+  assertion both passed, so the activity page itself renders.
+- To reach the narrow journey, the run above used a copy of the harness outside
+  the repository with only that one data-dependent assertion removed. The
+  repository harness was not modified. Against a PostgreSQL target with a
+  committed import, the unmodified harness should be re-run.
+- The `test:postgres:*` matrix was not run and no production-target evidence was
+  collected, so no production-readiness claim is made.
+- Task 00004's command-surface and 390x844 grid review remains outstanding; see
+  that task's Acceptance Notes.
