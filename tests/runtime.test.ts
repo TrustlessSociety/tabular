@@ -75,13 +75,16 @@ test('source runtime serves health, readiness, Reactus, and releases the listene
     assert.match(login.headers.get('content-security-policy') || '', /style-src 'self'/);
     const loginHtml = await login.text();
     assert.match(loginHtml, /Sign in to Tabular/);
-    const stylesheetHref = loginHtml.match(/href="([^\"]+\.css\?v=[a-f0-9]{16})"/)?.[1];
-    assert.ok(stylesheetHref);
-    const stylesheet = await fetch(`${runtime.origin}${stylesheetHref}`);
-    assert.equal(stylesheet.status, 200);
-    assert.match(stylesheet.headers.get('content-type') || '', /text\/css/);
-    assert.match(await stylesheet.text(), /\.auth-card/);
-
+    const stylesheetHrefs = [...loginHtml.matchAll(/href="([^\"]+\.css(?:\?v=[a-f0-9]{16})?)"/g)].map(match => match[1]);
+    assert.ok(stylesheetHrefs.length > 0);
+    const stylesheets: string[] = [];
+    for (const stylesheetHref of stylesheetHrefs) {
+      const stylesheet = await fetch(`${runtime.origin}${stylesheetHref}`);
+      assert.equal(stylesheet.status, 200);
+      assert.match(stylesheet.headers.get('content-type') || '', /text\/css/);
+      stylesheets.push(await stylesheet.text());
+    }
+    assert.ok(stylesheets.some(stylesheet => /\.auth-card/.test(stylesheet)));
     //owned failures preserve their public contract
     const invalid = await fetch(`${runtime.origin}/__test/invalid`);
     assert.equal(invalid.status, 400);

@@ -51,8 +51,8 @@ for (const script of [
 }
 assert.equal(
   packageJson.scripts.dev,
-  'node dist/entrypoints/web.js',
-  'The normal development command must use the compiled Node entrypoint'
+  'tsx scripts/develop.ts',
+  'The normal development command must use the source development entrypoint'
 );
 assert.equal(packageJson.scripts['start:source'], 'npm run dev');
 for (const script of [

@@ -8,7 +8,7 @@ import { ApplicationError } from './errors.js';
 
 //The artifact record contract exported for module callers
 export type ArtifactRecord = {
-  type: 'page' | 'client' | 'asset',
+  type: 'page' | 'client' | 'asset' | 'static',
   id: string,
   entry: string,
   source?: string,
@@ -30,6 +30,7 @@ export type ArtifactRoots = {
   pagePath: string,
   clientPath: string,
   assetPath: string,
+  publicPath: string,
   clientRoute: string,
   assetRoute: string,
 };
@@ -51,6 +52,7 @@ function artifactRoot(artifact: ArtifactRecord, roots: ArtifactRoots) {
     case 'page': return roots.pagePath;
     case 'client': return roots.clientPath;
     case 'asset': return roots.assetPath;
+    case 'static': return roots.publicPath;
     default: throw new Error(`Unsupported artifact type ${String(artifact.type)}`);
   }
 }
@@ -128,6 +130,9 @@ export async function loadArtifactManifest(
 
     //destination paths must stay inside both the project and their typed
     // Reactus output root before any file is opened
+    if (path.isAbsolute(artifact.destination)) {
+      throw new Error(`Artifact destination must be portable: ${artifact.destination}`);
+    }
     const destination = path.resolve(projectRoot, artifact.destination);
     const relative = path.relative(projectRoot, destination);
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
@@ -147,10 +152,20 @@ export async function loadArtifactManifest(
     if (expectedRoute && !artifact.publicRoute?.startsWith(`${expectedRoute}/`)) {
       throw new Error(`Artifact has an invalid public route: ${artifact.destination}`);
     }
-    if (!expectedRoute && artifact.publicRoute) {
+    if (artifact.type === 'static' && !artifact.publicRoute) {
+      throw new Error(`Static artifacts require a public route: ${artifact.destination}`);
+    }
+    if (artifact.type === 'page' && artifact.publicRoute) {
       throw new Error(`Page artifacts cannot be public static routes: ${artifact.destination}`);
     }
     if (artifact.publicRoute) {
+      if (!artifact.publicRoute.startsWith('/')
+        || artifact.publicRoute.includes('..')
+        || artifact.publicRoute.includes('\\')
+        || artifact.publicRoute.includes('?')
+        || artifact.publicRoute.includes('#')) {
+        throw new Error(`Artifact public route is invalid: ${artifact.publicRoute}`);
+      }
       if (publicRoutes.has(artifact.publicRoute)) {
         throw new Error(`Duplicate artifact public route: ${artifact.publicRoute}`);
       }
@@ -158,7 +173,8 @@ export async function loadArtifactManifest(
     }
 
     //finish with integrity metadata and the real on-disk file verification
-    if (!/^[a-f0-9]{64}$/.test(artifact.sha256) || artifact.size < 1) {
+    if (!/^[a-f0-9]{64}$/.test(artifact.sha256) || !Number.isSafeInteger(artifact.size)
+      || artifact.size < 1) {
       throw new Error(`Artifact integrity metadata is invalid: ${artifact.destination}`);
     }
     await verifyArtifactFile(projectRoot, artifact, roots);

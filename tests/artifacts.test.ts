@@ -8,7 +8,11 @@ import test from 'node:test';
 
 //client
 import type { ArtifactManifest, ArtifactRecord } from '../bootstrap/artifacts.js';
-import { loadArtifactManifest, verifyArtifactFile } from '../bootstrap/artifacts.js';
+import {
+  loadArtifactManifest,
+  publicArtifact,
+  verifyArtifactFile
+} from '../bootstrap/artifacts.js';
 import { loadReactusConfig } from '../config/reactus.js';
 import { versionPublicArtifactReferences } from '../plugins/app/helpers/assets.js';
 
@@ -105,12 +109,68 @@ test('artifact integrity rejects files changed after the build manifest', async 
       () => verifyArtifactFile(projectRoot, artifact, roots),
       /Artifact size mismatch|Artifact hash mismatch/
     );
+
+    //A same-length mutation must still fail the content digest check.
+    await fs.writeFile(destination, 'changed');
+    const sameLengthArtifact = record({
+      destination: 'public/assets/test.css',
+      size: Buffer.byteLength('changed'),
+      sha256: crypto.createHash('sha256').update('artifact').digest('hex')
+    });
+    await assert.rejects(
+      () => verifyArtifactFile(projectRoot, sameLengthArtifact, roots),
+      /Artifact hash mismatch/
+    );
   } finally {
     await fs.rm(projectRoot, { recursive: true, force: true });
   }
 });
 
-test('artifact integrity rejects symlinks that resolve outside the output root', async () => {
+test('production public artifact lookup requires an exact route key', () => {
+  const artifact = record({ destination: 'public/assets/test.css' });
+  const manifest: ArtifactManifest = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    artifacts: [artifact]
+  };
+  assert.equal(publicArtifact(manifest, '/assets/test.css'), artifact);
+  assert.equal(publicArtifact(manifest, '/assets/test.css?download=1'), undefined);
+  assert.equal(publicArtifact(manifest, '/../public/assets/test.css'), undefined);
+});
+
+test('page artifacts can never become public static routes', async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tabular-page-artifact-'));
+  try {
+    const roots = loadReactusConfig(projectRoot);
+    const destination = path.join(roots.pagePath, 'page.js');
+    const body = Buffer.from('page');
+    await fs.mkdir(roots.pagePath, { recursive: true });
+    await fs.writeFile(destination, body);
+    await fs.mkdir(path.dirname(roots.manifestPath), { recursive: true });
+    const manifest: ArtifactManifest = {
+      schemaVersion: 1,
+      generatedAt: new Date().toISOString(),
+      artifacts: [{
+        type: 'page',
+        id: 'page',
+        entry: '@/pages/page',
+        destination: path.relative(projectRoot, destination),
+        publicRoute: '/pages/page.js',
+        sha256: crypto.createHash('sha256').update(body).digest('hex'),
+        size: body.byteLength
+      }]
+    };
+    await fs.writeFile(roots.manifestPath, JSON.stringify(manifest));
+    await assert.rejects(
+      () => loadArtifactManifest(projectRoot, roots.manifestPath, roots),
+      /Page artifacts cannot be public static routes/
+    );
+  } finally {
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('artifact integrity rejects symlinks that resolve outside the output root', async (context) => {
   //create an in-project secret and expose it through an asset-root symlink
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tabular-symlink-'));
   try {
@@ -119,7 +179,17 @@ test('artifact integrity rejects symlinks that resolve outside the output root',
     await fs.writeFile(secret, 'artifact');
     await fs.mkdir(roots.assetPath, { recursive: true });
     const destination = path.join(roots.assetPath, 'leak.css');
-    await fs.symlink(path.relative(roots.assetPath, secret), destination);
+    try {
+      await fs.symlink(path.relative(roots.assetPath, secret), destination);
+    } catch (error) {
+      //Windows test runners may not have the privilege required to create links
+      if (error && typeof error === 'object' && 'code' in error
+        && ['EACCES', 'EPERM'].includes(String(error.code))) {
+        context.skip('Symlink creation is not permitted in this environment');
+        return;
+      }
+      throw error;
+    }
     const artifact = record({ destination: path.relative(projectRoot, destination) });
 
     //realpath confinement must reject the link even though its pathname is safe

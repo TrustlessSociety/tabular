@@ -10,7 +10,7 @@ import { createApplication } from '../../../bootstrap/application.js';
 import { loadPluginManifest, validatePluginPaths } from '../../../bootstrap/plugins.js';
 import { createExplorerSnapshot } from '../../explorer/tests/fixtures.js';
 import { dispatchExplorerAction } from '../../explorer/events/actions.js';
-import { resolveExplorerAction } from '../../explorer/pages/routes.js';
+import { resolveExplorerAction } from '../../explorer/helpers/routes.js';
 import appPlugin from '../plugin.js';
 
 test('app plugin loads in declared order with config and stable service lookup', async () => {
@@ -25,8 +25,7 @@ test('app plugin loads in declared order with config and stable service lookup',
     './plugins/saved-views/plugin',
     './plugins/import-export/plugin',
     './plugins/explorer/plugin',
-    './plugins/ui/plugin',
-    './plugins/grid/plugin',
+        './plugins/grid/plugin',
     './plugins/commands/plugin',
     './plugins/realtime/plugin',
     './plugins/mcp/plugin',
@@ -42,7 +41,7 @@ test('app plugin loads in declared order with config and stable service lookup',
     name: 'tabular.app',
     configName: 'Tabular',
     routes: [
-      '/healthz', '/readyz', '/client/**', '/assets/**', '/favicon.ico', '/**'
+      '/healthz', '/readyz', '/client/**', '/assets/**', '/styles/**', '/favicon.ico', '/**'
     ]
   });
   assert.deepEqual(application.runtime.rawHandlers.routes, [
@@ -50,7 +49,7 @@ test('app plugin loads in declared order with config and stable service lookup',
   ]);
   assert.deepEqual(application.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
   assert.equal(application.operations.name, 'tabular.operations');
   assert.equal(application.app.plugin('tabular.operations'), application.operations);
@@ -59,9 +58,9 @@ test('app plugin loads in declared order with config and stable service lookup',
   assert.equal(application.app.plugin('tabular.app'), service);
   assert.deepEqual(application.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
-  assert.throws(() => appPlugin(application.app), /already registered/);
+  await assert.rejects(() => appPlugin(application.app), /already registered/);
 });
 
 test('worker composition does not initialize web artifacts or HTTP routes', async () => {

@@ -48,9 +48,11 @@ try {
   const loginHtml = await login.text();
   assert.match(loginHtml, /Sign in to Tabular/);
   const clientArtifact = runtime.runtime.artifacts.artifacts.find((artifact) =>
-    artifact.publicRoute?.startsWith('/client/'));
+    artifact.entry === '@/plugins/identity/views/login'
+      && artifact.publicRoute?.startsWith('/client/'));
   const assetArtifact = runtime.runtime.artifacts.artifacts.find((artifact) =>
-    artifact.publicRoute?.startsWith('/assets/'));
+    artifact.entry === '@/plugins/identity/views/login'
+      && artifact.publicRoute?.startsWith('/assets/'));
   assert.ok(clientArtifact?.publicRoute, 'Manifest should expose a client artifact');
   assert.ok(assetArtifact?.publicRoute, 'Manifest should expose a stylesheet artifact');
   const clientRoute = `${clientArtifact.publicRoute}?v=${clientArtifact.sha256.slice(0, 16)}`;
@@ -65,8 +67,14 @@ try {
   assert.match(asset.headers.get('content-type') || '', /text\/css/);
   const assetBody = await asset.text();
   assert.ok(assetBody.length > 0);
-  assert.match(assetBody, /\.auth-card/);
-  assert.equal((await fetch(`${runtime.origin}/client/not-in-manifest.js`)).status, 404);
+  const staticStylesheet = runtime.runtime.artifacts.artifacts.find((artifact) => artifact.publicRoute === '/styles/identity.css');
+  assert.ok(staticStylesheet?.publicRoute, 'Manifest should expose the identity static stylesheet');
+  const staticRoute = `${staticStylesheet.publicRoute}?v=${staticStylesheet.sha256.slice(0, 16)}`;
+  assert.match(loginHtml, new RegExp(`href="${staticRoute.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+  const staticResponse = await fetch(`${runtime.origin}${staticRoute}`);
+  assert.equal(staticResponse.status, 200);
+  assert.match(staticResponse.headers.get('content-type') || '', /text\/css/);
+  assert.match(await staticResponse.text(), /\.auth-card/);  assert.equal((await fetch(`${runtime.origin}/client/not-in-manifest.js`)).status, 404);
   const invalid = await fetch(`${runtime.origin}/__test/invalid`);
   assert.equal(invalid.status, 400);
   assert.deepEqual(await invalid.json(), {
@@ -78,14 +86,14 @@ try {
   assert.doesNotMatch(failedBody, /TOP_SECRET_SENTINEL|LEAK_ATTEMPT|stack/);
   assert.deepEqual(runtime.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
   const firstService = runtime.app.plugin('tabular.app');
   await runtime.app.bootstrap();
   assert.equal(runtime.app.plugin('tabular.app'), firstService);
   assert.deepEqual(runtime.runtime.pluginOrder, [
     'tabular.database', 'tabular.identity', 'tabular.operations', 'tabular.catalog', 'tabular.capability', 'tabular.files', 'tabular.saved-views', 'tabular.import-export',
-    'tabular.explorer', 'tabular.ui', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
+    'tabular.explorer', 'tabular.grid', 'tabular.commands', 'tabular.realtime', 'tabular.mcp', 'tabular.app'
   ]);
 } finally {
   await runtime.close();
