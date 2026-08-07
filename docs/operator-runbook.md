@@ -1,4 +1,4 @@
-?# Tabular Operator Runbook
+# Tabular Operator Runbook
 
 ## Supported release boundary
 
@@ -98,6 +98,7 @@ Human review from start to finish:
 6. Review desktop and `390x844`, then sign out and confirm the cookie/session
    is unusable; restart with shutdown/start and resume the review.
 7. Run cleanup only when the disposable environment is no longer needed.
+
 ## Development acceptance without PostgreSQL
 
 The repository also provides a development-only, in-memory acceptance path.
@@ -142,7 +143,10 @@ discovers unique Reactus entries from registered `server.views`, and builds
 only those entries. It does not open a listener, database pool, worker, or
 migrator. `npm run build:server` compiles the server entrypoints and copies
 server-owned assets; `npm run build` runs the clean build, both build stages,
-and artifact verification.
+and artifact verification. `npm run verify:css` checks that the route styles
+remain in the exact flat `public/styles/` inventory and that no plugin-local
+CSS has returned. This boundary runs in `npm run lint` and therefore in the
+CI-facing `npm run verify` chain.
 
 `npm run dev` runs `scripts/develop.ts` directly through `tsx`. It resolves
 the development `config`, `listen`, and `route` phases. When no
@@ -150,17 +154,22 @@ the development `config`, `listen`, and `route` phases. When no
 PGlite adapter, runs the real migrations, and calls `seedLocalDemo`; this is
 a disposable development substrate, not a PostgreSQL or production claim.
 
-The compiled process entrypoints and lifecycle phases are:
+The source and compiled entrypoints and their lifecycle phases are:
 
 | Command | Entrypoint | Phases |
 | --- | --- | --- |
+| `npm run build:reactus` | `scripts/build.ts` | `config`, `route` |
+| `npm run dev` | `scripts/develop.ts` | `config`, `listen`, `route` |
 | `npm start` | `dist/entrypoints/web.js` | `config`, `listen`, `route` |
 | `npm run worker` | `dist/entrypoints/worker.js` | `config`, `worker` |
 | `npm run migrate` | `dist/entrypoints/migrate.js` | `config`, `migrate` |
 | `npm run migrator:operations` | `dist/entrypoints/migrate.js --consume-operations` | `config`, `migrate`, optional `worker` |
 | `npm run doctor` | `dist/entrypoints/doctor.js --scope web` | `config`, `doctor` |
 | `npm run preflight` | `dist/entrypoints/preflight.js` | `config`, `preflight` |
-| `npm run seed:demo` | `dist/entrypoints/seed-demo.js --confirm-local-demo` | migrator-scoped seed workflow |
+| `npm run seed:demo` | `dist/entrypoints/seed-demo.js --confirm-local-demo` | `config`, `migrate` |
+
+`npm run start:source` is a retained alias for `npm run dev` used by the
+release static checks; use `npm run dev` for the documented source workflow.
 
 The built browser surface uses UnoCSS through `virtual:uno.css`. The only
 conventional CSS exceptions are source-owned flat files under
@@ -170,11 +179,13 @@ unchanged vendor `tabulator.css`. There is no plugin-local CSS. Generated
 Reactus clients and assets live under `public/client` and `public/assets`;
 source static files use exact manifest-allowlisted routes such as
 `/styles/**`. Production does not expose Vite.
+
 ## Install and configure
 
 For a source checkout, install the exact lockfile with `npm ci` and create the
-compiled server and registered-view Reactus assets with `npm run build`. To assemble the
-production artifact, run `npm run package:release` from that source checkout.
+compiled server and registered-view Reactus assets with `npm run build`. To
+assemble the production artifact, run `npm run package:release` from that
+source checkout.
 
 For an already assembled `.build/release-package`, install and execute it in
 place:
@@ -329,13 +340,13 @@ Use expand/contract-compatible migrations. Deploy migrator first, then web and
 worker instances, and drain old processes. Confirm health/readiness, error rate,
 job backlog, and SSE reconnect behavior before increasing traffic.
 
-For an application-only regression, drain traffic and roll web/worker artifacts
-  back to the last compatible build; do not edit the migration ledger. If a
-  committed schema/data change is incompatible or corrupt, stop writers,
-  preserve forensic logs and a fresh backup, restore the last verified physical
-  backup into an isolated cluster, apply only compatible forward migrations,
-  validate it as above, and then switch traffic. Document lost writes against
-  the declared RPO.
+For an application-only regression, drain traffic and roll web/worker
+artifacts back to the last compatible build; do not edit the migration ledger.
+If a committed schema/data change is incompatible or corrupt, stop writers,
+preserve forensic logs and a fresh backup, restore the last verified physical
+backup into an isolated cluster, apply only compatible forward migrations,
+validate it as above, and then switch traffic. Document lost writes against
+the declared RPO.
 
 For a stuck job, use its opaque activity ID and redacted diagnostics. Do not
 change job rows by hand. Resolve the underlying permission/provider/availability
@@ -362,6 +373,6 @@ admin URL at retained data.
 For each PostgreSQL suite, set `TABULAR_TEST_POSTGRES_URL` to its exact disposable
 database name and set `TABULAR_TEST_POSTGRES_DISPOSABLE` to the suite's required
 guard, then run the corresponding domain-named `test:postgres:*` script. Never
-run a guarded suite against retained data. The final release package records exact commands,
-PostgreSQL version, browser/viewport results, screenshots, logs, and known live
-deployment inputs.
+run a guarded suite against retained data. The final release package records
+exact commands, PostgreSQL version, browser/viewport results, screenshots,
+logs, and known live deployment inputs.

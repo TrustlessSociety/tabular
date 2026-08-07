@@ -76,18 +76,3 @@ export function useResponse(): BrowserResponse {
 export function useSession(): BrowserSession {
   return useContext(ProviderContext).session;
 }
-
-/**
- * Return public data under the compatibility name used by the proof.
- */
-export function useConfig(): BrowserData {
-  return useData();
-}
-
-/**
- * Return all browser-safe Provider lanes together.
- */
-export function useServer() {
-  const context = useContext(ProviderContext);
-  return context;
-}

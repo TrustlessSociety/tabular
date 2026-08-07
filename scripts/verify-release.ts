@@ -170,7 +170,9 @@ for (const plugin of pluginEntries) {
 }
 
 const productionSources = await sourceFiles(path.join(projectRoot, 'plugins'));
-for (const file of productionSources.filter((candidate) => !candidate.includes('/tests/'))) {
+for (const file of productionSources.filter(
+  (candidate) => !candidate.includes(`${path.sep}tests${path.sep}`)
+)) {
   const source = await fs.readFile(file, 'utf8');
   assert.doesNotMatch(
     source,
