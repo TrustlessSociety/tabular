@@ -1,5 +1,39 @@
+//client
+import type {
+  LifecycleResolutionPhase,
+  ProcessName
+} from '../config/phases.js';
+import {
+  assertPermittedPhase,
+  PROCESS_PHASES
+} from '../config/phases.js';
+
 //The lifecycle phase contract exported for module callers
 export type LifecyclePhase = 'initializing' | 'ready' | 'draining' | 'stopped';
+
+//The process phase resolver contract used by thin entrypoints
+export type ProcessPhaseResolver = {
+  resolve: (phase: string) => Promise<unknown>,
+};
+
+/**
+ * Resolve the exact lifecycle phases owned by one process profile.
+ */
+export async function resolveProcessPhases(
+  server: ProcessPhaseResolver,
+  process: ProcessName,
+  additional: readonly LifecycleResolutionPhase[] = []
+) {
+  const phases = [...PROCESS_PHASES[process], ...additional];
+  const resolved: LifecycleResolutionPhase[] = [];
+  for (const phase of phases) {
+    assertPermittedPhase(process, phase);
+    if (resolved.includes(phase)) continue;
+    await server.resolve(phase);
+    resolved.push(phase);
+  }
+  return resolved;
+}
 
 /**
  * Provide the application lifecycle behavior used by this module.

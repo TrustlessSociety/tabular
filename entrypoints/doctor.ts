@@ -1,6 +1,8 @@
 import { createApplication } from '../bootstrap/application.js';
 import { entrypointPaths } from '../bootstrap/entrypoint-paths.js';
+import { resolveProcessPhases } from '../bootstrap/lifecycle.js';
 import { writeLog } from '../bootstrap/logger.js';
+import { loadDoctorConfig, type DoctorScope } from '../config/doctor.js';
 import { assertProductionConfiguration } from '../config/index.js';
 
 const scopeIndex = process.argv.indexOf('--scope');
@@ -8,9 +10,16 @@ const scope = process.argv[scopeIndex + 1];
 if (!['web', 'migrator', 'worker'].includes(scope || '')) {
   throw new Error('Doctor requires --scope web, --scope migrator, or --scope worker');
 }
-const processKind = scope as 'web' | 'migrator' | 'worker';
+const processKind = scope as DoctorScope;
 const { projectRoot, runtimeRoot } = entrypointPaths(import.meta.url);
-const application = await createApplication({ processKind, projectRoot, runtimeRoot });
+const config = loadDoctorConfig(processKind, { projectRoot, runtimeRoot });
+const application = await createApplication({
+  processKind,
+  config,
+  projectRoot,
+  runtimeRoot
+});
+await resolveProcessPhases(application.app, 'doctor');
 try {
   assertProductionConfiguration(application.config);
   await application.database.assertReady(processKind);

@@ -12,6 +12,14 @@ type VerifierChild = ChildProcess & { stdout: Readable; stderr: Readable };
 const entrypointPathModule = await import(
   pathToFileURL(path.join(projectRoot, 'dist/bootstrap/entrypoint-paths.js')).href
 );
+const phaseModule = await import(
+  pathToFileURL(path.join(projectRoot, 'dist/config/phases.js')).href
+);
+assert.deepEqual(phaseModule.PROCESS_PHASES.build, ['config', 'route']);
+const buildPermissions = phaseModule.PROCESS_PHASE_PERMISSIONS.build as readonly string[];
+assert.equal(buildPermissions.includes('listen'), false);
+assert.equal(buildPermissions.includes('worker'), false);
+assert.equal(buildPermissions.includes('migrate'), false);
 for (const entrypoint of ['web.js', 'migrate.js', 'worker.js']) {
   const resolved = entrypointPathModule.entrypointPaths(
     pathToFileURL(path.join(projectRoot, 'dist/entrypoints', entrypoint)).href
@@ -87,7 +95,12 @@ assert.equal((await fetch(`${origin}/readyz`)).status, 200);
 const port = Number(new URL(origin).port);
 const webExit = waitForExit(web);
 web.kill('SIGTERM');
-assert.equal(await webExit, 0);
+const webExitCode = await webExit;
+if (process.platform === 'win32') {
+  assert.ok(webExitCode === 0 || webExitCode === null);
+} else {
+  assert.equal(webExitCode, 0);
+}
 await provePortAvailable(port);
 
 const migration = spawnSync(process.execPath, [path.join(projectRoot, 'dist/entrypoints/migrate.js')], {

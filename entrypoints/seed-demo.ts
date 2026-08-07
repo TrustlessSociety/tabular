@@ -1,6 +1,8 @@
 import { createApplication } from '../bootstrap/application.js';
 import { entrypointPaths } from '../bootstrap/entrypoint-paths.js';
+import { resolveProcessPhases } from '../bootstrap/lifecycle.js';
 import { writeLog } from '../bootstrap/logger.js';
+import { loadMigratorConfig } from '../config/migrator.js';
 import {
   seedLocalDemo,
   type DemoSeedResult
@@ -11,11 +13,14 @@ if (!process.argv.includes('--confirm-local-demo')) {
 }
 
 const { projectRoot, runtimeRoot } = entrypointPaths(import.meta.url);
+const config = loadMigratorConfig({ projectRoot, runtimeRoot });
 const application = await createApplication({
   processKind: 'migrator',
+  config,
   projectRoot,
   runtimeRoot
 });
+await resolveProcessPhases(application.app, 'migrator');
 
 try {
   if (application.config.environment.mode === 'production') {

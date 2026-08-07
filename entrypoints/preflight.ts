@@ -1,10 +1,8 @@
 import { configureLogging, writeLog } from '../bootstrap/logger.js';
-import {
-  assertProductionConfiguration,
-  loadConfig
-} from '../config/index.js';
+import { loadPreflightConfig } from '../config/preflight.js';
+import { assertProductionConfiguration } from '../config/index.js';
 
-const config = loadConfig({ productionScope: 'all' });
+const config = loadPreflightConfig();
 configureLogging(config.environment.logLevel, {
   instanceId: config.environment.instanceId,
   processKind: 'preflight'

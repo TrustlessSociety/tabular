@@ -1,7 +1,9 @@
 import { createApplication } from '../bootstrap/application.js';
 import { entrypointPaths } from '../bootstrap/entrypoint-paths.js';
+import { resolveProcessPhases } from '../bootstrap/lifecycle.js';
 import { writeLog } from '../bootstrap/logger.js';
 import { ApplicationError } from '../bootstrap/errors.js';
+import { loadWorkerProcessConfig } from '../config/worker.js';
 import { assertProductionConfiguration } from '../config/index.js';
 import { operationHandler } from '../plugins/operations/helpers/handlers.js';
 import {
@@ -10,6 +12,7 @@ import {
 } from '../plugins/operations/helpers/worker.js';
 
 const { projectRoot, runtimeRoot } = entrypointPaths(import.meta.url);
+const config = loadWorkerProcessConfig({ projectRoot, runtimeRoot });
 const requestedJobId = process.env.TABULAR_OPERATION_JOB_ID;
 if (requestedJobId && !/^job_[A-Za-z0-9_-]{32,64}$/.test(requestedJobId)) {
   throw new Error('TABULAR_OPERATION_JOB_ID must be an opaque operation job ID');
@@ -17,9 +20,11 @@ if (requestedJobId && !/^job_[A-Za-z0-9_-]{32,64}$/.test(requestedJobId)) {
 
 const application = await createApplication({
   processKind: 'worker',
+  config,
   projectRoot,
   runtimeRoot
 });
+await resolveProcessPhases(application.app, 'worker');
 assertProductionConfiguration(application.config);
 const shutdownTimeoutMs = Math.max(
   application.config.server.shutdownTimeoutMs,

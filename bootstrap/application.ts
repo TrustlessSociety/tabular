@@ -8,12 +8,12 @@ import type { AddressInfo } from 'node:net';
 
 //modules
 import type { HttpServer } from '@stackpress/ingest/types';
+import type { ActionRouterAction } from '@stackpress/ingest/types';
 import {
   Adapter,
   formDataToObject,
   server
 } from '@stackpress/ingest/http';
-import { serve } from 'reactus';
 
 //client
 import type { TabularConfig } from '../config/index.js';
@@ -24,18 +24,20 @@ import type { DatabasePluginService } from '../plugins/database/helpers/service.
 import type { ExplorerPluginService } from '../plugins/explorer/helpers/service.js';
 import type { FilesPluginService } from '../plugins/files/helpers/service.js';
 import type { GridPluginService } from '../plugins/grid/helpers/service.js';
-import type { IdentityPluginService } from '../plugins/identity/helpers/service.js';
+import type { DevelopmentLoginProvider, IdentityPluginService } from '../plugins/identity/helpers/service.js';
 import type { ImportExportPluginService } from '../plugins/import-export/helpers/service.js';
 import type { McpPluginService } from '../plugins/mcp/helpers/service.js';
 import type { OperationsPluginService } from '../plugins/operations/helpers/service.js';
 import type { RealtimePluginService } from '../plugins/realtime/helpers/service.js';
 import type { SavedViewsPluginService } from '../plugins/saved-views/helpers/service.js';
-import type { UiPluginService } from '../plugins/ui/helpers/service.js';
 import type { ArtifactManifest } from './artifacts.js';
+import type { DevelopmentDatabaseBackend } from '../plugins/database/helpers/development-contracts.js';
 import { assertProductionConfiguration, loadConfig } from '../config/index.js';
-import { loadArtifactManifest } from './artifacts.js';
 import { ApplicationError, mapError, sanitizeRouteError } from './errors.js';
-import { ApplicationLifecycle } from './lifecycle.js';
+import {
+  ApplicationLifecycle,
+  resolveProcessPhases
+} from './lifecycle.js';
 import { configureLogging, writeLog } from './logger.js';
 import { loadPluginManifest } from './plugins.js';
 import { RawHttpHandlerRegistry } from './raw-handlers.js';
@@ -46,7 +48,6 @@ import { CATALOG_SERVICE } from '../plugins/catalog/helpers/service.js';
 import { CAPABILITY_SERVICE } from '../plugins/capability/helpers/service.js';
 import { FILES_SERVICE } from '../plugins/files/helpers/service.js';
 import { EXPLORER_SERVICE } from '../plugins/explorer/helpers/service.js';
-import { UI_SERVICE } from '../plugins/ui/helpers/service.js';
 import { GRID_SERVICE } from '../plugins/grid/helpers/service.js';
 import { COMMANDS_SERVICE } from '../plugins/commands/helpers/service.js';
 import { SAVED_VIEWS_SERVICE } from '../plugins/saved-views/helpers/service.js';
@@ -63,16 +64,24 @@ export const RUNTIME_SERVICE = 'tabular.runtime';
 export const APP_SERVICE = 'tabular.app';
 
 //The reactus runtime contract exported for module callers
-export type ReactusRuntime = ReturnType<typeof serve>;
+export type ReactusRuntime = {
+  render: (entry: string, props?: Record<string, unknown>) => Promise<string>,
+};
 
 //The application runtime service contract exported for module callers
 export type ApplicationRuntimeService = {
   processKind: 'web' | 'migrator' | 'worker',
   config: TabularConfig,
+  developmentDatabase?: DevelopmentDatabaseBackend,
+  developmentLogin?: DevelopmentLoginProvider,
   lifecycle: ApplicationLifecycle,
   resources: RuntimeResources,
   reactus: ReactusRuntime | undefined,
   artifacts: ArtifactManifest,
+  rendering: {
+    loadArtifacts: boolean,
+    createReactus: boolean,
+  },
   pluginOrder: string[],
   rawHandlers: RawHttpHandlerRegistry,
 };
@@ -98,7 +107,6 @@ export type ApplicationServer = HttpServer<
     [OPERATIONS_SERVICE]: OperationsPluginService,
     [IMPORT_EXPORT_SERVICE]: ImportExportPluginService,
     [EXPLORER_SERVICE]: ExplorerPluginService,
-    [UI_SERVICE]: UiPluginService,
     [GRID_SERVICE]: GridPluginService,
     [COMMANDS_SERVICE]: CommandsPluginService,
     [REALTIME_SERVICE]: RealtimePluginService,
@@ -107,13 +115,27 @@ export type ApplicationServer = HttpServer<
   }
 >;
 
+//The concrete action type keeps lazy page modules aligned with this server's
+//typed config and plugin registry at the import-router boundary.
+export type ApplicationHttpAction = ActionRouterAction<
+  IncomingMessage,
+  ServerResponse,
+  ApplicationServer
+>;
+
 //The create application options contract exported for module callers
 export type CreateApplicationOptions = {
   processKind?: 'web' | 'migrator' | 'worker',
+  config?: TabularConfig,
+  artifacts?: ArtifactManifest,
   env?: NodeJS.ProcessEnv,
   projectRoot?: string,
   runtimeRoot?: string,
   version?: string,
+  loadArtifacts?: boolean,
+  createReactus?: boolean,
+  developmentDatabase?: DevelopmentDatabaseBackend,
+  developmentLogin?: DevelopmentLoginProvider,
 };
 
 /**
@@ -133,7 +155,29 @@ export async function createApplication(options: CreateApplicationOptions = {}) 
   //load process-scoped configuration before initializing any side-effectful
   // runtime boundary
   const processKind = options.processKind || 'web';
-  const config = loadConfig({ ...options, productionScope: processKind });
+  const config = options.config || loadConfig({
+    env: options.env,
+    projectRoot: options.projectRoot,
+    runtimeRoot: options.runtimeRoot,
+    version: options.version,
+    productionScope: processKind
+  });
+  //Development adapters are injected only by the source development entrypoint;
+  //production, worker, and migrator processes cannot receive that capability.
+  if (options.developmentDatabase || options.developmentLogin) {
+    if (processKind !== 'web' || config.environment.mode !== 'development') {
+      throw new Error(
+        'Development database adapters are available only for the development web process'
+      );
+    }
+    if (options.developmentDatabase && config.database.webUrl) {
+      throw new Error('The development PGlite backend requires no web database URL');
+    }
+    if (options.developmentLogin && !options.developmentDatabase) {
+      throw new Error('A development login verifier requires the development database backend');
+    }
+  }
+
   configureLogging(config.environment.logLevel, {
     instanceId: config.environment.instanceId,
     processKind
@@ -145,27 +189,15 @@ export async function createApplication(options: CreateApplicationOptions = {}) 
   const resources = new RuntimeResources();
   const rawHandlers = new RawHttpHandlerRegistry();
 
-  //only the web process needs verified Reactus artifacts and a renderer; the
-  // migrator and worker retain an explicit empty manifest instead
-  const artifacts: ArtifactManifest = processKind === 'web'
-    ? await loadArtifactManifest(
-      config.paths.projectRoot,
-      config.reactus.manifestPath,
-      config.reactus
-    )
-    : {
+ //the app plugin owns Reactus initialization; bootstrap supplies only the
+  // explicit process option and the manifest shape used by non-web processes
+  const shouldLoadArtifacts = options.loadArtifacts ?? processKind === 'web';
+  const artifacts: ArtifactManifest = options.artifacts || {
       schemaVersion: 1,
       generatedAt: '1970-01-01T00:00:00.000Z',
       artifacts: []
     };
-  const reactus = processKind === 'web'
-    ? serve({
-      cwd: config.paths.projectRoot,
-      clientRoute: config.reactus.clientRoute,
-      cssRoute: config.reactus.assetRoute,
-      pagePath: config.reactus.pagePath
-    })
-    : undefined;
+  const shouldCreateReactus = options.createReactus ?? processKind === 'web';
 
   //the shared handler admits requests through lifecycle accounting before raw
   // streaming routes or bounded Ingest adaptation can consume the body
@@ -236,10 +268,16 @@ export async function createApplication(options: CreateApplicationOptions = {}) 
   const runtime: ApplicationRuntimeService = {
     processKind,
     config,
+    developmentDatabase: options.developmentDatabase,
+    developmentLogin: options.developmentLogin,
     lifecycle,
     resources,
-    reactus,
+    reactus: undefined,
     artifacts,
+    rendering: {
+      loadArtifacts: shouldLoadArtifacts,
+      createReactus: shouldCreateReactus
+    },
     pluginOrder: [],
     rawHandlers
   };
@@ -266,8 +304,6 @@ export async function createApplication(options: CreateApplicationOptions = {}) 
   if (!importExport) throw new Error(`${IMPORT_EXPORT_SERVICE} did not register during bootstrap`);
   const explorer = app.plugin<ExplorerPluginService>(EXPLORER_SERVICE);
   if (!explorer) throw new Error(`${EXPLORER_SERVICE} did not register during bootstrap`);
-  const ui = app.plugin<UiPluginService>(UI_SERVICE);
-  if (!ui) throw new Error(`${UI_SERVICE} did not register during bootstrap`);
   const grid = app.plugin<GridPluginService>(GRID_SERVICE);
   if (!grid) throw new Error(`${GRID_SERVICE} did not register during bootstrap`);
   const commands = app.plugin<CommandsPluginService>(COMMANDS_SERVICE);
@@ -294,7 +330,6 @@ export async function createApplication(options: CreateApplicationOptions = {}) 
     operations,
     importExport,
     explorer,
-    ui,
     grid,
     commands,
     realtime,
@@ -433,6 +468,7 @@ function boundedRequestLoader(resource: IncomingMessage, maximumBytes: number) {
 export type StartWebOptions = CreateApplicationOptions & {
   host?: string,
   port?: number,
+  phaseProfile?: 'development' | 'live',
 };
 
 /**
@@ -443,6 +479,12 @@ export async function startWeb(options: StartWebOptions = {}) {
   const application = await createApplication(options);
   let httpServer: NodeServer | undefined;
   try {
+    //resolve only the HTTP phases owned by the selected web profile before
+    // readiness checks or the first network listener can be observed
+    const phaseProfile = options.phaseProfile
+      || (application.config.environment.mode === 'production' ? 'live' : 'development');
+    await resolveProcessPhases(application.app, phaseProfile);
+
     //fail production misconfiguration and database readiness before any client
     // can observe a listening socket
     assertProductionConfiguration(application.config);

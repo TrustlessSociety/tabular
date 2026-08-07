@@ -1,6 +1,8 @@
 import { createApplication } from '../bootstrap/application.js';
 import { entrypointPaths } from '../bootstrap/entrypoint-paths.js';
+import { resolveProcessPhases } from '../bootstrap/lifecycle.js';
 import { writeLog } from '../bootstrap/logger.js';
+import { loadMigratorConfig } from '../config/migrator.js';
 import { assertProductionConfiguration } from '../config/index.js';
 import { operationHandler } from '../plugins/operations/helpers/handlers.js';
 import {
@@ -9,6 +11,7 @@ import {
 } from '../plugins/operations/helpers/worker.js';
 
 const { projectRoot, runtimeRoot } = entrypointPaths(import.meta.url);
+const config = loadMigratorConfig({ projectRoot, runtimeRoot });
 const requestedJobId = process.env.TABULAR_OPERATION_JOB_ID;
 const consumeOperations = process.argv.includes('--consume-operations');
 if (requestedJobId && !/^job_[A-Za-z0-9_-]{32,64}$/.test(requestedJobId)) {
@@ -20,9 +23,15 @@ if (requestedJobId && consumeOperations) {
 
 const application = await createApplication({
   processKind: 'migrator',
+  config,
   projectRoot,
   runtimeRoot
 });
+await resolveProcessPhases(
+  application.app,
+  'migrator',
+  consumeOperations ? ['worker'] : []
+);
 const shutdownTimeoutMs = Math.max(
   application.config.server.shutdownTimeoutMs,
   application.config.workers.shutdownTimeoutMs

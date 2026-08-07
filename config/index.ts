@@ -41,6 +41,15 @@ export type TabularConfig = {
   productionIssues: string[],
 };
 
+//The shared configuration loader options used by process-specific modules
+export type ConfigLoadOptions = {
+  env?: NodeJS.ProcessEnv,
+  projectRoot?: string,
+  runtimeRoot?: string,
+  version?: string,
+  productionScope?: ProductionProcessScope,
+};
+
 /**
  * Compose and validate the complete application configuration.
  */
