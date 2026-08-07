@@ -48,7 +48,9 @@ Freeze blocker unless the user accepts a documented fallback or deferral.
 
 ## P-002: Tabular Boilerplate-Aligned Composition Slice
 
-- Status: Proposed; not started.
+- Status: Proved 2026-08-06 within its stated slice boundaries; a narrow proof
+  was created at
+  `proofs/tabular-boilerplate-alignment/`.
 - Proposed prototype path: `proofs/tabular-boilerplate-alignment/`
 - Gap questions and decisions: G-003, G-007, G-008, D-008, and D-011.
 - Hypothesis: Tabular can bootstrap focused packages through explicit lifecycle
@@ -108,3 +110,20 @@ Freeze blocker unless the user accepts a documented fallback or deferral.
 - Required closeout: record commands, dependency graph, generated entries,
   serialized hydration inspection, artifact checks, browser evidence, and all
   remaining target limitations before classifying the result.
+
+### P-002 Result: proved within slice boundaries
+
+- Commands passed: `npm install` and `npm test` in the proof directory. The
+  isolated manifest installed direct packages only, and build discovered two
+  views without resolving `listen`.
+- Initial handler code treated `res.data` as a function, leaving each view with
+  empty data. Focused-library source shows it is a Nest object; `res.data.set()`
+  is the supported handoff. After that correction, `/` rendered its static
+  heading and `/customer?name=Tabular` rendered its dynamic heading.
+- The route/view ordering concern is resolved for this slice. Deterministic
+  tests now prove an allowlisted Provider projection and manifest-bound public
+  artifact reads that reject traversal, missing entries, and hash/size changes.
+- `npm test` in the proof directory passed all three checks on 2026-08-06. This
+  Proof does not widen its stated non-goals around PostgreSQL, workers,
+  migrators, or deployment infrastructure.
+- Evidence: `proofs/tabular-boilerplate-alignment/results.json` and its source.

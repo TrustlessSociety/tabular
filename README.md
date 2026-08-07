@@ -1,4 +1,4 @@
-# Tabular
+?# Tabular
 
 Tabular is a PostgreSQL-native spreadsheet application composed directly from
 focused Stackpress libraries. The current production slice includes catalog
@@ -41,7 +41,36 @@ Shutdown gracefully stops all three application processes and the PostgreSQL
 container within bounded time; a later start resumes it. Cleanup permanently
 destroys only the exact disposable container and generated local-review state.
 It refuses retained storage or non-loopback PostgreSQL publishing.
+## No-PostgreSQL development acceptance
 
+For a development-only review without PostgreSQL, build the source checkout and
+start the thin source entrypoint:
+
+```sh
+npm run build
+npm run dev
+```
+
+When development has no `TABULAR_*_DATABASE_URL` value, `npm run dev` creates an
+in-memory PGlite database, applies the real migrations, and invokes the same
+`seedLocalDemo` helper used by `npm run seed:demo`. The database is recreated
+when the process restarts. Open `http://127.0.0.1:3000` and sign in with:
+
+```text
+Username: tabular_reviewer
+Password: review-local-only-2026
+```
+
+The review data includes Operations and Finance folders, representative files
+and rows, the table grid, import/export, and System activity. After signing in,
+review `/`, `/pages/browse.html`, `/pages/table.html`,
+`/pages/import.html`, and `/pages/system-activity.html` (the browse/table
+pages also accept the seeded folder/table query parameters used by the links).
+
+This path is source-only and development-only. A configured development
+PostgreSQL URL continues to use PostgreSQL; live, worker, and migrator
+processes reject the development adapter, and production builds do not import
+PGlite.
 ## Source checkout
 
 Requirements: Node.js 22.14 or newer, npm 11, and PostgreSQL 18. Copy the values

@@ -1,0 +1,19 @@
+{
+  "proof": "P-002-tabular-boilerplate-aligned-composition-slice",
+  "result": "proved-with-slice-boundaries",
+  "date": "2026-08-06",
+  "passed": [
+    "The isolated direct-dependency manifest installed without umbrella stackpress.",
+    "Build discovered two registered Reactus views without resolving the listen phase.",
+    "Reactus produced UnoCSS-backed development output for both routes.",
+    "The static and dynamic lazy handlers populated their paired views after using res.data.set(...)."
+  ],
+  "verified": [
+    "The browser Provider is explicitly projected through an allowlist and its serialized test fixture excludes server-only fields.",
+    "The production artifact manifest records every built public asset by size and SHA-256 hash.",
+    "Production artifact reads require an exact manifest entry, reject traversal and missing paths, and reject content tampering."
+  ],
+  "boundaries": [
+    "This proof does not claim PostgreSQL, worker, migrator, or live production deployment behavior."
+  ]
+}

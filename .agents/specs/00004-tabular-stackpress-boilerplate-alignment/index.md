@@ -1,12 +1,13 @@
 # Spec 00004: Tabular Stackpress Boilerplate Alignment
 
-Status: **Proposed 2026-08-06.** The user-provided boilerplate proof and the
+Status: **Frozen 2026-08-06.** The user-provided boilerplate proof and the
 current-code comparison are recorded. The corrected direct import, one-handler
 page files, lazy server-entry registration, and registered-view build strategy
 are explicit. Provider projection, removal of `plugins/ui`, and UnoCSS/default
-CSS ownership are accepted. No implementation task plan is accepted, no
-production files have changed under this spec, and lifecycle and closeout Gaps
-remain open.
+CSS ownership are accepted. The implementation sprint was accepted 2026-08-06
+and is in progress: Tasks 00001 through 00004 and the added Task 00006 are
+verified, and Task 00005 remains open. Lifecycle and closeout gates remain
+mandatory for the remaining work.
 
 This spec preserves the proposed restructuring that makes Tabular resemble the
 small, lifecycle-driven Stackpress boilerplate without restoring umbrella
@@ -25,6 +26,8 @@ Stackpress, weakening existing production boundaries, or reopening Frozen Spec
   current findings, remaining source research, and provenance.
 - [Proofs](proofs.md): load for the user-provided guide artifact, its evidence
   limits, and the planned Tabular-specific composition Proof.
+- [Sprint](tasks/sprint.md) and [Task Status](tasks/status.md): load for the
+  accepted wave plan and the authoritative per-task state.
 
 ## Authority And Relationship
 
@@ -53,7 +56,8 @@ centered plugin shape, and `plugins/ui` is removed after ownership migration.
 
 ## Operating Boundary
 
-- Do not implement from this spec until it Freezes and a task plan is accepted.
+- Implement only from the accepted sprint in `tasks/sprint.md`. Work outside it
+  needs explicit user authorization, as Task 00006 received.
 - Do not add or import umbrella `stackpress`.
 - Do not expose raw request headers/bodies, cookies, opaque session identifiers
   or tokens, server config, PostgreSQL credentials, raw errors, or stacks

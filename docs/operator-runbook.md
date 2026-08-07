@@ -1,4 +1,4 @@
-# Tabular Operator Runbook
+?# Tabular Operator Runbook
 
 ## Supported release boundary
 
@@ -98,11 +98,82 @@ Human review from start to finish:
 6. Review desktop and `390x844`, then sign out and confirm the cookie/session
    is unusable; restart with shutdown/start and resume the review.
 7. Run cleanup only when the disposable environment is no longer needed.
+## Development acceptance without PostgreSQL
 
+The repository also provides a development-only, in-memory acceptance path.
+From the repository root run:
+
+```sh
+npm run build
+npm run dev
+```
+
+With no `TABULAR_*_DATABASE_URL` configured, the source entrypoint dynamically
+loads PGlite, applies every migration in `plugins/database/migrations/`, and
+seeds through the existing `seedLocalDemo` helper. It does not require a
+PostgreSQL server. The disposable database is recreated on each server start.
+
+Use `http://127.0.0.1:3000` and sign in with:
+
+```text
+Username: tabular_reviewer
+Password: review-local-only-2026
+```
+
+Review `/`, `/pages/browse.html`, `/pages/table.html`, `/pages/import.html`,
+and `/pages/system-activity.html`. The seeded Operations and Finance data
+should appear in the folders, table grid, import screen, and activity view.
+For the route-by-route smoke check, use the seeded coordinates explicitly:
+`/pages/browse.html?folder=operations`,
+`/pages/table.html?folder=operations&table=customer-orders`,
+`/pages/import.html?folder=operations`, and `/pages/system-activity.html`.
+The exact same source seeder remains available as `npm run seed:demo` for its
+PostgreSQL-only workflow.
+
+PGlite cannot be selected by production, live, worker, or migrator configs.
+Its packages remain development dependencies and are loaded only by the
+development source entrypoint; PostgreSQL remains the production authority.
+
+## Source composition, entrypoints, and assets
+
+`npm run build:reactus` is the package name for `scripts/build.ts`. It boots
+the plugin graph, resolves only the build `config` and `route` phases,
+discovers unique Reactus entries from registered `server.views`, and builds
+only those entries. It does not open a listener, database pool, worker, or
+migrator. `npm run build:server` compiles the server entrypoints and copies
+server-owned assets; `npm run build` runs the clean build, both build stages,
+and artifact verification.
+
+`npm run dev` runs `scripts/develop.ts` directly through `tsx`. It resolves
+the development `config`, `listen`, and `route` phases. When no
+`TABULAR_*_DATABASE_URL` is configured, it dynamically loads the development
+PGlite adapter, runs the real migrations, and calls `seedLocalDemo`; this is
+a disposable development substrate, not a PostgreSQL or production claim.
+
+The compiled process entrypoints and lifecycle phases are:
+
+| Command | Entrypoint | Phases |
+| --- | --- | --- |
+| `npm start` | `dist/entrypoints/web.js` | `config`, `listen`, `route` |
+| `npm run worker` | `dist/entrypoints/worker.js` | `config`, `worker` |
+| `npm run migrate` | `dist/entrypoints/migrate.js` | `config`, `migrate` |
+| `npm run migrator:operations` | `dist/entrypoints/migrate.js --consume-operations` | `config`, `migrate`, optional `worker` |
+| `npm run doctor` | `dist/entrypoints/doctor.js --scope web` | `config`, `doctor` |
+| `npm run preflight` | `dist/entrypoints/preflight.js` | `config`, `preflight` |
+| `npm run seed:demo` | `dist/entrypoints/seed-demo.js --confirm-local-demo` | migrator-scoped seed workflow |
+
+The built browser surface uses UnoCSS through `virtual:uno.css`. The only
+conventional CSS exceptions are source-owned flat files under
+`public/styles/`: `base.css`, `commands.css`, `explorer.css`, `grid.css`,
+`identity.css`, `import.css`, `activity.css`, `saved-views.css`, and the
+unchanged vendor `tabulator.css`. There is no plugin-local CSS. Generated
+Reactus clients and assets live under `public/client` and `public/assets`;
+source static files use exact manifest-allowlisted routes such as
+`/styles/**`. Production does not expose Vite.
 ## Install and configure
 
 For a source checkout, install the exact lockfile with `npm ci` and create the
-compiled server and Reactus assets with `npm run build`. To assemble the
+compiled server and registered-view Reactus assets with `npm run build`. To assemble the
 production artifact, run `npm run package:release` from that source checkout.
 
 For an already assembled `.build/release-package`, install and execute it in
@@ -278,6 +349,10 @@ rather than trusting `NOTIFY` delivery.
 Run `npm run verify`, `npm run audit:production`, and `npm run verify:release`.
 Use `npm run test:postgres:all` when you need the complete guarded PostgreSQL 18
 suite outside the release-readiness command.
+Local static and development evidence does not sign off production. Production
+sign-off remains open until the guarded PostgreSQL matrix, process lifecycle
+and resilience checks, P-002 regression, fresh ordinary-origin browser review,
+and separate production-target evidence have all been collected.
 The guarded `npm run test:release:resilience` drill force-restarts only the
 declared Task 00014 disposable PostgreSQL container, takes a physical base
 backup into its dedicated disposable volume, restores that cluster on an

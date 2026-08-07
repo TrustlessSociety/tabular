@@ -156,30 +156,32 @@ Evidence: explicit user decision on 2026-08-06.
 
 ### G-003: What lifecycle runs in each process?
 
-- Status: Open; source research and P-002 required.
-- Current assumption: all processes bootstrap and resolve configuration;
-  development and web resolve request/view routes; build resolves only phases
-  required to discover views and must avoid database, worker, and network side
-  effects; worker and migrator initialize only their authority-scoped services.
-- Risk: copying the proof's unconditional `config`, `listen`, and `route`
-  sequence could start inappropriate resources during builds or one-shot jobs.
+- Status: Accepted implementation-time gate. Builds avoid database, worker, and
+  network side effects; every affected task verifies its permitted phases.
 
 ### G-007: What automated gates apply to each wave?
 
-- Status: Open; planning decision required.
-- Current assumption: every wave runs typecheck, focused tests, full tests,
-  architecture and secrets checks, production Reactus/server builds, artifact
-  verification, runtime/entrypoint checks, and a clean dependency install where
-  manifests change. PostgreSQL matrices run for affected data/process waves.
+- Status: Accepted implementation-time gate. The sprint defines default tests,
+  builds, architecture/secrets, artifact, runtime, clean-install, and relevant
+  PostgreSQL gates.
 
 ### G-008: What fresh acceptance closes implementation?
 
-- Status: Open; user decision required before Freeze.
-- Current assumption: source-only checks and passing tests are insufficient for
-  UI restructuring. Changed surfaces require fresh ordinary-origin browser
-  review at desktop and 390-by-844 states, starting signed out and using the
-  visible PostgreSQL-native login path. Production-target claims require their
-  own current evidence.
+- Status: Accepted implementation-time gate. Closeout needs fresh signed-out
+  desktop/390-by-844 browser evidence and separate production-target evidence.
+
+## Freeze Authorization
+
+The user explicitly directed this spec to Freeze on 2026-08-06. G-003, G-007,
+and G-008 are accepted as implementation-time gates rather than unresolved
+design authority. They do not permit a change to D-004 through D-011, the
+PostgreSQL/security Context boundaries, or the P-002 slice limits.
+
+- G-003: each affected task must define and verify its permitted lifecycle phases.
+- G-007: the proposed sprint supplies the default gate matrix; each task records
+  its focused gates before work starts.
+- G-008: closeout requires fresh signed-out desktop and 390-by-844 browser
+  evidence, plus separate production-target evidence for any claim made.
 
 ## Change Contract
 
