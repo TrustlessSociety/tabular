@@ -59,9 +59,12 @@ test('resource cleanup reports a bounded close timeout', async () => {
 
   //cleanup aggregates timeout failures while staying within one global budget
   await assert.rejects(
-    () => resources.close(50),
+    () => resources.close(200),
     (error: unknown) => error instanceof AggregateError
       && error.errors.some((failure) => /Timed out closing runtime resource/.test(failure.message))
   );
-  assert.ok(Date.now() - startedAt < 80, 'cleanup should share one global timeout budget');
+
+  //a shared deadline finishes near the budget; a per-resource deadline needs
+  //twice it, so the midpoint separates them with real headroom on both sides
+  assert.ok(Date.now() - startedAt < 300, 'cleanup should share one global timeout budget');
 });
