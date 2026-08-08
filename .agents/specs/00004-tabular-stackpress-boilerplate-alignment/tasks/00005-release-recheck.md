@@ -101,8 +101,24 @@ PowerShell verification results from the current working tree:
 - `git diff --check` - PASS, exit 0; only the repository's normal LF/CRLF
   conversion warnings were emitted.
 
-The `test:postgres:*` gates were not run because no local PostgreSQL server is
-available. They remain outstanding and are not claimed as passed. The fresh
+PostgreSQL 18 matrix, run 2026-08-08 against a disposable local target
+(`postgres:18` container, `server_version_num` 180004, bound to
+`127.0.0.1:5433`, data in tmpfs, destroyed after the run):
+
+- `npm run test:postgres:all` - PASS, exit 0, `"result": "passed"`. All ten
+  suites passed: foundation, identity-catalog, capability-actions, files-ddl,
+  grid, realtime-views, import-export, operations, mcp-parity, and the
+  production-boundary P-002 regression, which ran from an isolated copy without
+  changing the Frozen proof files. The runner created and dropped each
+  `tabular_task*` database itself.
+
+Running the matrix required a Windows portability fix in the release tooling:
+`scripts/release/postgresql18-matrix.ts` and
+`scripts/release/run-release-readiness.ts` both spawned `npm` directly, which
+fails with `spawn npm ENOENT` on Windows because npm resolves through
+`npm.cmd`. Both now pass `shell: process.platform === 'win32'`. This is the
+same class of POSIX-only assumption already corrected in
+`scripts/verify-release.ts`. The fresh
 signed-out ordinary-origin browser review at desktop and 390-by-844 was not
 run; it remains for the separate browser agent, along with Task 00004's
 outstanding browser review. No production-target evidence was collected, so no

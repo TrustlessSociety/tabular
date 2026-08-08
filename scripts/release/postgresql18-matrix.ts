@@ -122,7 +122,13 @@ try {
 
 function command(executable: string, args: string[], env: NodeJS.ProcessEnv) {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, args, { cwd: process.cwd(), env, stdio: 'inherit' });
+    //Windows resolves npm through npm.cmd, so a shell lookup keeps this portable
+    const child = spawn(executable, args, {
+      cwd: process.cwd(),
+      env,
+      stdio: 'inherit',
+      shell: process.platform === 'win32'
+    });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (code === 0) resolve();

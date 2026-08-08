@@ -131,10 +131,12 @@ process.stdout.write(`${JSON.stringify({
 async function run(name: string, executable: string, args: string[], cwd = projectRoot) {
   const commandStartedAt = Date.now();
   const result = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+    //Windows resolves npm through npm.cmd, so a shell lookup keeps this portable
     const child = spawn(executable, args, {
       cwd,
       env: process.env,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32'
     });
     let stdout = '';
     let stderr = '';
