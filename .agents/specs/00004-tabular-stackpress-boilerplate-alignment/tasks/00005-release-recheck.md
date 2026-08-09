@@ -112,13 +112,25 @@ PostgreSQL 18 matrix, run 2026-08-08 against a disposable local target
   changing the Frozen proof files. The runner created and dropped each
   `tabular_task*` database itself.
 
-Running the matrix required a Windows portability fix in the release tooling:
-`scripts/release/postgresql18-matrix.ts` and
-`scripts/release/run-release-readiness.ts` both spawned `npm` directly, which
-fails with `spawn npm ENOENT` on Windows because npm resolves through
-`npm.cmd`. Both now pass `shell: process.platform === 'win32'`. This is the
-same class of POSIX-only assumption already corrected in
-`scripts/verify-release.ts`. The fresh
+Running these gates required four Windows portability fixes in the release
+tooling, all the same class of POSIX-only assumption:
+
+- `scripts/verify-release.ts` filtered test files with a POSIX-only `/tests/`
+  path check, so test sources were inspected as production sources.
+- `scripts/release/postgresql18-matrix.ts`, `run-release-readiness.ts`, and
+  `scripts/local-review/common.ts` spawned `npm` directly, which fails with
+  `spawn npm ENOENT` because npm resolves through `npm.cmd`. They now use a
+  shared `needsShellLookup` guard that requests a shell only for bare command
+  names; absolute paths must not use one, because the shell splits them at
+  spaces.
+- `scripts/local-review/common.ts` verified process ownership with
+  `ps -p <pid> -o command=`, which does not exist on Windows, so
+  `local-review:shutdown` and `local-review:cleanup` always refused to signal
+  their own processes. It now reads the command line from `Win32_Process` on
+  Windows.
+
+Before these fixes the PostgreSQL matrix, the top-level `verify:release` gate,
+and the local-review shutdown/cleanup path could not run on Windows at all. The fresh
 signed-out ordinary-origin browser review at desktop and 390-by-844 was not
 run; it remains for the separate browser agent, along with Task 00004's
 outstanding browser review. No production-target evidence was collected, so no
@@ -157,20 +169,33 @@ cross-origin-style `POST /auth/login` without the browser's origin context was
 rejected with `403`, and the page enforces `script-src 'self'` with no
 `unsafe-eval`.
 
+Re-run on 2026-08-09 against real PostgreSQL 18 through the documented
+`local-review` flow (container `tabular-task00014-review-pg18`,
+`127.0.0.1:55432/tabular_review`, 11 migrations applied, demo seed loaded, web
+and worker and migrator started from compiled entrypoints). The same twelve
+steps passed, so the browser evidence above is now PostgreSQL-backed rather
+than PGlite-backed. The environment was shut down and destroyed afterwards.
+
 Scope limits and one dropped assertion:
 
-- The upstream harness aborted at `activityJourney` on
-  `assert.ok(await page.visibleText('Import values'))`. That string is the
-  `import.commit` activity label from `plugins/operations/helpers/presenter.ts`.
-  `seedLocalDemo` creates schemas, tables, rows, and catalog metadata but no
-  operations activity records, so no `import.commit` row exists on this
-  substrate; the Task 00014 PostgreSQL environment created one through a
-  fixture. The preceding `.activity-shell` selector and `authorized operations`
-  assertion both passed, so the activity page itself renders.
-- To reach the narrow journey, the run above used a copy of the harness outside
-  the repository with only that one data-dependent assertion removed. The
-  repository harness was not modified. Against a PostgreSQL target with a
-  committed import, the unmodified harness should be re-run.
+- The unmodified harness still aborts at `activityJourney` on
+  `assert.ok(await page.visibleText('Import values'))`, identically on
+  PostgreSQL and on PGlite. An earlier note in this record attributed that to
+  the development substrate; that was wrong. `tabular.operation_jobs`,
+  `tabular.import_operations`, and `tabular.operation_reads` are all empty
+  after a full `local-review:setup`, because no seed creates an
+  `import.commit` and the harness never commits an import itself. Task 00014's
+  evidence came from `output/release/task-00014/browser-fixture.ts`, a bespoke
+  fixture worker that registers the `import.commit` handler.
+- Consequence: `npm run verify:release:browser` cannot pass from the documented
+  setup on any substrate. This is a defect in the release tooling, not in the
+  Spec 00004 restructure, and it is recorded here for a follow-up decision:
+  either the harness should commit an import as part of its journey, or the
+  activity assertion should not depend on state the flow never creates.
+- Both passing runs used a copy of the harness outside the repository with only
+  that one assertion removed. The repository harness is unmodified. The
+  preceding `.activity-shell` selector and `authorized operations` assertion
+  both pass, so the activity page itself renders.
 - The `test:postgres:*` matrix was not run and no production-target evidence was
   collected, so no production-readiness claim is made.
 - Task 00004's command-surface and 390x844 grid review remains outstanding; see

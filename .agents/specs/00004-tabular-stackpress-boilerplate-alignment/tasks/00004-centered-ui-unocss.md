@@ -93,9 +93,10 @@ runtime path. Therefore no screenshot or browser-console claim is made here.
 
 ## Acceptance Notes
 
-Browser acceptance run 2026-08-08 against the development PGlite substrate
-(`npm run dev`, `database: pglite-development`, no `TABULAR_*_DATABASE_URL`
-set). Driver was the repository's own harness,
+Browser acceptance run 2026-08-08 against the development PGlite substrate and
+re-run 2026-08-09 against real PostgreSQL 18 through the documented
+`local-review` flow, with identical results. Driver was the repository's own
+harness,
 `scripts/release/browser-acceptance.mjs`, on real headless
 Chrome/150.0.7871.189 with fresh contexts, no session injection, and no direct
 service calls. Verdict: **PARTIAL - not accepted.**

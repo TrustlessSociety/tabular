@@ -131,12 +131,11 @@ process.stdout.write(`${JSON.stringify({
 async function run(name: string, executable: string, args: string[], cwd = projectRoot) {
   const commandStartedAt = Date.now();
   const result = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-    //Windows resolves npm through npm.cmd, so a shell lookup keeps this portable
     const child = spawn(executable, args, {
       cwd,
       env: process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: process.platform === 'win32'
+      shell: needsShellLookup(executable)
     });
     let stdout = '';
     let stderr = '';
@@ -213,4 +212,14 @@ function sanitize(value: string) {
     if (secret) sanitized = sanitized.replaceAll(secret, '[redacted]');
   }
   return sanitized;
+}
+
+/**
+ * Report whether Windows needs a shell to resolve a bare command name.
+ *
+ * npm resolves through npm.cmd, which Node refuses to spawn without a shell.
+ * Absolute paths must not use one: the shell would split them at spaces.
+ */
+function needsShellLookup(executable: string) {
+  return process.platform === 'win32' && !path.isAbsolute(executable);
 }

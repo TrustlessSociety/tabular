@@ -122,12 +122,11 @@ try {
 
 function command(executable: string, args: string[], env: NodeJS.ProcessEnv) {
   return new Promise<void>((resolve, reject) => {
-    //Windows resolves npm through npm.cmd, so a shell lookup keeps this portable
     const child = spawn(executable, args, {
       cwd: process.cwd(),
       env,
       stdio: 'inherit',
-      shell: process.platform === 'win32'
+      shell: needsShellLookup(executable)
     });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
@@ -140,4 +139,14 @@ function command(executable: string, args: string[], env: NodeJS.ProcessEnv) {
 function quoteIdentifier(value: string) {
   assert.match(value, /^[a-z][a-z0-9_]{0,62}$/);
   return `"${value}"`;
+}
+
+/**
+ * Report whether Windows needs a shell to resolve a bare command name.
+ *
+ * npm resolves through npm.cmd, which Node refuses to spawn without a shell.
+ * Absolute paths must not use one: the shell would split them at spaces.
+ */
+function needsShellLookup(executable: string) {
+  return process.platform === 'win32' && !path.isAbsolute(executable);
 }

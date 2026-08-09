@@ -206,7 +206,8 @@ export function runCommand(executable: string, args: string[], env = process.env
     const child = spawn(executable, args, {
       cwd: process.cwd(),
       env,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: needsShellLookup(executable)
     });
     let stdout = '';
     let stderr = '';
@@ -298,9 +299,17 @@ export function assertOwnedProcess(record: LocalReviewProcess) {
     throw new Error(`Refusing invalid ${record.name} process ID`);
   }
   if (!processIsRunning(record.pid)) return false;
-  const result = spawnSync('ps', ['-p', String(record.pid), '-o', 'command='], {
-    encoding: 'utf8'
-  });
+  //Windows has no ps, so the owning command line comes from the process table
+  const result = process.platform === 'win32'
+    ? spawnSync('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `(Get-CimInstance Win32_Process -Filter "ProcessId=${record.pid}").CommandLine`
+    ], { encoding: 'utf8' })
+    : spawnSync('ps', ['-p', String(record.pid), '-o', 'command='], {
+      encoding: 'utf8'
+    });
   const expected = path.resolve(record.entrypoint);
   if (result.status !== 0 || !result.stdout.includes(expected)) {
     throw new Error(`Refusing to signal PID ${record.pid}; it is not the recorded ${record.name}`);
@@ -345,4 +354,14 @@ function waitForSpawn(child: ChildProcess) {
     child.once('spawn', resolve);
     child.once('error', reject);
   });
+}
+
+/**
+ * Report whether Windows needs a shell to resolve a bare command name.
+ *
+ * npm resolves through npm.cmd, which Node refuses to spawn without a shell.
+ * Absolute paths must not use one: the shell would split them at spaces.
+ */
+function needsShellLookup(executable: string) {
+  return process.platform === 'win32' && !path.isAbsolute(executable);
 }
