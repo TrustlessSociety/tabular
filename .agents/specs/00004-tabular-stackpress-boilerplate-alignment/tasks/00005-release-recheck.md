@@ -178,7 +178,14 @@ than PGlite-backed. The environment was shut down and destroyed afterwards.
 
 Scope limits and one dropped assertion:
 
-- The unmodified harness still aborts at `activityJourney` on
+- **Resolved 2026-08-10.** The harness now commits a real import through the
+  visible wizard, using CDP `DOM.setFileInputFiles` on the wizard's own file
+  input, and waits for the worker to consume the job. A clean run produced an
+  `import.commit` row in `tabular.operation_jobs` in state `succeeded`, so
+  `npm run verify:release:browser` passes unmodified from the documented setup
+  with no assertion removed or weakened. The description below records the
+  defect as it stood.
+- The previously unmodified harness aborted at `activityJourney` on
   `assert.ok(await page.visibleText('Import values'))`, identically on
   PostgreSQL and on PGlite. An earlier note in this record attributed that to
   the development substrate; that was wrong. `tabular.operation_jobs`,

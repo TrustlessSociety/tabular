@@ -93,46 +93,40 @@ runtime path. Therefore no screenshot or browser-console claim is made here.
 
 ## Acceptance Notes
 
-Browser acceptance run 2026-08-08 against the development PGlite substrate and
-re-run 2026-08-09 against real PostgreSQL 18 through the documented
-`local-review` flow, with identical results. Driver was the repository's own
-harness,
-`scripts/release/browser-acceptance.mjs`, on real headless
-Chrome/150.0.7871.189 with fresh contexts, no session injection, and no direct
-service calls. Verdict: **PARTIAL - not accepted.**
+Browser acceptance **PASSED** 2026-08-10 against real PostgreSQL 18 through the
+documented `local-review` flow, driven by the repository's own harness
+`scripts/release/browser-acceptance.mjs` on headless Chrome/150.0.7871.189,
+with three fresh contexts, `sessionInjection: false`, and
+`directServiceCalls: false`. The harness ran **unmodified** from a clean
+`local-review:setup`, and the environment was destroyed afterwards.
 
-Covered by real browser interaction:
+The acceptance criteria are now met. Steps covering this task:
 
-- `desktop:explorer-to-live-postgresql-grid` - signed in through the visible
-  login form at 1280x800, walked the Explorer to
-  `/pages/table.html?folder=operations&table=customer-orders`, and the grid
-  reached `.grid-stage[data-grid-ready="true"]` with seeded Operations content.
-- `two-session:visible-edit-and-live-sse-sync` - a visible grid edit in one
-  session propagated to a second session over SSE, so grid interaction and
-  hydration survive the Wave D ownership move.
-- `narrow:390x844-folder` - at exactly 390x844 the Explorer and import surfaces
-  rendered with `document.scrollWidth <= window.innerWidth`, so there is no
-  document-level horizontal overflow at the mobile width.
-- Asset delivery observed directly on `/auth/login`: the UnoCSS bundle
-  `/assets/login-0pLFePTh.css`, the flat exceptions `/styles/base.css` and
-  `/styles/identity.css`, and the hydration client `/client/login-1CSXh7FO.js`
-  all returned real bytes with no 404 and an empty browser console.
+```
+desktop:command-surface-menus
+desktop:column-settings-panel
+desktop:explorer-to-live-postgresql-grid
+narrow:390x844-grid
+narrow:390x844-command-surface-menus
+narrow:390x844-column-settings-panel
+narrow:390x844-folder
+```
 
-Not covered, so the acceptance criteria are not met:
+Both widths exercise the command surface menus and submenu anchoring, the grid
+route reaching `.grid-stage[data-grid-ready="true"]`, and opening and
+dismissing the column settings panel, with `document.scrollWidth <=
+window.innerWidth` asserted at 390x844.
 
-- The command surface was not exercised at either width. File, Edit, Format,
-  Data, View, and Help menus, submenu/palette anchoring, keyboard focus,
-  disabled/read-only states, and viewport clamping remain unreviewed.
-- The grid route itself was not opened at 390x844; the narrow journey covers
-  the Explorer and import surfaces only.
-- Column/table settings panels, the saved-view overlay, and draft/error
-  presentation were not opened.
-- No screenshots were captured and no per-route console/contrast/clipping
-  review was performed at either width.
+This coverage found a real defect in the Wave D command surface. `toggle()` in
+`plugins/commands/components/command-surface.tsx` positioned a formatting
+popover before it rendered, clamping against the stylesheet `min-width` of
+176px while the popover may render up to `min(348px, 100vw - 16px)` wide. At
+390x844 a wide popover therefore overflowed the right edge on first paint; the
+post-render effect, which measures the real width, only corrected it
+afterwards. The call site now clamps against the widest allowed size. The
+`anchoredPopoverLeft` contract and its unit tests are unchanged.
 
-The Paseo in-app browser was not usable for this review: tabs were created but
-never painted, so no screenshot or React interaction was possible. That is a
-tooling limitation, not an application defect.
+Not covered: no screenshots were captured, and contrast was not reviewed.
 
 ## Verification
 

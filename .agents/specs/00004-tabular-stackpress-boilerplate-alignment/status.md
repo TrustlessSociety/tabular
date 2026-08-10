@@ -33,17 +33,17 @@ Freeze Authorization in `decisions.md`. They do not reopen the frozen design:
 | Context-promotion review | Complete | Revisit after production implementation |
 | Freeze Spec 00004 | Complete | Reopen only with user approval |
 | Implementation sprint | Implemented | Close out remaining acceptance and production evidence |
-| Task 00004 acceptance | Partial | Command surface at both widths and the grid route at 390-by-844 remain unreviewed |
+| Task 00004 acceptance | Passed | Covered by the release browser gate at desktop and 390-by-844 |
 | Task 00006 PGlite substrate | Complete | Preserve PostgreSQL authority; PostgreSQL integration gates still need a disposable target |
 | Task 00005 acceptance | Passed | Re-run the unmodified harness against a PostgreSQL target with a committed import |
 
 ## Next Authority Gate
 
-The sprint is implemented. Two items remain before any production claim:
+The sprint is implemented and every acceptance criterion is met. One item
+remains before any production claim:
 
-- Task 00004 acceptance is partial. The command surface was not exercised at
-  either width and the grid route was not opened at 390-by-844.
-- The `test:postgres:*` matrix passed on 2026-08-08 against a disposable
-  PostgreSQL 18.4 container. Re-run it on the release target of record.
+- All evidence so far comes from disposable local containers. The
+  `test:postgres:*` matrix and the browser gate must be re-run on the release
+  target of record, and production-target evidence collected there.
 - Production-target evidence has not been collected, so no production-readiness
   claim is supported.

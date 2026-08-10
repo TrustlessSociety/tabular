@@ -18,27 +18,33 @@ delete process.env.TABULAR_ACCEPTANCE_PASSWORD;
 let browserDiagnostic = '';
 
 async function main() {
-const chromeExecutable = await resolveChromeExecutable(
-  process.env.TABULAR_BROWSER_EXECUTABLE
-);
-const profileRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tabular-browser-'));
-const browser = spawn(chromeExecutable, [
-  '--headless=new',
-  '--disable-background-networking',
-  '--disable-component-update',
-  '--disable-default-apps',
-  '--disable-extensions',
-  '--disable-sync',
-  '--metrics-recording-only',
-  '--no-default-browser-check',
-  '--no-first-run',
-  '--remote-debugging-address=127.0.0.1',
-  '--remote-debugging-port=0',
-  `--user-data-dir=${profileRoot}`,
-  'about:blank'
-], {
-  stdio: ['ignore', 'ignore', 'pipe']
-});
+  const chromeExecutable = await resolveChromeExecutable(
+    process.env.TABULAR_BROWSER_EXECUTABLE
+  );
+  const profileRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tabular-browser-'));
+  const importSourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tabular-import-'));
+  const importSourcePath = path.join(importSourceRoot, 'release-acceptance-orders.csv');
+  await fs.writeFile(importSourcePath, [
+    'order_id,customer_id,status,units,unit_price,ordered_on,expedited,notes',
+    'acceptance-0001,cust-001,New,1,12.50,2026-08-10,true,Release gate import'
+  ].join('\n'), 'utf8');
+  const browser = spawn(chromeExecutable, [
+    '--headless=new',
+    '--disable-background-networking',
+    '--disable-component-update',
+    '--disable-default-apps',
+    '--disable-extensions',
+    '--disable-sync',
+    '--metrics-recording-only',
+    '--no-default-browser-check',
+    '--no-first-run',
+    '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=0',
+    `--user-data-dir=${profileRoot}`,
+    'about:blank'
+  ], {
+    stdio: ['ignore', 'ignore', 'pipe']
+  });
 browser.stderr.on('data', (chunk) => {
   browserDiagnostic = bounded(browserDiagnostic, String(chunk));
 });
@@ -55,6 +61,8 @@ try {
   const desktop = await BrowserPage.create(connection, { width: 1280, height: 800 });
   results.push(await visibleSignIn(desktop, username, password));
   results.push(await explorerJourney(desktop));
+  results.push(await commandSurfaceJourney(desktop, 'desktop:command-surface-menus'));
+  results.push(await columnSettingsJourney(desktop, 'desktop:column-settings-panel'));
   results.push(await unknownTargetsFailClosed(desktop));
 
   // A second independent sign-in proves acceptance does not reuse an injected session.
@@ -63,12 +71,16 @@ try {
   results.push(await secondSessionJourney(second));
   results.push(await twoSessionLiveSync(desktop, second));
   results.push(await rotateOneBrowserSession(desktop, second));
+  results.push(await importJourney(desktop, importSourcePath));
   results.push(await activityJourney(desktop));
 
   // The narrow context repeats the public entry and product navigation from signed out.
   const narrow = await BrowserPage.create(connection, { width: 390, height: 844 });
   results.push(await visibleSignIn(narrow, username, password, 'narrow-session'));
   results.push(await narrowJourney(narrow));
+  results.push(await narrowGridJourney(narrow));
+  results.push(await commandSurfaceJourney(narrow, 'narrow:390x844-command-surface-menus'));
+  results.push(await columnSettingsJourney(narrow, 'narrow:390x844-column-settings-panel'));
   results.push(await visibleLogout(narrow));
   await desktop.waitForSelector('a[href="/auth/account"]');
   await second.waitForSelector('a[href="/auth/account"]');
@@ -93,6 +105,7 @@ try {
   browser.kill('SIGTERM');
   await waitForExit(browser).catch(() => browser.kill('SIGKILL'));
   await fs.rm(profileRoot, { recursive: true, force: true });
+  await fs.rm(importSourceRoot, { recursive: true, force: true });
 }
 }
 
@@ -135,6 +148,164 @@ async function explorerJourney(page) {
   await page.waitForSelector('.workbench-shell');
   await page.waitForSelector('.grid-stage[data-grid-ready="true"]');
   return 'desktop:explorer-to-live-postgresql-grid';
+}
+
+/** Exercises desktop and narrow command menus, submenus, and formatting palettes. */
+async function commandSurfaceJourney(page, stepName) {
+  await page.waitForSelector('.command-menubar[role="menubar"][aria-label="Spreadsheet menus"]');
+  const triggerCount = await page.evaluate(() => (
+    document.querySelectorAll('.command-menu-trigger').length
+  ));
+  assert.ok(triggerCount > 0);
+
+  // Open every public top-level menu and inspect its semantic menu items.
+  for (let index = 0; index < triggerCount; index += 1) {
+    const group = index + 1;
+    const trigger = `.command-menu-group:nth-child(${group}) > .command-menu-trigger`;
+    const menu = `.command-menu-group:nth-child(${group}) > [role="menu"]`;
+    await page.click(trigger);
+    await page.waitForSelector(menu);
+    const state = await page.evaluate((candidate) => {
+      const element = document.querySelector(candidate);
+      if (!(element instanceof HTMLElement)) return undefined;
+      const bounds = element.getBoundingClientRect();
+      const items = [...element.querySelectorAll('[role="menuitem"], [role="menuitemcheckbox"]')];
+      return {
+        itemCount: items.length,
+        validItemRoles: items.every((item) => (
+          item.getAttribute('role') === 'menuitem'
+          || item.getAttribute('role') === 'menuitemcheckbox'
+        )),
+        left: bounds.left,
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight
+      };
+    }, menu);
+    assert.ok(state?.itemCount > 0);
+    assert.equal(state?.validItemRoles, true);
+    assert.ok(state.left >= 0 && state.right <= state.viewportWidth);
+    assert.ok(state.top >= 0 && state.bottom <= state.viewportHeight);
+  }
+
+  // View exposes a nested menu; its data key proves it remains anchored to
+  // the visible submenu trigger while its rendered rectangle stays bounded.
+  await page.click('.command-menu-group:nth-child(3) > .command-menu-trigger');
+  await page.click('.command-menu-group:nth-child(3) .command-submenu-trigger');
+  await page.waitForSelector('.command-submenu[role="menu"]');
+  const submenuState = await page.evaluate(() => {
+    const trigger = document.querySelector('.command-submenu-trigger[aria-expanded="true"]');
+    const submenu = document.querySelector('.command-submenu[role="menu"]');
+    if (!(trigger instanceof HTMLElement) || !(submenu instanceof HTMLElement)) return undefined;
+    const bounds = submenu.getBoundingClientRect();
+    return {
+      triggerKey: trigger.getAttribute('data-submenu'),
+      submenuKey: submenu.getAttribute('data-submenu'),
+      left: bounds.left,
+      top: bounds.top,
+      right: bounds.right,
+      bottom: bounds.bottom,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
+    };
+  });
+  assert.equal(submenuState?.triggerKey, submenuState?.submenuKey);
+  assert.ok(submenuState?.left >= 0 && submenuState?.right <= submenuState.viewportWidth);
+  assert.ok(submenuState?.top >= 0 && submenuState?.bottom <= submenuState.viewportHeight);
+
+  // Clicking the live grid outside the command root must dismiss an open menu.
+  await page.click('.grid-stage');
+  await page.waitForAbsent('[role="menu"]');
+
+  // Desktop exposes the color palette directly; narrow mode exposes it through
+  // the visible More formatting control after the compact toolbar hides tools.
+  const paletteTrigger = stepName.startsWith('narrow')
+    ? '[aria-label="More formatting"]'
+    : '[aria-label="Text color"]';
+  await page.click(paletteTrigger);
+  await page.waitForSelector('.formatting-popover[role="dialog"]');
+  const paletteState = await page.evaluate((candidate) => {
+    const trigger = document.querySelector(candidate);
+    const popover = document.querySelector('.formatting-popover[role="dialog"]');
+    if (!(trigger instanceof HTMLElement) || !(popover instanceof HTMLElement)) return undefined;
+    const bounds = popover.getBoundingClientRect();
+    return {
+      triggerLabel: trigger.getAttribute('aria-label'),
+      anchorLabel: popover.getAttribute('data-anchor-label'),
+      left: bounds.left,
+      top: bounds.top,
+      right: bounds.right,
+      bottom: bounds.bottom,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight
+    };
+  }, paletteTrigger);
+  assert.equal(paletteState?.anchorLabel, paletteState?.triggerLabel);
+  assert.ok(
+    paletteState?.left >= 0 && paletteState?.right <= paletteState.viewportWidth,
+    `Formatting palette overflowed its viewport: ${JSON.stringify(paletteState)}`
+  );
+  assert.ok(paletteState?.top >= 0 && paletteState?.bottom <= paletteState.viewportHeight);
+  await page.click(paletteTrigger);
+  await page.waitForAbsent('.formatting-popover[role="dialog"]');
+  return stepName;
+}
+
+/** Opens and dismisses the visible grid column settings dialog. */
+async function columnSettingsJourney(page, stepName) {
+  await page.waitForSelector('.grid-stage[data-grid-ready="true"]');
+  await page.doubleClick('.tabulator-col[tabulator-field]');
+  await page.waitForSelector('.column-settings-panel[role="dialog"]');
+  assert.ok(await page.visibleText('Column'));
+  await page.click('[aria-label="Close column settings"]');
+  await page.waitForAbsent('.column-settings-panel[role="dialog"]');
+  return stepName;
+}
+
+/** Commits one real CSV import through the visible wizard controls. */
+async function importJourney(page, sourcePath) {
+  await page.navigate(origin);
+  await page.waitForSelector('[aria-label="File explorer"]');
+  await page.clickByText('a.explorer-item', 'Operations');
+  await page.waitForUrl((url) => url.searchParams.get('folder') === 'operations');
+  await page.click('a[href="/pages/import.html?folder=operations"]');
+  await page.waitForUrl((url) => url.pathname === '/pages/import.html');
+  await page.waitForSelector('.import-wizard[data-step="choose-source"]');
+  await page.click('input[type="radio"][name="import-source"][value="csv"]');
+  await page.setFileInputFiles('input[type="file"]', sourcePath);
+  await page.waitForSelector('.import-source-summary');
+  await page.waitForEnabled('.import-button-primary');
+  await page.scrollIntoView('.import-button-primary');
+  await page.clickByText('.import-button-primary', 'Preview values');
+  await page.waitForSelector('.import-wizard[data-step="preview-values"]');
+
+  // Visit every visible mapping select while retaining the parser's compatible
+  // inferred storage choices for the seeded Operations-shaped source.
+  const mappingIds = await page.evaluate(() => [...document.querySelectorAll(
+    '.import-mapping-table select'
+  )].map((select) => select.id));
+  assert.ok(mappingIds.length > 0);
+  assert.equal(mappingIds.every((id) => Boolean(id)), true);
+  for (const id of mappingIds) {
+    await page.scrollIntoView(`#${id}`);
+    await page.click(`#${id}`);
+    await page.pressEscape();
+  }
+
+  await page.waitForEnabled('.import-button-primary');
+  await page.scrollIntoView('.import-button-primary');
+  await page.clickByText('.import-button-primary', 'Review import');
+  await page.waitForSelector('.import-wizard[data-step="import"]');
+  await page.waitForEnabled('.import-button-primary');
+  await page.scrollIntoView('.import-button-primary');
+  await page.clickByText('.import-button-primary', 'Import values');
+  await page.waitForSelector('.import-wizard[data-status="success"]');
+  await page.click('a.explorer-brand');
+  await page.waitForUrl((url) => url.pathname === '/pages/browse.html');
+  await page.waitForSelector('[aria-label="File explorer"]');
+  return 'desktop:visible-import-commit';
 }
 
 /** Proves guessed route and file identities do not become product or review pages. */
@@ -273,6 +444,20 @@ async function narrowJourney(page) {
   return 'narrow:390x844-folder';
 }
 
+/** Opens the seeded Operations grid at 390x844 without document overflow. */
+async function narrowGridJourney(page) {
+  await page.click('a[href="/pages/table.html?folder=operations&table=customer-orders"]');
+  await page.waitForUrl((url) => url.pathname === '/pages/table.html');
+  await page.waitForSelector('.grid-stage[data-grid-ready="true"]');
+  const widths = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth
+  }));
+  assert.equal(widths.viewport, 390);
+  assert.ok(widths.document <= widths.viewport);
+  return 'narrow:390x844-grid';
+}
+
 /** Signs out with the visible account and logout forms and observes the cleared session. */
 async function visibleLogout(page) {
   await page.click('a[href="/auth/account"]');
@@ -342,6 +527,7 @@ class BrowserPage {
     );
     await Promise.all([
       page.send('Page.enable'),
+      page.send('DOM.enable'),
       page.send('Runtime.enable'),
       page.send('Network.enable'),
       page.send('Log.enable'),
@@ -401,6 +587,35 @@ class BrowserPage {
     );
   }
 
+  /** Waits for one visible button to become enabled for the next public action. */
+  async waitForEnabled(selector) {
+    await waitUntil(
+      () => this.evaluate((candidate) => {
+        const element = document.querySelector(candidate);
+        return element instanceof HTMLButtonElement && !element.disabled;
+      }, selector),
+      20_000,
+      `enabled control ${selector}`
+    );
+  }
+
+  /** Scrolls one visible public control into the viewport before a mouse gesture. */
+  async scrollIntoView(selector) {
+    await this.waitForSelector(selector);
+    await this.evaluate((candidate) => {
+      document.querySelector(candidate)?.scrollIntoView({ block: 'center', inline: 'center' });
+    }, selector);
+  }
+
+  /** Waits until a selector is no longer present in the visible document. */
+  async waitForAbsent(selector) {
+    await waitUntil(
+      () => this.evaluate((candidate) => !document.querySelector(candidate), selector),
+      20_000,
+      `absent selector ${selector}`
+    );
+  }
+
   /** Waits for the top-level URL to satisfy one expected public-navigation shape. */
   async waitForUrl(predicate) {
     await waitUntil(async () => predicate(new URL(await this.url())), 20_000, 'browser URL');
@@ -429,6 +644,33 @@ class BrowserPage {
       return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
     }, selector);
     await this.mouseClick(point);
+  }
+
+  /** Double-clicks one visible browser control with trusted DevTools gestures. */
+  async doubleClick(selector) {
+    await this.waitForSelector(selector);
+    const point = await this.evaluate((candidate) => {
+      const element = document.querySelector(candidate);
+      if (!(element instanceof HTMLElement)) throw new Error('Browser control is unavailable');
+      const bounds = element.getBoundingClientRect();
+      return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+    }, selector);
+    await this.mouseDoubleClick(point);
+  }
+
+  /** Selects a real local file on one visible native file input through CDP. */
+  async setFileInputFiles(selector, filePath) {
+    await this.waitForSelector(selector);
+    const document = await this.send('DOM.getDocument', { depth: -1 });
+    const node = await this.send('DOM.querySelector', {
+      nodeId: document.root.nodeId,
+      selector
+    });
+    assert.ok(node.nodeId, `Native file input was not found: ${selector}`);
+    await this.send('DOM.setFileInputFiles', {
+      nodeId: node.nodeId,
+      files: [filePath]
+    });
   }
 
   /** Activates one visible control with exact normalized text. */
@@ -565,6 +807,24 @@ class BrowserPage {
       code: 'Enter',
       windowsVirtualKeyCode: 13,
       nativeVirtualKeyCode: 13
+    });
+  }
+
+  /** Dismisses the focused browser control or overlay with a trusted Escape key. */
+  async pressEscape() {
+    await this.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27,
+      nativeVirtualKeyCode: 27
+    });
+    await this.send('Input.dispatchKeyEvent', {
+      type: 'keyUp',
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27,
+      nativeVirtualKeyCode: 27
     });
   }
 

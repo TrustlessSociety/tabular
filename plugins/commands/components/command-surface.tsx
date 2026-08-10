@@ -593,10 +593,14 @@ export function FormattingToolbar({ context, presentation, stateFor, onCommand }
     const toolbarRect = root.current?.getBoundingClientRect();
     const triggerRect = element.getBoundingClientRect();
     if (toolbarRect) {
+      //the popover is not rendered yet, so clamp against its widest allowed
+      //size from the stylesheet; the post-render effect refines this with the
+      //measured width. Guessing the min-width instead lets a wide popover
+      //overflow the right edge on the first paint.
       setPopoverLeft(anchoredPopoverLeft(
         triggerRect.left,
         toolbarRect.left,
-        176,
+        Math.min(348, window.innerWidth - 16),
         window.innerWidth
       ));
     }
