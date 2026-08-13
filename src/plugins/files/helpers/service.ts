@@ -106,7 +106,13 @@ export class FilesPluginService {
     private readonly identity: IdentityPluginService,
     operations: OperationsPluginService
   ) {
-    this.#workflow = new FileDdlWorkflow(runtime.processKind, database, identity, operations);
+    this.#workflow = new FileDdlWorkflow(
+      runtime.processKind,
+      database,
+      identity,
+      operations,
+      Boolean(runtime.developmentDatabase)
+    );
   }
 
   /**

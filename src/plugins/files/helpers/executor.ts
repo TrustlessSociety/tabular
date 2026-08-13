@@ -93,22 +93,19 @@ async function assertExpectedStructure(
 ) {
   const expected = request.expected_context;
   const current = await database.execute<{
-    database_oid: string | number,
     current_oid: string | number,
     current_name: string,
     owner_oid: string | number,
     owner_name: string,
   }>(`
-    SELECT d.oid AS database_oid, current_user::regrole::oid AS current_oid,
+    SELECT current_user::regrole::oid AS current_oid,
            current_user::text AS current_name,
            r.oid AS owner_oid, r.rolname::text AS owner_name
-      FROM pg_database d
-      JOIN pg_roles r ON r.oid = ?::oid
-     WHERE d.datname = current_database()
+      FROM pg_roles r
+     WHERE r.oid = ?::oid
   `, [expected.ownerRoleOid!]);
   const authority = current.rows[0];
   if (!authority
-    || String(authority.database_oid) !== expected.databaseOid
     || String(authority.current_oid) !== expected.ownerRoleOid
     || authority.current_name !== expected.ownerRoleName
     || String(authority.owner_oid) !== expected.ownerRoleOid

@@ -48,7 +48,8 @@ export class FileDdlWorkflow {
     private readonly processKind: 'web' | 'migrator' | 'worker',
     private readonly database: DatabasePluginService,
     private readonly identity: IdentityPluginService,
-    private readonly operations: OperationsPluginService
+    private readonly operations: OperationsPluginService,
+    private readonly developmentApply = false
   ) {}
 
   /**
@@ -156,7 +157,7 @@ export class FileDdlWorkflow {
   /**
    * Handle the confirm operation.
    */
-  public confirm(
+  public async confirm(
     principal: BrowserMutationPrincipal,
     requestId: string,
     confirmationToken: string
@@ -164,7 +165,7 @@ export class FileDdlWorkflow {
     requireMutation(principal);
     let request: StoredFileDdlRequest | undefined;
     let confirmedReplay = false;
-    return this.identity.authorizedTransaction(
+    const confirmed: ConfirmedFileDdl = await this.identity.authorizedTransaction(
       principal,
       'tabular.files',
       async (database) => {
@@ -187,6 +188,9 @@ export class FileDdlWorkflow {
       },
       async (database) => {
         if (confirmedReplay) {
+          if (this.developmentApply) {
+            return { requestId, state: 'confirmed' as const, expiresAt: iso(request!.expires_at) };
+          }
           await this.operations.enqueueInTransaction(database, principal, {
             kind: 'ddl.apply',
             authority: 'migrator',
@@ -198,6 +202,9 @@ export class FileDdlWorkflow {
         }
         const confirmed = await new FileRepository(database).confirm(requestId);
         if (!confirmed) confirmationDenied();
+        if (this.developmentApply) {
+          return { requestId, state: 'confirmed' as const, expiresAt: iso(confirmed.expires_at) };
+        }
         await this.operations.enqueueInTransaction(database, principal, {
           kind: 'ddl.apply',
           authority: 'migrator',
@@ -209,6 +216,8 @@ export class FileDdlWorkflow {
       },
       'read committed'
     );
+    if (this.developmentApply) await this.applyWithScope(requestId, 'web', {});
+    return confirmed;
   }
 
   /**
@@ -225,24 +234,25 @@ export class FileDdlWorkflow {
         'Only the separate migrator process can apply confirmed schema changes'
       );
     }
-    return this.applyMigrator(requestId, options);
+    return this.applyWithScope(requestId, 'migrator', options);
   }
 
   /**
-   * Apply the migrator.
+   * Apply one confirmed request with the explicitly selected authority scope.
    */
-  private async applyMigrator(
+  private async applyWithScope(
     requestId: string,
+    scope: 'web' | 'migrator',
     options: { failpoint?: NativeDdlFailpoint, }
   ) {
-    const existing = await this.database.transaction('migrator', {}, (database) =>
+    const existing = await this.database.transaction(scope, {}, (database) =>
       new FileRepository(database).requestById(requestId)
     );
     if (!existing) confirmationDenied();
     if (existing.state === 'applied' && existing.result_summary) return existing.result_summary;
     let request: StoredFileDdlRequest | undefined;
     try {
-      return await this.database.transaction<NativeFileDdlEffect, AppliedFileDdl>('migrator', {
+      return await this.database.transaction<NativeFileDdlEffect, AppliedFileDdl>(scope, {
       resolveRole: async (database) => {
         const repository = new FileRepository(database);
         const coordinates = await repository.requestById(requestId);

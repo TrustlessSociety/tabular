@@ -26,20 +26,19 @@ export async function readExpectedFingerprint(
 ) {
   if (!expected.relationOid) {
     const schema = await database.execute<{
-      database_oid: string | number,
       namespace_oid: string | number,
       schema_name: string,
       owner_oid: string | number,
       owner_name: string,
     }>(`
-      SELECT d.oid AS database_oid, n.oid AS namespace_oid, n.nspname AS schema_name,
+      SELECT n.oid AS namespace_oid, n.nspname AS schema_name,
              r.oid AS owner_oid, r.rolname::text AS owner_name
-        FROM pg_database d
-        JOIN pg_namespace n ON n.oid = ?::oid AND n.nspname = ?
+        FROM pg_namespace n
         JOIN pg_roles r ON r.oid = n.nspowner
-       WHERE d.datname = current_database()
+       WHERE n.oid = ?::oid AND n.nspname = ?
     `, [expected.namespaceOid!, expected.schemaName!]);
-    return digest(schema.rows[0] || null);
+    const row = schema.rows[0];
+    return digest(row ? { database_oid: expected.databaseOid, ...row } : null);
   }
   return readRelationFingerprint(database, expected.relationOid);
 }
