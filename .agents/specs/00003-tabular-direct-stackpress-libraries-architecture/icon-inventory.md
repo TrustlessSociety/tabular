@@ -10,7 +10,7 @@ Frozen architecture or accepted command behavior.
 
 Use this file when planning a production icon cleanup or checking what a visible
 symbol currently means. "Used" means renderable production source under
-`plugins/**`, including conditional states, not only the icons visible in one
+`src/plugins/**`, including conditional states, not only the icons visible in one
 screenshot.
 
 Included:
@@ -31,7 +31,7 @@ Excluded:
 
 ## Shared Inline SVG Vocabulary In Use
 
-The shared [`Icon` component](../../../plugins/app/components/icon.tsx) now
+The shared [`Icon` component](../../../src/plugins/app/components/icon.tsx) now
 renders dependency-free 16 by 16 SVGs with a `0 0 24 24` view box,
 `currentColor`, no fill, a 2px default stroke, round caps/joins, and
 `aria-hidden="true"`. The surrounding control or copy owns the accessible name.

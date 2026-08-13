@@ -149,7 +149,7 @@ export default defineConfig({
     pipeline: {
       include: [
         // include js/ts files
-        'plugins/**/*.{js,ts,tsx}'
+        'src/plugins/**/*.{js,ts,tsx}'
       ],
       // exclude files
       // exclude: []

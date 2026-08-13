@@ -12,7 +12,8 @@ if (!finalizeInstalledPackage) {
   await fs.mkdir(packageRoot, { recursive: true });
 
   for (const entry of [
-    'dist',
+    'src',
+    'scripts/runtime',
     'public',
     'docs',
     'package.json',
@@ -68,7 +69,7 @@ const files = (await filesUnder(packageRoot))
 const artifacts = await Promise.all(files.map(async (file) => {
   const body = await fs.readFile(file);
   const relative = path.relative(packageRoot, file);
-  if (/\.[cm]?js$/.test(file)) {
+  if (/\.[cm]?[jt]sx?$/.test(file)) {
     assert.doesNotMatch(
       body.toString('utf8'),
       /@electric-sql\/pglite|@stackpress\/inquire-pglite/,

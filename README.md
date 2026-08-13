@@ -1,4 +1,4 @@
-?# Tabular
+# Tabular
 
 Tabular is a PostgreSQL-native spreadsheet application composed directly from
 focused Stackpress libraries. The current production slice includes catalog
@@ -27,9 +27,9 @@ form with username `tabular_reviewer` and password
 `tabular_review_member` authorization role. It migrates and seeds real
 Operations and Finance schemas with representative rows and Tabular metadata.
 
-The launch command supervises the compiled Node web, worker, and continuous DDL
-migrator entrypoints. It writes owner-only process state and logs beneath
-`.build/local-review`; it does not use the deprecated TypeScript loader path.
+The launch command supervises the checked-in TypeScript web, worker, and
+continuous DDL migrator entrypoints through `tsx`. It writes owner-only process
+state and logs beneath `.build/local-review`; no server JavaScript is emitted.
 
 ```sh
 npm run local-review:shutdown
@@ -91,10 +91,10 @@ consumption is assigned locally, run `npm run migrator:operations` in a third.
 
 ## Packaged release
 
-`npm run package:release` creates `.build/release-package` with compiled server
-code and built Reactus assets. Inside that package, install only production
-dependencies; do not run a source build because source and build tooling are
-intentionally absent:
+`npm run package:release` creates `.build/release-package` with the production
+TypeScript source runtime and built Reactus assets. Inside that package,
+install only production dependencies; do not run a build because build tooling
+and development-only scripts are intentionally absent:
 
 ```sh
 npm ci --omit=dev --ignore-scripts

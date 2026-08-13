@@ -8,6 +8,7 @@
   --paper: #FFFFFF;
   --canvas: #F6F7F8;
   --subtle: #F0F2F4;
+  --column-header: #F7F8FA;
   --rule: #D9DDE3;
   --rule-strong: #BDC3CB;
   --ink: #20242A;
@@ -446,23 +447,6 @@ kbd {
   position: relative;
 }
 
-.blank-grid-guidance {
-  position: absolute;
-  z-index: 15;
-  top: 38px;
-  right: 12px;
-  max-width: min(410px, calc(100% - 24px));
-  border: 1px solid #9BB7E8;
-  border-radius: 4px;
-  background: #F3F7FF;
-  padding: 8px 10px;
-  color: #174EA6;
-  font-size: 11px;
-  line-height: 1.45;
-  box-shadow: 0 3px 10px rgb(31 35 40 / 10%);
-  pointer-events: none;
-}
-
 .grid-stage {
   display: grid;
   grid-template-rows: 31px minmax(0, 1fr);
@@ -588,24 +572,24 @@ kbd {
   font-size: 12px;
 }
 
-.tabulator .tabulator-header {
+.workbench-shell .tabulator .tabulator-header {
+  background: var(--column-header);
   border: 0;
   border-bottom: 1px solid var(--rule-strong);
-  background: var(--subtle);
   color: var(--ink);
 }
 
-.tabulator .tabulator-header .tabulator-col {
-  background: var(--subtle);
+.workbench-shell .tabulator .tabulator-header .tabulator-col {
+  background: var(--column-header);
   border-right: 1px solid var(--rule);
   min-height: 52px;
 }
 
-.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+.workbench-shell .tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
   background: #E9ECEF;
 }
 
-.tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+.workbench-shell .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
   padding: 0;
 }
 
@@ -679,9 +663,9 @@ kbd {
   min-width: 48px;
 }
 
-.tabulator .tabulator-row {
+.workbench-shell .tabulator .tabulator-row {
   background: var(--paper);
-  border-bottom: 1px solid #E3E6EA;
+  border-bottom: 1px solid var(--rule);
   min-height: 32px;
 }
 
@@ -693,8 +677,8 @@ kbd {
   background: #F7F8FA;
 }
 
-.tabulator .tabulator-row .tabulator-cell {
-  border-right: 1px solid #E1E4E8;
+.workbench-shell .tabulator .tabulator-row .tabulator-cell {
+  border-right: 1px solid var(--rule);
   height: 32px;
   line-height: 18px;
   overflow: hidden;
@@ -703,8 +687,10 @@ kbd {
   white-space: nowrap;
 }
 
-.tabulator .tabulator-row .tabulator-cell.tabulator-row-header {
+.workbench-shell .tabulator .tabulator-row .tabulator-cell.tabulator-row-header {
   background: var(--subtle);
+  border-bottom: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;

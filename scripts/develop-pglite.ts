@@ -2,23 +2,23 @@
 import assert from 'node:assert/strict';
 
 //client
-import type { DevelopmentLoginProvider } from '../plugins/identity/helpers/service.js';
-import type { DevelopmentDatabaseBackend } from '../plugins/database/helpers/development-contracts.js';
-import type { PostgreSqlLoginCredentials, VerifiedPostgreSqlSubject } from '../plugins/identity/helpers/postgresql-login.js';
-import type { PostgreSqlTransactionOptions } from '../plugins/database/helpers/transactions.js';
-import { DatabaseExecutor } from '../plugins/database/helpers/executor.js';
-import { withDevelopmentTransaction } from '../plugins/database/helpers/development-transaction.js';
-import { seedLocalDemo } from '../plugins/database/helpers/demo-seed.js';
-import { runMigrations } from '../plugins/database/helpers/migrator.js';
-import { loadMigrations } from '../plugins/database/migrations/index.js';
-import { IdentityProviderAdapter } from '../plugins/identity/helpers/contracts.js';
+import type { DevelopmentLoginProvider } from '../src/plugins/identity/helpers/service.js';
+import type { DevelopmentDatabaseBackend } from '../src/plugins/database/helpers/development-contracts.js';
+import type { PostgreSqlLoginCredentials, VerifiedPostgreSqlSubject } from '../src/plugins/identity/helpers/postgresql-login.js';
+import type { PostgreSqlTransactionOptions } from '../src/plugins/database/helpers/transactions.js';
+import { DatabaseExecutor } from '../src/plugins/database/helpers/executor.js';
+import { withDevelopmentTransaction } from '../src/plugins/database/helpers/development-transaction.js';
+import { seedLocalDemo } from '../src/plugins/database/helpers/demo-seed.js';
+import { runMigrations } from '../src/plugins/database/helpers/migrator.js';
+import { loadMigrations } from '../src/plugins/database/migrations/index.js';
+import { IdentityProviderAdapter } from '../src/plugins/identity/helpers/contracts.js';
 
 const DEMO_USERNAME = 'tabular_reviewer';
 const DEMO_PASSWORD = 'review-local-only-2026';
 const DEMO_MEMBER_ROLE = 'tabular_review_member';
 
 //The development-only runtime return contract keeps the dynamic adapter out
-//of every compiled production entrypoint.
+//of every production source entrypoint.
 export type PGliteDevelopmentRuntime = {
   backend: DevelopmentDatabaseBackend,
   login: DevelopmentLoginProvider,

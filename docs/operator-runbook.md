@@ -55,20 +55,19 @@ files with cross-schema relations, twelve rows, and reconciled file/column
 metadata. Rerunning the seed preserves changed rows and metadata; a changed or
 foreign-owned contract is refused.
 
-`npm run local-review:start` supervises these exact compiled commands and
+`npm run local-review:start` supervises these exact source-runtime commands and
 records their validated PIDs and owner-only logs beneath `.build/local-review`:
 
 ```sh
-node dist/entrypoints/web.js --host 127.0.0.1 --port 3000
-node dist/entrypoints/worker.js
-node dist/entrypoints/migrate.js --consume-operations
+tsx scripts/runtime/web.ts --host 127.0.0.1 --port 3000
+tsx scripts/runtime/worker.ts
+tsx scripts/runtime/migrate.ts --consume-operations
 ```
 
 Use the supervisor command for supported review instead of launching those
 three commands manually. It waits for web readiness, worker readiness, and the
-continuous DDL migrator before returning. Because it runs compiled Node
-entrypoints, the supported development launch does not use `tsx` or emit the
-Node `module.register()` loader deprecation.
+continuous DDL migrator before returning. The supported launch uses `tsx`
+directly and does not compile or retain a server `dist/` tree.
 
 For a bounded shutdown that preserves the stopped disposable container for a
 restart, and for permanent cleanup, run:
@@ -80,7 +79,7 @@ npm run local-review:cleanup
 ```
 
 Shutdown sends `SIGTERM` only when each stored PID still names its recorded
-compiled entrypoint, waits twelve seconds, refuses force-kill on timeout, and
+source entrypoint, waits twelve seconds, refuses force-kill on timeout, and
 then gives PostgreSQL ten seconds to stop. Cleanup repeats the same process
 guard, revalidates the exact image/label/loopback/tmpfs container contract, and
 permanently removes the container plus `.build/local-review`. The tmpfs data
@@ -110,7 +109,7 @@ npm run dev
 ```
 
 With no `TABULAR_*_DATABASE_URL` configured, the source entrypoint dynamically
-loads PGlite, applies every migration in `plugins/database/migrations/`, and
+loads PGlite, applies every migration in `src/plugins/database/migrations/`, and
 seeds through the existing `seedLocalDemo` helper. It does not require a
 PostgreSQL server. The disposable database is recreated on each server start.
 
@@ -141,9 +140,8 @@ development source entrypoint; PostgreSQL remains the production authority.
 the plugin graph, resolves only the build `config` and `route` phases,
 discovers unique Reactus entries from registered `server.views`, and builds
 only those entries. It does not open a listener, database pool, worker, or
-migrator. `npm run build:server` compiles the server entrypoints and copies
-server-owned assets; `npm run build` runs the clean build, both build stages,
-and artifact verification. `npm run verify:css` checks that the route styles
+migrator. `npm run build` cleans and regenerates only browser artifacts, then
+verifies their manifest. `npm run verify:css` checks that the route styles
 remain in the exact flat `public/styles/` inventory and that no plugin-local
 CSS has returned. This boundary runs in `npm run lint` and therefore in the
 CI-facing `npm run verify` chain.
@@ -154,19 +152,19 @@ the development `config`, `listen`, and `route` phases. When no
 PGlite adapter, runs the real migrations, and calls `seedLocalDemo`; this is
 a disposable development substrate, not a PostgreSQL or production claim.
 
-The source and compiled entrypoints and their lifecycle phases are:
+The source entrypoints and their lifecycle phases are:
 
 | Command | Entrypoint | Phases |
 | --- | --- | --- |
 | `npm run build:reactus` | `scripts/build.ts` | `config`, `route` |
 | `npm run dev` | `scripts/develop.ts` | `config`, `listen`, `route` |
-| `npm start` | `dist/entrypoints/web.js` | `config`, `listen`, `route` |
-| `npm run worker` | `dist/entrypoints/worker.js` | `config`, `worker` |
-| `npm run migrate` | `dist/entrypoints/migrate.js` | `config`, `migrate` |
-| `npm run migrator:operations` | `dist/entrypoints/migrate.js --consume-operations` | `config`, `migrate`, optional `worker` |
-| `npm run doctor` | `dist/entrypoints/doctor.js --scope web` | `config`, `doctor` |
-| `npm run preflight` | `dist/entrypoints/preflight.js` | `config`, `preflight` |
-| `npm run seed:demo` | `dist/entrypoints/seed-demo.js --confirm-local-demo` | `config`, `migrate` |
+| `npm start` | `scripts/runtime/web.ts` | `config`, `listen`, `route` |
+| `npm run worker` | `scripts/runtime/worker.ts` | `config`, `worker` |
+| `npm run migrate` | `scripts/runtime/migrate.ts` | `config`, `migrate` |
+| `npm run migrator:operations` | `scripts/runtime/migrate.ts --consume-operations` | `config`, `migrate`, optional `worker` |
+| `npm run doctor` | `scripts/runtime/doctor.ts --scope web` | `config`, `doctor` |
+| `npm run preflight` | `scripts/runtime/preflight.ts` | `config`, `preflight` |
+| `npm run seed:demo` | `scripts/runtime/seed-demo.ts --confirm-local-demo` | `config`, `migrate` |
 
 `npm run start:source` is a retained alias for `npm run dev` used by the
 release static checks; use `npm run dev` for the documented source workflow.
@@ -183,7 +181,8 @@ source static files use exact manifest-allowlisted routes such as
 ## Install and configure
 
 For a source checkout, install the exact lockfile with `npm ci` and create the
-compiled server and registered-view Reactus assets with `npm run build`. To
+registered-view Reactus assets with `npm run build`. Server entrypoints execute
+directly from TypeScript through the production `tsx` dependency. To
 assemble the production artifact, run `npm run package:release` from that
 source checkout.
 
@@ -195,8 +194,9 @@ npm ci --omit=dev --ignore-scripts
 npm run preflight
 ```
 
-Do not run `npm run build` inside the package: TypeScript source, tests, and
-build tooling are intentionally excluded. The release pipeline finalizes the
+Do not run `npm run build` inside the package: tests and build tooling are
+intentionally excluded. The packaged TypeScript source is the server runtime.
+The release pipeline finalizes the
 package manifest after this production-only install so every shipped file
 except the self-referential manifest is hashed.
 

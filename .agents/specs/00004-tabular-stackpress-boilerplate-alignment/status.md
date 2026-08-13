@@ -2,13 +2,15 @@
 
 ## Current State
 
-Status refreshed 2026-08-08 against `tasks/status.md`.
+Status refreshed 2026-08-11 against `tasks/status.md`.
 
 - Spec state: **Frozen 2026-08-06** by explicit user authorization.
 - Implementation plan: accepted 2026-08-06. All sprint tasks are implemented
   and verified. Task 00005 is implemented and its signed-out ordinary-origin
   browser acceptance passed. Task 00006 is user-authorized work added after the
-  Freeze baseline and is verified.
+  Freeze baseline and is verified. Task 00007 is user-authorized repository
+  consolidation added 2026-08-11, is implemented, and awaits fresh browser
+  acceptance.
 - Proof state: P-001 is guide evidence; P-002 is proved within its slice.
 - Context promotion: reviewed and skipped. The restructuring remains spec-local
   until production implementation validates it.
@@ -36,6 +38,7 @@ Freeze Authorization in `decisions.md`. They do not reopen the frozen design:
 | Task 00004 acceptance | Passed | Covered by the release browser gate at desktop and 390-by-844 |
 | Task 00006 PGlite substrate | Complete | Preserve PostgreSQL authority; PostgreSQL integration gates still need a disposable target |
 | Task 00005 acceptance | Passed | Re-run the unmodified harness against a PostgreSQL target with a committed import |
+| Task 00007 source-runtime consolidation | Implemented; browser acceptance pending | Recheck the live Product data page in a connected browser and record explicit user acceptance |
 
 ## Next Authority Gate
 

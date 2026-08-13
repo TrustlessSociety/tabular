@@ -5,10 +5,11 @@
 - Spec: `00003-tabular-direct-stackpress-libraries-architecture`
 - Implementation plan: **accepted 2026-08-01**
 - Implementation state: Task 00014 and corrective side quests 00014A through
-  00014J agent-verified
-- Active task: Final human review
+  00014J agent-verified; corrective side quest 00014K started
+- Active task: 00014K grid default and visual regressions
 - Task sequence: Stable Tasks 00001-00014 plus required side quests 00014A,
-  00014B, 00014C, 00014D, 00014E, 00014F, 00014G, 00014H, 00014I, and 00014J
+  00014B, 00014C, 00014D, 00014E, 00014F, 00014G, 00014H, 00014I, 00014J,
+  and 00014K
 - Per-task human acceptance: `none`
 - Final human review: In progress; explicit user acceptance remains pending
 
@@ -54,6 +55,7 @@ every task file; tasks finish at `verified` after all applicable steps pass.
 | [00014H Color palettes and Border accordion](00014H-color-palettes-border-accordion.md) | verified | Passed | Passed | Complete |
 | [00014I Remove Conditional formatting row](00014I-remove-conditional-formatting-row.md) | verified | Passed | Passed | Complete |
 | [00014J Border styles and session custom colors](00014J-border-style-and-session-custom-colors.md) | verified | Passed | Passed | Complete |
+| [00014K Grid default and visual regressions](00014K-grid-default-and-visual-regressions.md) | started | Technical passed; Browser pending | Pending | In progress |
 
 ## Wave Gates
 

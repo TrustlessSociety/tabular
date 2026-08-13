@@ -13,7 +13,7 @@
 - Implementation plan: **Accepted 2026-08-01** in `tasks/sprint.md`; replaces
   the superseded Spec 00002 architecture proposal
 - Implementation state: Task 00014 and corrective side quests 00014A through
-  00014J verified
+  00014J verified; corrective side quest 00014K started
 - Per-task human acceptance: Waived; every task records `none`
 - Agent acceptance: Required only for tasks with applicable UI acceptance steps
 - Final human review: In progress; explicit user acceptance remains pending
@@ -53,6 +53,7 @@
 | Expand color palettes and add Border accordion | Verified 2026-08-05 | Preserve evidence; resume final human review |
 | Remove background Conditional formatting row | Verified 2026-08-05 | Preserve evidence; resume final human review |
 | Repair Border styles and retain session custom colors | Verified 2026-08-05 | Preserve evidence; resume final human review |
+| Repair grid default and visual regressions | Started 2026-08-11 | Implement and verify the user-supplied final-review corrections |
 
 ## Freeze Blockers
 

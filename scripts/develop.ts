@@ -1,8 +1,8 @@
 ﻿//client
-import { installSignalHandlers, startWeb } from '../bootstrap/application.js';
-import { entrypointPaths } from '../bootstrap/entrypoint-paths.js';
-import { writeLog } from '../bootstrap/logger.js';
-import { loadDevelopmentConfig } from '../config/dev.js';
+import { installSignalHandlers, startWeb } from '../src/bootstrap/application.js';
+import { entrypointPaths } from '../src/bootstrap/entrypoint-paths.js';
+import { writeLog } from '../src/bootstrap/logger.js';
+import { loadDevelopmentConfig } from '../src/config/dev.js';
 import { createPGliteDevelopmentRuntime } from './develop-pglite.js';
 
 const { projectRoot, runtimeRoot } = entrypointPaths(import.meta.url);

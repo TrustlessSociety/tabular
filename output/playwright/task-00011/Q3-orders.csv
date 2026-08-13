@@ -1,4 +1,0 @@
-code,name,amount,risky
-001,Alpha,10.50,safe
-002,Beta,2,"=SUM(A1)"
-003,Gamma,20,plain

@@ -1,8 +1,8 @@
 //client
-import { createApplication } from '../bootstrap/application.js';
-import { buildReactusArtifacts } from '../bootstrap/build.js';
-import { resolveProcessPhases } from '../bootstrap/lifecycle.js';
-import { loadBuildConfig } from '../config/build.js';
+import { createApplication } from '../src/bootstrap/application.js';
+import { buildReactusArtifacts } from '../src/bootstrap/build.js';
+import { resolveProcessPhases } from '../src/bootstrap/lifecycle.js';
+import { loadBuildConfig } from '../src/config/build.js';
 
 //The build profile bootstraps route registration without creating a renderer
 //server, opening a pool, starting a worker, or applying migrations

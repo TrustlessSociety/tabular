@@ -12,14 +12,11 @@
     "resolveJsonModule": true
   },
   "include": [
-    "bootstrap/**/*.ts",
-    "config/**/*.ts",
-    "entrypoints/**/*.ts",
-    "plugins/**/*.ts",
-    "plugins/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "scripts/**/*.ts",
     "tests/**/*.ts",
     "global.d.ts"
   ],
-  "exclude": ["node_modules", "dist", "proofs", "wireframes"]
+  "exclude": ["node_modules", "proofs", "wireframes", "tests/acceptance/evidence"]
 }

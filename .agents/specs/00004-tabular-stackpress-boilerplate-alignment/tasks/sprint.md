@@ -80,11 +80,21 @@ Added after the accepted sprint by explicit user authorization. It gives the
 source-run development web application a disposable PGlite backend and does not
 relax the PostgreSQL, process, artifact, or release boundaries of Waves A to C.
 
+### 00007 - Source runtime and repository consolidation
+
+Added 2026-08-11 by explicit user authorization after a maintainability review.
+It moves application source beneath `src/`, process entrypoints beneath
+`scripts/runtime/`, and test and acceptance material beneath `tests/`. It also
+replaces compiled-server execution with a packaged `tsx` source runtime while
+retaining type checking and Reactus artifact builds. `proofs/` and `wireframes/`
+remain at the project root.
+
 ## Accepted Gate
 
 The user accepted this sprint on 2026-08-06.
 
-Progress as of 2026-08-07: Tasks 00001, 00002, 00003, 00004, and the added
-Task 00006 are verified. Task 00005 is the only open task and is unblocked now
-that Wave D is verified. Task 00004's browser-agent acceptance review remains
-outstanding.
+Progress as of 2026-08-11: Tasks 00001 through 00006 are verified. Added Task
+00007 is implemented and passes the complete automated verification and
+source-runtime packaging gates. Its live acceptance service has been cut over;
+fresh visual browser review and explicit user acceptance remain outstanding
+because no browser instance was connected during closeout.
