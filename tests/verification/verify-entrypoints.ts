@@ -17,9 +17,14 @@ const buildPermissions = PROCESS_PHASE_PERMISSIONS.build as readonly string[];
 assert.equal(buildPermissions.includes('listen'), false);
 assert.equal(buildPermissions.includes('worker'), false);
 assert.equal(buildPermissions.includes('migrate'), false);
-for (const entrypoint of ['web.ts', 'migrate.ts', 'worker.ts']) {
+for (const entrypoint of [
+  'scripts/develop.ts',
+  'scripts/runtime/web.ts',
+  'scripts/runtime/migrate.ts',
+  'scripts/runtime/worker.ts'
+]) {
   const resolved = entrypointPaths(
-    pathToFileURL(path.join(projectRoot, 'scripts/runtime', entrypoint)).href
+    pathToFileURL(path.join(projectRoot, entrypoint)).href
   );
   assert.equal(resolved.projectRoot, projectRoot);
   assert.equal(resolved.runtimeRoot, projectRoot);

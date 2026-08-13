@@ -6,11 +6,17 @@ import path from 'node:path';
  * Resolve a checked-in runtime entrypoint to its project and runtime roots.
  */
 export function entrypointPaths(metaUrl: string) {
-  //runtime entrypoints live beneath scripts/runtime and execute the packaged
-  // TypeScript source through tsx
+  // development lives directly under scripts while production process
+  // entrypoints live one level deeper under scripts/runtime
   const filename = fileURLToPath(metaUrl);
   const directory = path.dirname(filename);
-  const projectRoot = path.resolve(directory, '../..');
+  const scriptsRoot = path.basename(directory) === 'runtime'
+    ? path.dirname(directory)
+    : directory;
+  if (path.basename(scriptsRoot) !== 'scripts') {
+    throw new Error('Entrypoint must live beneath the project scripts directory');
+  }
+  const projectRoot = path.dirname(scriptsRoot);
 
   //application source, package metadata, migrations, and public artifacts all
   // resolve from the same source-runtime package root
