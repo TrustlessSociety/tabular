@@ -96,8 +96,8 @@ test('PostgreSQL 18 durable workers claim, fence, retry, link results, and isola
     assert.deepEqual(
       await runMigrations(transaction(migrationPool), await loadMigrations()),
       {
-        applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'],
-        total: 11
+      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'],
+      total: 12
       }
     );
     await admin.query(`

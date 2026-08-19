@@ -266,6 +266,69 @@ test('sparse insert drafts retain the hidden logical row rank across persistence
   if (recovered?.kind === 'insert') assert.equal(recovered.rowRank, rank);
 });
 
+test('literal defaults are validated only on field exit and stay correctable', () => {
+  const id = `col_${'d'.repeat(43)}`;
+  const validated: GridColumn = {
+    id,
+    coordinate: 'A',
+    label: 'Code',
+    storageCodec: 'text',
+    storageType: 'text',
+    field: 'text',
+    format: 'plain-text',
+    fieldConfig: {},
+    validatorConfig: {
+      version: 1,
+      rules: [{ id: 'vr_prefix_rule_01', kind: 'starts_with', args: { text: 'OK-' } }]
+    },
+    defaultValue: 'INVALID',
+    serverDefault: true
+  };
+  const staged = stageInsertRow([], [validated], 0, 'default_validation');
+  assert.equal(staged.kind, 'insert');
+  if (staged.kind !== 'insert') return;
+  assert.equal(staged.row[id], null);
+  assert.deepEqual(draftIssues(staged), []);
+
+  const exited = updateInsertDraft(staged, [validated], {
+    rowId: staged.row.id,
+    columnId: id
+  }, '');
+  assert.equal(exited.row[id], 'INVALID');
+  assert.match(draftIssues(exited)[0]?.message || '', /start with/);
+  assert.equal(persistentDraftPatch(exited, [validated])?.patch[0]?.value.type, 'text');
+});
+
+test('mixed-invalid paste keeps per-cell correction state under each column validator', () => {
+  const left = `col_${'l'.repeat(43)}`;
+  const right = `col_${'r'.repeat(43)}`;
+  const validator = (id: string, kind: 'starts_with' | 'ends_with', text: string): GridColumn => ({
+    id,
+    coordinate: id === left ? 'A' : 'B',
+    label: id === left ? 'Left' : 'Right',
+    storageCodec: 'text',
+    storageType: 'text',
+    field: 'text',
+    format: 'plain-text',
+    fieldConfig: {},
+    validatorConfig: {
+      version: 1,
+      rules: [{ id: `vr_${id === left ? 'left_rule_01' : 'right_rule_1'}`, kind, args: { text } }]
+    }
+  });
+  const pasteColumns = [validator(left, 'starts_with', 'A'), validator(right, 'ends_with', 'Z')];
+  const pasteRows = [{ id: row1, [left]: null, [right]: null }];
+  const draft = stageScalarRange(pasteRows, pasteColumns, {
+    kind: 'range',
+    anchor: { rowId: row1, columnId: left },
+    focus: { rowId: row1, columnId: right }
+  }, 'Apple', 'paste', 'mixed_validator_paste');
+  assert.equal(draft.changes.length, 2);
+  assert.equal(draft.changes[0]?.issue, undefined);
+  assert.match(draft.changes[1]?.issue?.message || '', /end with/);
+  assert.equal(draft.changes[1]?.raw, 'Apple');
+});
+
 test('recovered partial rows derive required errors without marking every cell', () => {
   const required = `col_${'r'.repeat(43)}`;
   const note = `col_${'n'.repeat(43)}`;
@@ -381,7 +444,7 @@ test('the ten accepted fields retain raw values and compile their storage codecs
     ['select', 'text', 'Ready', { type: 'text', value: 'Ready' }],
     ['price', 'decimal', '12345678901234567890.01', { type: 'decimal', value: '12345678901234567890.01' }],
     ['switch', 'boolean', true, { type: 'boolean', value: true }],
-    ['datetime', 'timestamp', '2026-08-01T10:32', { type: 'timestamp', value: '2026-08-01T10:32' }]
+    ['datetime', 'timestamp', '2026-08-01T10:32:00+08:00', { type: 'timestamp', value: '2026-08-01T10:32:00+08:00' }]
   ] as const;
   for (const [kind, storageCodec, attempted, expected] of matrix) {
     const id = `col_${kind.padEnd(43, kind[0]).slice(0, 43)}`;
@@ -410,7 +473,7 @@ test('the ten accepted fields retain raw values and compile their storage codecs
   const badPrice = stageCellEdit([{ id: row1, price: null }], [{
     id: 'price', coordinate: 'A', label: 'Price', kind: 'price', storageCodec: 'decimal'
   }], { rowId: row1, columnId: 'price' }, 'twelve pesos', 'draft_bad_price');
-  assert.equal(draftIssues(badPrice)[0]?.message, 'Enter a valid number.');
+  assert.equal(draftIssues(badPrice)[0]?.message, 'Enter a valid exact number.');
 });
 
 test('a composite relation choice patches explicitly mapped non-adjacent source columns atomically', () => {

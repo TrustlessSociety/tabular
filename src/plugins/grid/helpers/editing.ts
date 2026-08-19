@@ -12,7 +12,14 @@ import type {
   GridRow,
   LogicalGridSelection
 } from './contracts.js';
+import { canonicalJsonValue } from '../../capability/helpers/value-contracts.js';
 import { valueAfterFieldExit } from './defaults.js';
+import { validateColumnValue } from '../../files/helpers/validator-engine.js';
+import {
+  FieldCodecError,
+  decodeExpandedFieldValue,
+  type ExpandedFieldKind
+} from './field-codecs.js';
 
 //The grid draft change contract exported for module callers
 export type GridDraftChange = {
@@ -99,7 +106,7 @@ export function stageRelationChoice(
       point: { rowId, columnId },
       before: row[columnId] ?? null,
       after: value,
-      raw: value === null ? '' : String(value)
+      raw: rawGridValue(value)
     };
   });
   if (!changes.length) throw new Error('The relation choice is incomplete');
@@ -549,7 +556,7 @@ export function gridDraftFromPersistent(
       point: { rowId, columnId: entry.columnId },
       before: current?.[entry.columnId] ?? null,
       after: attempted,
-      raw: attempted === null ? '' : String(attempted),
+      raw: rawGridValue(attempted),
       ...(issue ? { issue } : {})
     }];
   });
@@ -629,7 +636,7 @@ function draftChange(
   attempted: GridCellValue,
   column: GridColumn
 ): GridDraftChange {
-  const raw = attempted === null ? '' : String(attempted);
+  const raw = rawGridValue(attempted);
   if (column.editable === false || column.generated) {
     return {
       point,
@@ -658,11 +665,27 @@ function draftChange(
       }
     };
   }
+  if (column.storageType === 'jsonb' && expandedField(column.field)) {
+    try {
+      attempted = raw.trim() === ''
+        ? null
+        : decodeExpandedFieldValue(column.field, raw, {
+          allowedValues: column.options?.filter((option) => !option.restricted)
+            .map((option) => option.value)
+        });
+    } catch (caught) {
+      const message = caught instanceof FieldCodecError
+        ? `${caught.message}${caught.path ? ` at ${caught.path}` : ''}`
+        : 'Enter a valid JSON Field value.';
+      return invalid(point, before, attempted, raw, message);
+    }
+  }
   if (column.kind === 'number' || column.kind === 'price') {
     if (attempted === null || raw === '') return { point, before, after: null, raw };
-    const numeric = typeof attempted === 'number' ? attempted : Number(raw);
-    if (!Number.isFinite(numeric)) return invalid(point, before, attempted, raw, 'Enter a valid number.');
-    return { point, before, after: raw, raw };
+    if (!/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(raw) || raw === '-0') {
+      return invalid(point, before, attempted, raw, 'Enter a valid exact number.');
+    }
+    attempted = raw;
   }
   if (column.kind === 'date' && attempted !== null && raw !== '') {
     const valid = /^\d{4}-\d{2}-\d{2}$/.test(raw)
@@ -670,13 +693,9 @@ function draftChange(
     if (!valid) return invalid(point, before, attempted, raw, 'Use YYYY-MM-DD for dates.');
   }
   if (column.kind === 'datetime' && attempted !== null && raw !== '') {
-    const normalized = /(?:Z|[+-]\d{2}:\d{2})$/.test(raw)
-      ? raw
-      : /[+-]\d{2}$/.test(raw)
-        ? `${raw}:00`
-        : `${raw}Z`;
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) || !Number.isFinite(new Date(normalized).getTime())) {
-      return invalid(point, before, attempted, raw, 'Use a valid date and time.');
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw)
+      || !Number.isFinite(new Date(raw).getTime())) {
+      return invalid(point, before, attempted, raw, 'Use a valid date and time with an explicit UTC offset.');
     }
   }
   if (column.kind === 'email' && raw && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
@@ -687,7 +706,35 @@ function draftChange(
     if (!option) return invalid(point, before, attempted, raw, 'Choose an available option.');
     if (option.restricted) return invalid(point, before, attempted, raw, option.restricted);
   }
+  if (column.storageType && column.field && column.validatorConfig) {
+    try {
+      const validation = validateColumnValue({
+        storageType: column.storageType,
+        field: column.field,
+        fieldConfig: column.fieldConfig || {},
+        validatorConfig: column.validatorConfig
+      }, attempted);
+      if (!validation.valid) {
+        const message = validation.failures.map((failure) => (
+          `${failure.message}${failure.path ? ` at ${failure.path}` : ''}`
+        )).join(' ');
+        return invalid(
+          point,
+          before,
+          attempted,
+          raw,
+          `${message}${validation.overflow ? ` (+${validation.overflow} more)` : ''}`
+        );
+      }
+    } catch {
+      return invalid(point, before, attempted, raw, 'The column validator metadata must be corrected before saving.');
+    }
+  }
   return { point, before, after: attempted, raw };
+}
+
+function expandedField(field: GridColumn['field']): field is ExpandedFieldKind {
+  return Boolean(field && ['metadata', 'tags', 'text-list', 'multi-select', 'checkbox-list'].includes(field));
 }
 
 /**
@@ -737,10 +784,10 @@ function typedValue(column: GridColumn, value: GridCellValue): TypedCellValue {
   if (codec === 'date') return { type: 'date', value: String(value) };
   if (codec === 'time') return { type: 'time', value: String(value) };
   if (codec === 'timestamp') return { type: 'timestamp', value: String(value) };
-  if (codec === 'json') return {
-    type: 'json',
-    value: typeof value === 'string' ? value : JSON.stringify(value)
-  };
+  if (codec === 'json') {
+    if (typeof value === 'object' && value.type === 'json') return value;
+    return canonicalJsonValue(String(value));
+  }
   return { type: 'text', value: String(value) };
 }
 
@@ -749,7 +796,17 @@ function typedValue(column: GridColumn, value: GridCellValue): TypedCellValue {
  */
 function gridValueFromTyped(value: TypedCellValue): GridCellValue {
   if (value.type === 'null') return null;
+  if (value.type === 'json') return value;
   return value.value;
+}
+
+/**
+ * Return the editor-facing raw representation without losing canonical JSON.
+ */
+function rawGridValue(value: GridCellValue) {
+  if (value === null) return '';
+  if (typeof value === 'object' && value.type === 'json') return value.source;
+  return String(value);
 }
 
 /**

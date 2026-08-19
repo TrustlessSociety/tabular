@@ -150,3 +150,7 @@ public/client/
 
 # Playwright CLI session state (retain curated proof output separately)
 **/.playwright-cli/
+
+# Playwright acceptance output
+playwright-report/
+test-results/

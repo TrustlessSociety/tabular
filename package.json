@@ -34,6 +34,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck && npm run verify:architecture && npm run verify:secrets && npm run verify:css",
     "test": "npm run build:reactus && tsx --test tests/application/*.test.ts tests/plugins/*/*.test.ts tests/acceptance/release/*.test.ts",
+    "test:acceptance": "playwright test",
+    "test:acceptance:headed": "playwright test --headed",
     "test:postgres:foundation": "tsx --test tests/integration/postgres/database/postgres.integration.ts",
     "test:postgres:identity-catalog": "tsx --test tests/integration/postgres/identity/postgres.integration.ts",
     "test:postgres:capability-actions": "tsx --test tests/integration/postgres/capability/postgres.integration.ts",
@@ -88,6 +90,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.15",
+    "@playwright/test": "1.62.1",
     "@stackpress/inquire-pglite": "0.10.8",
     "@types/node": "25.3.5",
     "@types/pg": "8.20.3",

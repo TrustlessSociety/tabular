@@ -1,3 +1,6 @@
+//client
+import type { CanonicalJsonValue } from './value-contracts.js';
+
 //The null cell value contract exported for module callers
 export type NullCellValue = { type: 'null', };
 
@@ -11,7 +14,7 @@ export type TypedCellValue =
   | { type: 'date', value: string, }
   | { type: 'time', value: string, }
   | { type: 'timestamp', value: string, }
-  | { type: 'json', value: string, };
+  | CanonicalJsonValue;
 
 //The cell patch contract exported for module callers
 export type CellPatch = {

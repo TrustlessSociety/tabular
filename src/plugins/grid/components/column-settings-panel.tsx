@@ -10,14 +10,30 @@ import type {
   FileFieldKind,
   FileFormatKind,
   FileStorageType,
-  PlannedFileDdl
+  PlannedFileDdl,
+  ValidatorConfig,
+  ValidatorRuleConfig,
+  ValidatorRuleKind
 } from '../../files/helpers/contracts.js';
 import type { GridColumn } from '../helpers/contracts.js';
+import { canonicalJsonValue } from '../../capability/helpers/value-contracts.js';
 import { Icon } from '../../app/components/icon.js';
+import {
+  EMPTY_VALIDATOR_CONFIG,
+  FIELD_REGISTRY,
+  FORMAT_REGISTRY,
+  columnAxesAreCompatible,
+  recommendedColumnAxes
+} from '../../files/helpers/field-registry.js';
+import {
+  compileValidatorPlan,
+  compatibleValidatorRuleKinds
+} from '../../files/helpers/validator-engine.js';
 import {
   confirmGridDdl,
   loadFileDescription,
-  planGridDdl
+  planGridDdl,
+  updateGridColumnPresentation
 } from '../events/actions.js';
 
 //The column form contract exported for module callers
@@ -27,6 +43,10 @@ export type ColumnForm = {
   storageType: FileStorageType,
   field: FileFieldKind,
   format: FileFormatKind,
+  fieldConfig: Record<string, unknown>,
+  formatConfig: Record<string, unknown>,
+  validatorConfig: ValidatorConfig,
+  metadataVersion: number,
   defaultValue: string,
   required: boolean,
   unique: boolean,
@@ -61,7 +81,7 @@ export function ColumnSettingsPanel({
   csrfToken: string,
   triggerRef: React.RefObject<HTMLElement | null>,
   onClose: () => void,
-  onConfirmed: (message: string) => void,
+  onConfirmed: (message: string, refreshMetadata?: boolean) => void,
 }) {
   const panel = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -72,6 +92,7 @@ export function ColumnSettingsPanel({
   const [plan, setPlan] = useState<PlannedFileDdl>();
   const [physicalNameOverridden, setPhysicalNameOverridden] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
+  const [validatorKind, setValidatorKind] = useState<ValidatorRuleKind>('not_empty');
   const [form, setForm] = useState<ColumnForm>(() => initialForm(selected));
   const targets = useMemo(() => folders.flatMap((folder) => folder.files.map((candidate) => ({
     ...candidate,
@@ -80,6 +101,26 @@ export function ColumnSettingsPanel({
   const eligibleKeys = targetDescription?.constraints.filter((constraint) =>
     constraint.kind === 'p' || constraint.kind === 'u'
   ) || [];
+  const compatibleFormats = useMemo(
+    () => compatibleFormatKinds(form.storageType, form.field),
+    [form.storageType, form.field]
+  );
+  const compatibleValidators = useMemo(
+    () => compatibleValidatorRuleKinds(form.storageType, form.field),
+    [form.storageType, form.field]
+  );
+  const impliedValidators = useMemo(() => {
+    try {
+      return compileValidatorPlan({
+        storageType: form.storageType,
+        field: form.field,
+        fieldConfig: fieldConfigForForm(form),
+        validatorConfig: EMPTY_VALIDATOR_CONFIG
+      }).rules;
+    } catch {
+      return [];
+    }
+  }, [form.storageType, form.field, form.fieldConfig, form.optionsText]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +130,7 @@ export function ColumnSettingsPanel({
     setPhysicalNameOverridden(false);
     setTargetDescription(undefined);
     setTargetSearch('');
+    setValidatorKind('not_empty');
     requestAnimationFrame(() => closeButton.current?.focus());
     /**
      * Handle the key down event.
@@ -154,6 +196,37 @@ export function ColumnSettingsPanel({
     setBusy(true);
     setError(undefined);
     try {
+      const fieldConfig = fieldConfigForForm(form);
+      compileValidatorPlan({
+        storageType: form.storageType,
+        field: form.field,
+        fieldConfig,
+        validatorConfig: form.validatorConfig
+      });
+      if (selected && presentationOnlyColumnUpdate(selected, form)) {
+        const result = await updateGridColumnPresentation({
+          fileId: file.id,
+          columnId: selected.id,
+          expectedMetadataVersion: form.metadataVersion,
+          storageType: form.storageType,
+          field: form.field,
+          format: form.format,
+          fieldConfig,
+          formatConfig: form.formatConfig,
+          validatorConfig: form.validatorConfig
+        }, csrfToken);
+        if (result.status === 'error') {
+          setError(result.error.message);
+          return;
+        }
+        onConfirmed(
+          'Field, Format, and validators saved as Tabular metadata. PostgreSQL values were not changed.',
+          true
+        );
+        onClose();
+        requestAnimationFrame(() => triggerRef.current?.focus());
+        return;
+      }
       const action = buildColumnSettingsAction(file, selected, columns, form, eligibleKeys);
       const result = await planGridDdl(action, csrfToken);
       if (result.status === 'error') {
@@ -228,25 +301,30 @@ export function ColumnSettingsPanel({
             </label>
             <label>
               <span>Field</span>
-              <select aria-label="Field" value={form.field} onChange={(event) => setForm((current) => ({
-                ...current,
-                field: event.target.value as FileFieldKind,
-                storageType: storageForField(event.target.value as FileFieldKind),
-                format: formatForField(event.target.value as FileFieldKind)
-              }))}>
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="email">Email</option>
-                <option value="url">URL</option>
-                <option value="phone">Phone</option>
-                <option value="relation">Relation</option>
-                <option value="select">Select</option>
-                <option value="price">Price</option>
-                <option value="switch">Switch</option>
-                <option value="date-time">Date and time</option>
-                {!selected && <option value="computed">Generated text</option>}
+              <select aria-label="Field" value={form.field} onChange={(event) => {
+                const field = event.target.value as FileFieldKind;
+                const axes = recommendedColumnAxes(field);
+                setForm((current) => ({
+                  ...current,
+                  field,
+                  storageType: axes.storageType,
+                  format: axes.format,
+                  fieldConfig: {},
+                  formatConfig: {},
+                  optionsText: '',
+                  validatorConfig: {
+                    version: 1,
+                    rules: current.validatorConfig.rules.filter((rule) =>
+                      compatibleValidatorRuleKinds(axes.storageType, field).includes(rule.kind)
+                    )
+                  }
+                }));
+              }}>
+                {(Object.keys(FIELD_REGISTRY) as FileFieldKind[])
+                  .filter((field) => field !== 'computed' || !selected)
+                  .map((field) => <option key={field} value={field}>{humanize(field)}</option>)}
               </select>
-              <small>Field controls data entry and validation.</small>
+              <small>Field controls editing and implied Tabular validation; selecting it never fills cells.</small>
             </label>
           </fieldset>
 
@@ -335,9 +413,9 @@ export function ColumnSettingsPanel({
             </fieldset>
           )}
 
-          {form.field === 'select' && (
+          {['select', 'radio', 'multi-select', 'checkbox-list'].includes(form.field) && (
             <fieldset disabled={busy || Boolean(plan)}>
-              <legend>Select options</legend>
+              <legend>Field options</legend>
               <label>
                 <span>Allowed values</span>
                 <textarea
@@ -355,26 +433,46 @@ export function ColumnSettingsPanel({
             </fieldset>
           )}
 
+          {['rating', 'slider'].includes(form.field) && (
+            <fieldset disabled={busy || Boolean(plan)}>
+              <legend>Field range</legend>
+              {(['min', 'max', 'step'] as const).map((key) => (
+                <label key={key}>
+                  <span>{humanize(key)}</span>
+                  <input
+                    inputMode="decimal"
+                    value={String(form.fieldConfig[key] ?? '')}
+                    onChange={(event) => setForm((current) => ({
+                      ...current,
+                      fieldConfig: {
+                        ...current.fieldConfig,
+                        ...(event.target.value ? { [key]: event.target.value } : {})
+                      }
+                    }))}
+                  />
+                </label>
+              ))}
+              <small>Exact decimal bounds are metadata only; they do not rewrite existing values.</small>
+            </fieldset>
+          )}
+
           <fieldset disabled={busy || Boolean(plan)}>
             <legend>Format</legend>
             <label>
               <span>Format</span>
-              <select aria-label="Format" value={form.format} onChange={(event) => setForm((current) => ({
-                ...current,
-                format: event.target.value as FileFormatKind
-              }))}>
-                <option value="plain-text">Plain text</option>
-                <option value="email-link">Email link</option>
-                <option value="link">Link</option>
-                <option value="phone-link">Phone link</option>
-                <option value="number">Number</option>
-                <option value="currency">Currency</option>
-                <option value="badge">Badge</option>
-                <option value="yes-no">Yes / No</option>
-                <option value="date-time">Date and time</option>
-                <option value="related-record">Related record</option>
+              <select aria-label="Format" value={form.format} onChange={(event) => {
+                const format = event.target.value as FileFormatKind;
+                setForm((current) => ({
+                  ...current,
+                  format,
+                  formatConfig: defaultFormatConfig(format)
+                }));
+              }}>
+                {compatibleFormats.map((format) => (
+                  <option key={format} value={format}>{humanize(format)}</option>
+                ))}
               </select>
-              <small>Format changes read-cell display only; it does not rewrite stored values.</small>
+              <small>Format changes escaped read-cell display only; it never rewrites stored values.</small>
             </label>
             {form.field === 'relation' && form.format === 'related-record' && (
               <label>
@@ -386,16 +484,179 @@ export function ColumnSettingsPanel({
                 <small>Used only by the saved relation cell.</small>
               </label>
             )}
+            {form.format === 'currency' && (
+              <label>
+                <span>Currency code</span>
+                <input
+                  maxLength={3}
+                  value={String(form.formatConfig.currency || 'USD')}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    formatConfig: { ...current.formatConfig, currency: event.target.value.toUpperCase() }
+                  }))}
+                />
+              </label>
+            )}
+            {['number', 'currency'].includes(form.format) && (
+              <label>
+                <span>Decimal places</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={String(form.formatConfig.decimals ?? '')}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    formatConfig: {
+                      ...current.formatConfig,
+                      decimals: event.target.value === '' ? undefined : Number(event.target.value)
+                    }
+                  }))}
+                />
+              </label>
+            )}
+            {['date', 'date-time', 'time', 'relative-time'].includes(form.format) && (
+              <label>
+                <span>Time zone</span>
+                <input
+                  placeholder="UTC"
+                  value={String(form.formatConfig.timeZone || '')}
+                  onChange={(event) => setForm((current) => ({
+                    ...current,
+                    formatConfig: { ...current.formatConfig, timeZone: event.target.value }
+                  }))}
+                />
+              </label>
+            )}
           </fieldset>
 
           <fieldset disabled={busy || Boolean(plan)}>
             <legend>Constraints</legend>
+            <p className="column-settings-disclosure">PostgreSQL constraints remain authoritative and are separate from Tabular validators.</p>
             <label className="check-row"><input type="checkbox" checked={form.required} onChange={(event) => setForm((current) => ({ ...current, required: event.target.checked }))} /> Required</label>
             <label className="check-row"><input type="checkbox" checked={form.unique} onChange={(event) => setForm((current) => ({ ...current, unique: event.target.checked }))} /> Unique</label>
             <label>
               <span>Default</span>
               <input value={form.defaultValue} placeholder="No default" onChange={(event) => setForm((current) => ({ ...current, defaultValue: event.target.value }))} />
             </label>
+          </fieldset>
+
+          <fieldset disabled={busy || Boolean(plan)}>
+            <legend>Validators</legend>
+            <p className="column-settings-disclosure">
+              Validated by Tabular. Direct SQL and other PostgreSQL clients can bypass these input rules.
+            </p>
+            <div className="validator-rule-list" aria-label="Locked implied validators">
+              {impliedValidators.map((rule) => (
+                <article className="validator-rule-card validator-rule-locked" key={rule.id}>
+                  <div>
+                    <strong>{humanize(rule.kind)}</strong>
+                    <small>{rule.source === 'storage' ? 'Storage-implied' : 'Field-implied'} · locked</small>
+                  </div>
+                  <span aria-label="Locked validator">Locked</span>
+                </article>
+              ))}
+            </div>
+            <div className="validator-rule-list" aria-label="Configured validators">
+              {form.validatorConfig.rules.map((rule, index) => (
+                <article className="validator-rule-card" key={rule.id}>
+                  <header>
+                    <div>
+                      <strong>{humanize(rule.kind)}</strong>
+                      <small>Configured rule {index + 1}</small>
+                    </div>
+                    <div className="validator-rule-actions">
+                      <button
+                        type="button"
+                        aria-label={`Move ${humanize(rule.kind)} up`}
+                        disabled={index === 0}
+                        onClick={() => setForm((current) => ({
+                          ...current,
+                          validatorConfig: reorderValidator(current.validatorConfig, index, index - 1)
+                        }))}
+                      >↑</button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${humanize(rule.kind)} down`}
+                        disabled={index === form.validatorConfig.rules.length - 1}
+                        onClick={() => setForm((current) => ({
+                          ...current,
+                          validatorConfig: reorderValidator(current.validatorConfig, index, index + 1)
+                        }))}
+                      >↓</button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${humanize(rule.kind)}`}
+                        onClick={() => setForm((current) => ({
+                          ...current,
+                          validatorConfig: removeValidator(current.validatorConfig, rule.id)
+                        }))}
+                      >Remove</button>
+                    </div>
+                  </header>
+                  <ValidatorArgumentEditor
+                    rule={rule}
+                    storageType={form.storageType}
+                    onChange={(args) => setForm((current) => ({
+                      ...current,
+                      validatorConfig: updateValidator(current.validatorConfig, rule.id, { args })
+                    }))}
+                  />
+                  <label>
+                    <span>Custom message</span>
+                    <input
+                      maxLength={500}
+                      value={rule.message || ''}
+                      placeholder="Use the default message"
+                      onChange={(event) => setForm((current) => ({
+                        ...current,
+                        validatorConfig: updateValidator(
+                          current.validatorConfig,
+                          rule.id,
+                          event.target.value ? { message: event.target.value } : { message: undefined }
+                        )
+                      }))}
+                    />
+                  </label>
+                </article>
+              ))}
+            </div>
+            <div className="validator-add-row">
+              <label>
+                <span>Add validator</span>
+                <select
+                  aria-label="Add validator"
+                  value={compatibleValidators.includes(validatorKind) ? validatorKind : compatibleValidators[0] || ''}
+                  disabled={!compatibleValidators.length}
+                  onChange={(event) => setValidatorKind(event.target.value as ValidatorRuleKind)}
+                >
+                  {compatibleValidators.map((kind) => (
+                    <option key={kind} value={kind}>{humanize(kind)}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={!compatibleValidators.length}
+                onClick={() => {
+                  const kind = compatibleValidators.includes(validatorKind)
+                    ? validatorKind
+                    : compatibleValidators[0];
+                  if (!kind) return;
+                  setForm((current) => ({
+                    ...current,
+                    validatorConfig: {
+                      version: 1,
+                      rules: [...current.validatorConfig.rules, {
+                        id: newValidatorId(),
+                        kind,
+                        args: defaultValidatorArgs(kind, current.storageType)
+                      }]
+                    }
+                  }));
+                }}
+              >Add rule</button>
+            </div>
           </fieldset>
 
           <details>
@@ -413,7 +674,7 @@ export function ColumnSettingsPanel({
             <dl className="column-impact-list">
               <div><dt>Storage</dt><dd>{form.storageType}</dd></div>
               <div><dt>Generated</dt><dd>{selected?.generated || form.generated ? 'Read-only' : 'No'}</dd></div>
-              <div><dt>Applied by</dt><dd>Background PostgreSQL update</dd></div>
+              <div><dt>Applied by</dt><dd>{selected && presentationOnlyColumnUpdate(selected, form) ? 'Tabular metadata save' : 'Background PostgreSQL update'}</dd></div>
             </dl>
             <p className="ddl-warning">Changing storage or the PostgreSQL name may require a cast, rename, existing-value review, and a background schema update.</p>
           </details>
@@ -436,7 +697,18 @@ export function ColumnSettingsPanel({
           <button type="button" onClick={onClose}>Cancel</button>
           {plan
             ? <button className="primary-action" type="button" disabled={busy} onClick={confirmPlan}>{busy ? 'Applying…' : 'Apply column change'}</button>
-            : <button className="primary-action" type="button" disabled={busy || readOnly} onClick={submitPlan}>{busy ? 'Planning…' : 'Review change'}</button>}
+            : <button
+              className="primary-action"
+              type="button"
+              disabled={busy || Boolean(readOnly && selected && !presentationOnlyColumnUpdate(selected, form))}
+              onClick={submitPlan}
+            >
+              {busy
+                ? 'Saving…'
+                : selected && presentationOnlyColumnUpdate(selected, form)
+                  ? 'Save metadata'
+                  : 'Review change'}
+            </button>}
         </footer>
       </aside>
     </div>
@@ -452,9 +724,13 @@ function initialForm(column: GridColumn | undefined): ColumnForm {
   return {
     displayName: name,
     physicalName: column?.physicalName || (column ? normalizeColumnName(name) : 'new_column'),
-    storageType: (column?.storageCodec === 'integer' ? 'bigint' : column?.storageCodec === 'decimal' ? 'numeric' : column?.storageCodec === 'json' ? 'jsonb' : column?.storageCodec || 'text') as FileStorageType,
+    storageType: column?.storageType || (column?.storageCodec === 'integer' ? 'bigint' : column?.storageCodec === 'decimal' ? 'numeric' : column?.storageCodec === 'json' ? 'jsonb' : column?.storageCodec || 'text') as FileStorageType,
     field,
     format: (column?.format || formatForField(field)) as FileFormatKind,
+    fieldConfig: structuredClone(column?.fieldConfig || {}),
+    formatConfig: structuredClone(column?.formatConfig || {}),
+    validatorConfig: structuredClone(column?.validatorConfig || EMPTY_VALIDATOR_CONFIG),
+    metadataVersion: column?.metadataVersion || 1,
     defaultValue: column?.defaultValue === null || typeof column?.defaultValue === 'undefined' ? '' : String(column.defaultValue),
     required: Boolean(column?.required),
     unique: Boolean(column?.unique),
@@ -507,6 +783,7 @@ export function buildColumnSettingsAction(
 ): FileDdlAction {
   if (!file.id.startsWith('obj_')) throw new Error('Save this file before changing its PostgreSQL columns.');
   const commandId = `cmd_column_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const fieldConfig = fieldConfigForForm(form);
   if (form.field === 'relation') {
     if (!selected) throw new Error('Create the source column before adding a relation.');
     const key = eligibleKeys.find((candidate) => candidate.name === form.targetConstraintName);
@@ -525,9 +802,11 @@ export function buildColumnSettingsAction(
       targetFileId: form.targetFileId,
       targetColumnIds: key.columnIds,
       fieldConfig: {
+        ...fieldConfig,
         pickerTemplate: form.pickerTemplate
       },
       formatConfig: {
+        ...form.formatConfig,
         outputTemplate: form.outputTemplate
       },
       onUpdate: 'NO ACTION',
@@ -536,9 +815,6 @@ export function buildColumnSettingsAction(
   }
   const defaultValue = form.defaultValue
     ? { mode: 'literal' as const, value: literalDefault(form.storageType, form.defaultValue) }
-    : undefined;
-  const selectConfig = form.field === 'select'
-    ? { options: [...new Set(form.optionsText.split(/\r?\n/).map((value) => value.trim()).filter(Boolean))] }
     : undefined;
   if (!selected) {
     return {
@@ -550,7 +826,9 @@ export function buildColumnSettingsAction(
       storageType: form.storageType,
       field: form.field,
       format: form.format,
-      ...(selectConfig ? { fieldConfig: selectConfig } : {}),
+      fieldConfig,
+      formatConfig: form.formatConfig,
+      validatorConfig: form.validatorConfig,
       required: form.required,
       unique: form.unique,
       ...(defaultValue ? { default: defaultValue } : {}),
@@ -573,11 +851,291 @@ export function buildColumnSettingsAction(
     storageType: form.storageType,
     field: form.field,
     format: form.format,
-    ...(selectConfig ? { fieldConfig: selectConfig } : {}),
+    fieldConfig,
+    formatConfig: form.formatConfig,
+    validatorConfig: form.validatorConfig,
     required: form.required,
     unique: form.unique,
     ...(defaultValue ? { default: defaultValue } : {})
   };
+}
+
+/** Report whether a save can stay entirely inside Tabular metadata. */
+export function presentationOnlyColumnUpdate(selected: GridColumn, form: ColumnForm) {
+  const original = initialForm(selected);
+  return form.displayName === original.displayName
+    && form.physicalName === original.physicalName
+    && form.storageType === original.storageType
+    && form.defaultValue === original.defaultValue
+    && form.required === original.required
+    && form.unique === original.unique;
+}
+
+/** Return the compatible closed Format subset in catalog order. */
+export function compatibleFormatKinds(
+  storageType: FileStorageType,
+  field: FileFieldKind
+) {
+  return (Object.keys(FORMAT_REGISTRY) as FileFormatKind[]).filter((format) =>
+    columnAxesAreCompatible(storageType, field, format)
+  );
+}
+
+/** Merge the typed option-list editor into the persisted Field configuration. */
+function fieldConfigForForm(form: ColumnForm) {
+  const config = structuredClone(form.fieldConfig);
+  if (['select', 'radio', 'multi-select', 'checkbox-list'].includes(form.field)) {
+    config.options = [...new Set(
+      form.optionsText.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)
+    )];
+  } else {
+    delete config.options;
+  }
+  return config;
+}
+
+/** Render typed controls for one configured validator's bounded argument shape. */
+function ValidatorArgumentEditor({
+  rule,
+  storageType,
+  onChange
+}: {
+  rule: ValidatorRuleConfig,
+  storageType: FileStorageType,
+  onChange: (args: Record<string, unknown>) => void,
+}) {
+  const noArguments = ['not_empty', 'email_shape', 'integer_value', 'unique_items'];
+  if (noArguments.includes(rule.kind)) return <small>No parameters.</small>;
+  if (['equals', 'not_equals'].includes(rule.kind)) {
+    if (storageType === 'boolean') {
+      return (
+        <label>
+          <span>Value</span>
+          <select value={String(rule.args.value)} onChange={(event) => onChange({ value: event.target.value === 'true' })}>
+            <option value="true">True</option>
+            <option value="false">False</option>
+          </select>
+        </label>
+      );
+    }
+    return (
+      <label>
+        <span>{storageType === 'jsonb' ? 'Canonical JSON value' : 'Value'}</span>
+        <input
+          value={typedArgumentText(rule.args.value)}
+          onChange={(event) => onChange({ value: typedValidatorArgument(storageType, event.target.value) })}
+        />
+      </label>
+    );
+  }
+  if (rule.kind === 'one_of') {
+    return (
+      <label>
+        <span>Allowed values</span>
+        <textarea
+          rows={4}
+          value={(rule.args.values as unknown[] || []).map(typedArgumentText).join('\n')}
+          onChange={(event) => onChange({
+            values: event.target.value.split(/\r?\n/)
+              .filter((value) => value.length > 0)
+              .map((value) => typedValidatorArgument(storageType, value))
+          })}
+        />
+      </label>
+    );
+  }
+  if (['starts_with', 'ends_with'].includes(rule.kind)) {
+    return (
+      <label>
+        <span>Text</span>
+        <input value={String(rule.args.text ?? '')} onChange={(event) => onChange({ text: event.target.value })} />
+      </label>
+    );
+  }
+  if (rule.kind === 'pattern') {
+    return (
+      <label>
+        <span>Safe wildcard pattern</span>
+        <input
+          value={String(rule.args.pattern ?? '')}
+          onChange={(event) => onChange({ pattern: event.target.value, dialect: 'tabular-wildcard-v1' })}
+        />
+        <small>Uses Tabular wildcard v1, not executable regular expressions.</small>
+      </label>
+    );
+  }
+  if (['min_length', 'max_length', 'exact_length', 'min_words', 'max_words', 'exact_words',
+    'min_items', 'max_items', 'exact_items'].includes(rule.kind)) {
+    return (
+      <label>
+        <span>Count</span>
+        <input type="number" min="0" step="1" value={String(rule.args.value ?? 0)} onChange={(event) => onChange({ value: Number(event.target.value) })} />
+      </label>
+    );
+  }
+  if (rule.kind === 'url_shape') {
+    return (
+      <label>
+        <span>Allowed protocols</span>
+        <input
+          value={(rule.args.protocols as string[] || []).join(', ')}
+          onChange={(event) => onChange({ protocols: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) })}
+        />
+      </label>
+    );
+  }
+  if (rule.kind === 'hex_shape') {
+    return (
+      <div className="validator-argument-row">
+        <label className="check-row">
+          <input type="checkbox" checked={rule.args.prefix === true} onChange={(event) => onChange({ ...rule.args, prefix: event.target.checked })} /> Require prefix
+        </label>
+        <label>
+          <span>Letter case</span>
+          <select value={String(rule.args.case || 'any')} onChange={(event) => onChange({ ...rule.args, case: event.target.value })}>
+            <option value="any">Any</option>
+            <option value="lower">Lowercase</option>
+            <option value="upper">Uppercase</option>
+          </select>
+        </label>
+      </div>
+    );
+  }
+  if (['min_value', 'max_value', 'before', 'after'].includes(rule.kind)) {
+    return (
+      <div className="validator-argument-row">
+        <label>
+          <span>Exact bound</span>
+          <input value={String(rule.args.value ?? '')} onChange={(event) => onChange({ ...rule.args, value: event.target.value })} />
+        </label>
+        <label className="check-row">
+          <input type="checkbox" checked={rule.args.inclusive !== false} onChange={(event) => onChange({ ...rule.args, inclusive: event.target.checked })} /> Inclusive
+        </label>
+      </div>
+    );
+  }
+  if (rule.kind === 'multiple_of') {
+    return (
+      <label>
+        <span>Exact positive step</span>
+        <input value={String(rule.args.value ?? '')} onChange={(event) => onChange({ value: event.target.value })} />
+      </label>
+    );
+  }
+  if (['past', 'future', 'today'].includes(rule.kind)) {
+    return (
+      <label>
+        <span>Time zone</span>
+        <input value={String(rule.args.timezone || '')} placeholder="UTC" onChange={(event) => onChange({ timezone: event.target.value })} />
+      </label>
+    );
+  }
+  if (['required_keys', 'allowed_keys'].includes(rule.kind)) {
+    return (
+      <label>
+        <span>Keys</span>
+        <textarea
+          rows={3}
+          value={(rule.args.keys as string[] || []).join('\n')}
+          onChange={(event) => onChange({ keys: event.target.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean) })}
+        />
+      </label>
+    );
+  }
+  return (
+    <label>
+      <span>{rule.kind === 'items' ? 'Ordered child rules JSON' : 'Property rules JSON'}</span>
+      <textarea
+        rows={5}
+        defaultValue={JSON.stringify(rule.args.rules, null, 2)}
+        onChange={(event) => {
+          try { onChange({ rules: JSON.parse(event.target.value) as unknown }); } catch { /* retain the correctable text draft */ }
+        }}
+      />
+      <small>One nested level only. SQL, JavaScript, and recursive schemas are rejected.</small>
+    </label>
+  );
+}
+
+function typedValidatorArgument(storageType: FileStorageType, value: string) {
+  if (storageType === 'jsonb') return canonicalJsonValue(value);
+  return value;
+}
+
+function typedArgumentText(value: unknown) {
+  if (value && typeof value === 'object' && 'source' in value) {
+    return String((value as { source: unknown, }).source);
+  }
+  return String(value ?? '');
+}
+
+export function defaultValidatorArgs(kind: ValidatorRuleKind, storageType: FileStorageType) {
+  if (['not_empty', 'email_shape', 'integer_value', 'unique_items'].includes(kind)) return {};
+  const typedDefault = storageType === 'boolean'
+    ? true
+    : storageType === 'jsonb'
+      ? canonicalJsonValue('{}')
+      : storageType === 'date'
+        ? '2000-01-01'
+        : storageType === 'time'
+          ? '00:00:00'
+          : storageType === 'timestamptz'
+            ? '2000-01-01T00:00:00.000Z'
+            : storageType === 'uuid'
+              ? '00000000-0000-0000-0000-000000000000'
+              : '0';
+  if (['equals', 'not_equals'].includes(kind)) return { value: typedDefault };
+  if (kind === 'one_of') return { values: [typedDefault] };
+  if (['starts_with', 'ends_with'].includes(kind)) return { text: '' };
+  if (kind === 'pattern') return { pattern: '*', dialect: 'tabular-wildcard-v1' };
+  if (['min_length', 'max_length', 'exact_length', 'min_words', 'max_words', 'exact_words',
+    'min_items', 'max_items', 'exact_items'].includes(kind)) return { value: 0 };
+  if (kind === 'url_shape') return { protocols: ['https'] };
+  if (kind === 'hex_shape') return { prefix: false, case: 'any' };
+  if (['min_value', 'max_value'].includes(kind)) return { value: '0', inclusive: true };
+  if (kind === 'multiple_of') return { value: '1' };
+  if (['before', 'after'].includes(kind)) return { value: typedDefault, inclusive: true };
+  if (['past', 'future', 'today'].includes(kind)) return { timezone: 'UTC' };
+  if (kind === 'items') return { rules: [] };
+  if (['required_keys', 'allowed_keys'].includes(kind)) return { keys: ['key'] };
+  return { rules: {} };
+}
+
+export function updateValidator(
+  config: ValidatorConfig,
+  id: string,
+  update: Partial<Pick<ValidatorRuleConfig, 'args' | 'message'>>
+): ValidatorConfig {
+  return {
+    version: 1,
+    rules: config.rules.map((rule) => rule.id === id ? { ...rule, ...update } : rule)
+  };
+}
+
+export function reorderValidator(config: ValidatorConfig, from: number, to: number): ValidatorConfig {
+  if (to < 0 || to >= config.rules.length) return config;
+  const rules = [...config.rules];
+  const [rule] = rules.splice(from, 1);
+  if (rule) rules.splice(to, 0, rule);
+  return { version: 1, rules };
+}
+
+export function removeValidator(config: ValidatorConfig, id: string): ValidatorConfig {
+  return { version: 1, rules: config.rules.filter((rule) => rule.id !== id) };
+}
+
+function newValidatorId() {
+  return `vr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function humanize(value: string) {
+  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function defaultFormatConfig(format: FileFormatKind): Record<string, unknown> {
+  if (format === 'currency') return { currency: 'USD', decimals: 2 };
+  if (format === 'number') return { decimals: 2 };
+  return {};
 }
 
 /**
@@ -593,28 +1151,14 @@ function literalDefault(storage: FileStorageType, value: string): DdlLiteral {
  * Return the storage for field result.
  */
 function storageForField(field: FileFieldKind): FileStorageType {
-  if (field === 'number' || field === 'price' || field === 'rating' || field === 'slider') return 'numeric';
-  if (field === 'checkbox' || field === 'switch') return 'boolean';
-  if (field === 'date') return 'date';
-  if (field === 'date-time') return 'timestamptz';
-  return 'text';
+  return recommendedColumnAxes(field).storageType;
 }
 
 /**
  * Format the for field.
  */
 function formatForField(field: FileFieldKind): FileFormatKind {
-  if (field === 'number') return 'number';
-  if (field === 'email') return 'email-link';
-  if (field === 'url') return 'link';
-  if (field === 'phone') return 'phone-link';
-  if (field === 'price') return 'currency';
-  if (field === 'checkbox' || field === 'switch') return 'yes-no';
-  if (field === 'date') return 'date';
-  if (field === 'date-time') return 'date-time';
-  if (field === 'select' || field === 'radio') return 'badge';
-  if (field === 'relation') return 'related-record';
-  return 'plain-text';
+  return recommendedColumnAxes(field).format;
 }
 
 /**

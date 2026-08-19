@@ -14,7 +14,9 @@ import type {
   FileDdlAction,
   FileDdlStatus,
   FileFieldKind,
-  FileFormatKind
+  FileFormatKind,
+  ColumnPresentationUpdate,
+  ValidatorConfig
 } from './contracts.js';
 import type { NativeDdlFailpoint } from './executor.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
@@ -30,6 +32,12 @@ import { opaqueId } from '../../identity/helpers/security.js';
 import { FileDdlWorkflow } from '../events/ddl-workflow.js';
 import { FileRepository, iso } from './repository.js';
 import { validateUnstructuredColumn } from './validation.js';
+import {
+  EMPTY_VALIDATOR_CONFIG,
+  fileStorageTypeForPostgres,
+  validateColumnPresentationUpdate
+} from './field-registry.js';
+import { updateColumnPresentationMetadata } from './metadata.js';
 
 //The files service value exported for module callers
 export const FILES_SERVICE = 'tabular.files';
@@ -84,6 +92,8 @@ type ColumnMetadata = {
   format_kind: string,
   field_config: Record<string, unknown>,
   format_config: Record<string, unknown>,
+  validator_config: ValidatorConfig,
+  metadata_version: string | number,
   hidden: boolean,
   hidden_purpose: string | null,
 };
@@ -133,6 +143,109 @@ export class FilesPluginService {
     confirmationToken: string
   ) {
     return this.#workflow.confirm(principal, requestId, confirmationToken);
+  }
+
+  /**
+   * Save Tabular-only Field, Format, and validator metadata.
+   */
+  public updateColumnPresentation(
+    principal: BrowserMutationPrincipal,
+    input: ColumnPresentationUpdate
+  ) {
+    requireMutation(principal);
+    input = validateColumnPresentationUpdate(input);
+    const eventId = opaqueId('evt');
+    return catalogAuthorizedTransactions.run(() => withCatalogReconciliationRetry(async () => {
+      let relationOid: string | undefined;
+      let attributeNumber: number | undefined;
+      let storageKind: 'postgresql' | 'unstructured-json' | undefined;
+      return this.identity.authorizedTransaction(
+        principal,
+        'tabular.files',
+        async (database) => {
+          if (!relationOid || !attributeNumber) unavailable();
+          const current = await database.execute<{
+            allowed: boolean,
+            storage_type: string,
+          }>(`
+            SELECT pg_has_role(current_user, c.relowner, 'USAGE') AS allowed,
+                   format_type(a.atttypid, a.atttypmod) AS storage_type
+              FROM pg_class c
+              JOIN pg_attribute a
+                ON a.attrelid = c.oid AND a.attnum = ?::smallint
+               AND a.attnum > 0 AND NOT a.attisdropped
+             WHERE c.oid = ?::oid
+          `, [attributeNumber, relationOid]);
+          if (!current.rows[0]?.allowed) denied();
+          const physicalStorage = fileStorageTypeForPostgres(current.rows[0].storage_type);
+          const storageMatches = storageKind === 'unstructured-json'
+            ? physicalStorage === 'jsonb' && input.storageType === 'text'
+            : physicalStorage === input.storageType;
+          if (!storageMatches) {
+            throw new ApplicationError(
+              'file_metadata_stale',
+              409,
+              'The PostgreSQL storage type changed before this presentation update'
+            );
+          }
+        },
+        async (database) => {
+          const stable = await reconcileCatalog(database, principal.connectionId);
+          const object = findObject(stable, input.fileId);
+          if (!object || !['table', 'partitioned-table'].includes(object.kind)) unavailable();
+          const metadata = await database.execute<{
+            catalog_column_id: string | null,
+            storage_kind: string,
+            hidden: boolean,
+          }>(`
+            SELECT catalog_column_id, storage_kind, hidden
+              FROM tabular.column_metadata
+             WHERE object_id = ? AND column_id = ?
+          `, [object.stableId, input.columnId]);
+          const row = metadata.rows[0];
+          if (!row || row.hidden || !['postgresql', 'unstructured-json'].includes(row.storage_kind)) unavailable();
+          storageKind = row.storage_kind as typeof storageKind;
+          let catalogColumnId = row.catalog_column_id;
+          if (storageKind === 'unstructured-json') {
+            const hidden = await database.execute<{ catalog_column_id: string | null, }>(`
+              SELECT catalog_column_id
+                FROM tabular.column_metadata
+               WHERE object_id = ? AND storage_kind = 'postgresql' AND hidden
+                 AND hidden_purpose = 'unstructured-json'
+            `, [object.stableId]);
+            catalogColumnId = hidden.rows[0]?.catalog_column_id || null;
+          }
+          if (!catalogColumnId) unavailable();
+          const column = [...stable.columns.values()].find((candidate) => (
+            candidate.stableId === catalogColumnId && candidate.objectId === object.stableId
+          ));
+          if (!column) unavailable();
+          relationOid = object.relationOid;
+          attributeNumber = column.attributeNumber;
+        },
+        async (database) => {
+          const result = await updateColumnPresentationMetadata(database, input);
+          await database.execute(`
+            SELECT tabular.append_outbox_event(
+              ?, ?, ?, ?, NULL, 'schema.changed', ?, ?::jsonb
+            )
+          `, [
+            eventId,
+            principal.connectionId,
+            input.fileId,
+            principal.identityId,
+            `column-presentation:${input.fileId}:${input.columnId}:${result.metadataVersion}`,
+            JSON.stringify({
+              columnId: input.columnId,
+              metadataVersion: result.metadataVersion,
+              targetTableChanged: false
+            })
+          ]);
+          return result;
+        },
+        'read committed'
+      );
+    }));
   }
 
   /**
@@ -393,6 +506,7 @@ export class FilesPluginService {
         const fields = await database.execute<ColumnMetadata>(`
           SELECT column_id, catalog_column_id, storage_kind, display_name,
                  field_kind, format_kind, field_config, format_config,
+                 validator_config, metadata_version,
                  hidden, hidden_purpose
             FROM tabular.column_metadata
            WHERE object_id = ?
@@ -604,6 +718,8 @@ function mergeDescription(
       format: presentation?.format_kind || 'plain-text',
       fieldConfig: presentation?.field_config || {},
       formatConfig: presentation?.format_config || {},
+      validatorConfig: presentation?.validator_config || EMPTY_VALIDATOR_CONFIG,
+      metadataVersion: Number(presentation?.metadata_version || 1),
       hidden: false,
       readOnly: Boolean(item.generated_kind || item.identity_kind || !item.can_update)
     }];
@@ -646,6 +762,8 @@ function mergeDescription(
     format: item.format_kind,
     fieldConfig: item.field_config,
     formatConfig: item.format_config,
+    validatorConfig: item.validator_config || EMPTY_VALIDATOR_CONFIG,
+    metadataVersion: Number(item.metadata_version),
     hidden: false,
     readOnly: !hiddenNative!.can_update
   }));

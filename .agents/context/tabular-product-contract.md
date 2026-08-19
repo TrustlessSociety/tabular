@@ -152,6 +152,16 @@ independent axes. Use the accepted low-friction field/format registry; raw HTML,
 FRUI `eval` formulas, rich content, attachments, and deeply nested field types
 are not first-slice defaults.
 
+Tabular validators are application metadata and input rules, not native
+PostgreSQL constraints. Saving, changing, reordering, or removing validators
+does not scan or mutate accepted rows and does not add target-table `CHECK`
+constraints. Existing stored values that violate active validators render as
+`#VALUE!` while their PostgreSQL values remain unchanged. Future invalid
+Tabular inputs do not enter the database and remain correctable drafts. Direct
+SQL can bypass this validator layer; violating values are surfaced when
+Tabular reads them. Required, Unique, foreign keys, storage types/typmods, and
+separately managed PostgreSQL constraints remain distinct native behavior.
+
 URL and Phone fields accept entered values as strings without strict
 application-level rejection. Best-effort formatters may improve their display
 or link behavior but must not silently rewrite the stored string. Native

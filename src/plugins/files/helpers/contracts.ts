@@ -36,8 +36,11 @@ export type FileFieldKind =
   | 'currency-code'
   | 'rating'
   | 'slider'
+  | 'metadata'
   | 'tags'
   | 'text-list'
+  | 'multi-select'
+  | 'checkbox-list'
   | 'code-source'
   | 'markdown-source';
 
@@ -68,8 +71,74 @@ export type FileFormatKind =
   | 'rating'
   | 'tags'
   | 'list'
+  | 'spread'
+  | 'metadata'
+  | 'markdown'
   | 'code-highlighting'
   | 'label';
+
+//The validator rule kinds are closed metadata, never executable dispatch names
+export type ValidatorRuleKind =
+  | 'not_empty'
+  | 'equals'
+  | 'not_equals'
+  | 'one_of'
+  | 'starts_with'
+  | 'ends_with'
+  | 'pattern'
+  | 'min_length'
+  | 'max_length'
+  | 'exact_length'
+  | 'min_words'
+  | 'max_words'
+  | 'exact_words'
+  | 'email_shape'
+  | 'url_shape'
+  | 'hex_shape'
+  | 'min_value'
+  | 'max_value'
+  | 'integer_value'
+  | 'multiple_of'
+  | 'before'
+  | 'after'
+  | 'past'
+  | 'future'
+  | 'today'
+  | 'min_items'
+  | 'max_items'
+  | 'exact_items'
+  | 'unique_items'
+  | 'items'
+  | 'required_keys'
+  | 'allowed_keys'
+  | 'properties';
+
+//The configured validator rule contract stored in Tabular metadata
+export type ValidatorRuleConfig = {
+  id: string,
+  kind: ValidatorRuleKind,
+  args: Record<string, unknown>,
+  message?: string,
+};
+
+//The versioned validator configuration contract stored per column
+export type ValidatorConfig = {
+  version: 1,
+  rules: ValidatorRuleConfig[],
+};
+
+//The metadata-only column presentation update contract
+export type ColumnPresentationUpdate = {
+  fileId: string,
+  columnId: string,
+  expectedMetadataVersion: number,
+  storageType: FileStorageType,
+  field: FileFieldKind,
+  format: FileFormatKind,
+  fieldConfig: Record<string, unknown>,
+  formatConfig: Record<string, unknown>,
+  validatorConfig: ValidatorConfig,
+};
 
 //The ddl literal contract exported for module callers
 export type DdlLiteral =
@@ -119,6 +188,7 @@ export type FileDdlAction =
     format: FileFormatKind,
     fieldConfig?: Record<string, unknown>,
     formatConfig?: Record<string, unknown>,
+    validatorConfig?: ValidatorConfig,
     required?: boolean,
     unique?: boolean,
     default?: Exclude<ColumnDefault, { mode: 'drop', }>,
@@ -135,6 +205,7 @@ export type FileDdlAction =
     format?: FileFormatKind,
     fieldConfig?: Record<string, unknown>,
     formatConfig?: Record<string, unknown>,
+    validatorConfig?: ValidatorConfig,
     required?: boolean,
     unique?: boolean,
     default?: ColumnDefault,
@@ -175,6 +246,7 @@ export type FileDdlAction =
     format: FileFormatKind,
     fieldConfig?: Record<string, unknown>,
     formatConfig?: Record<string, unknown>,
+    validatorConfig?: ValidatorConfig,
     required?: boolean,
     unique?: boolean,
   });
@@ -254,6 +326,8 @@ export type FileDescription = {
     format: string,
     fieldConfig: Record<string, unknown>,
     formatConfig: Record<string, unknown>,
+    validatorConfig?: ValidatorConfig,
+    metadataVersion?: number,
     hidden: boolean,
     hiddenPurpose?: string,
     readOnly: boolean,

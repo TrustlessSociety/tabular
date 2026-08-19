@@ -45,6 +45,11 @@ const migrationFiles = [
     version: '0011',
     name: 'sparse-row-drafts',
     file: '0011-sparse-row-drafts.sql'
+  },
+  {
+    version: '0012',
+    name: 'field-validator-metadata',
+    file: '0012-field-validator-metadata.sql'
   }
 ] as const;
 

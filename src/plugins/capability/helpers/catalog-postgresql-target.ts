@@ -29,6 +29,7 @@ import type { GridQueryInput } from './service.js';
 import { quoteIdentifier } from '../../database/helpers/identifiers.js';
 import { reconcileCatalog } from '../../catalog/helpers/reconciliation.js';
 import { ActionFault, CapabilityResultBudgetExceededError } from './contracts.js';
+import { canonicalJsonSource, canonicalJsonValue } from './value-contracts.js';
 
 type LiveColumn = {
   attribute_number: number,
@@ -1558,7 +1559,9 @@ function applyUnstructuredPatch(
   const next = { ...source };
   for (const entry of patch) {
     if (entry.value.type === 'null') delete next[entry.columnId];
-    else next[entry.columnId] = entry.value.value;
+    else next[entry.columnId] = entry.value.type === 'json'
+      ? JSON.parse(canonicalJsonSource(entry.value))
+      : entry.value.value;
   }
   return next;
 }
@@ -1768,7 +1771,7 @@ function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): Typed
     type: 'timestamp',
     value: value instanceof Date ? value.toISOString() : String(value).replace(' ', 'T')
   };
-  return { type: 'json', value: typeof value === 'string' ? value : JSON.stringify(value) };
+  return canonicalJsonValue(typeof value === 'string' ? value : JSON.stringify(value));
 }
 
 /**
@@ -1776,6 +1779,7 @@ function typedDatabaseValue(codec: PostgreSqlColumnCodec, value: unknown): Typed
  */
 function databaseValue(value: TypedCellValue): Value {
   if (value.type === 'null') return null;
+  if (value.type === 'json') return canonicalJsonSource(value);
   return value.value;
 }
 

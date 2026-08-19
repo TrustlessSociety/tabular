@@ -11,6 +11,10 @@ import { ImportParserError } from '../../../src/plugins/import-export/helpers/co
 import { parseCsv } from '../../../src/plugins/import-export/helpers/csv.js';
 import { deterministicFingerprint } from '../../../src/plugins/import-export/helpers/fingerprint.js';
 import { inferColumns } from '../../../src/plugins/import-export/helpers/inference.js';
+import {
+  defaultMapping,
+  validateMappedRows
+} from '../../../src/plugins/import-export/helpers/mapping.js';
 import { parseXlsx } from '../../../src/plugins/import-export/helpers/xlsx.js';
 
 test('CSV preserves exact tokens, quoted delimiters and embedded newlines across chunks', async () => {
@@ -92,6 +96,54 @@ test('inference is deterministic and never rewrites source tokens', async () => 
     deterministicFingerprint({ b: 2, a: { y: true, x: 'value' } }),
     deterministicFingerprint({ a: { x: 'value', y: true }, b: 2 })
   );
+});
+
+test('JSONB inference suggests Metadata versus Text List without changing JSONB storage', () => {
+  const header = {
+    rowNumber: 1,
+    cells: [
+      { type: 'text' as const, value: 'meta', sourceToken: 'meta' },
+      { type: 'text' as const, value: 'labels', sourceToken: 'labels' }
+    ]
+  };
+  const rows = [{
+    rowNumber: 2,
+    cells: [
+      { type: 'text' as const, value: '{"count":9007199254740993}', sourceToken: '{"count":9007199254740993}' },
+      { type: 'text' as const, value: '["alpha","alpha"]', sourceToken: '["alpha","alpha"]' }
+    ]
+  }];
+  const inference = inferColumns(rows);
+  assert.deepEqual(inference.map((entry) => [entry.suggestedType, entry.suggestedField]), [
+    ['jsonb', 'metadata'],
+    ['jsonb', 'text-list']
+  ]);
+  const mapping = defaultMapping(header, inference);
+  assert.deepEqual(mapping.map((entry) => [entry.storageType, entry.field]), [
+    ['jsonb', 'metadata'],
+    ['jsonb', 'text-list']
+  ]);
+  assert.deepEqual(validateMappedRows(rows, mapping), []);
+  assert.equal(rows[0]!.cells[0]!.sourceToken, '{"count":9007199254740993}');
+});
+
+test('import Field codecs expose per-cell correctable shape failures', () => {
+  const rows = [{
+    rowNumber: 9,
+    cells: [{ type: 'text' as const, value: '["not","metadata"]', sourceToken: '["not","metadata"]' }]
+  }];
+  const issues = validateMappedRows(rows, [{
+    sourceColumn: 1,
+    sourceName: 'meta',
+    displayName: 'Meta',
+    physicalName: 'meta',
+    storageType: 'jsonb',
+    field: 'metadata',
+    include: true
+  }]);
+  assert.equal(issues[0]?.code, 'field_validation_failed');
+  assert.match(issues[0]?.message || '', /top-level JSON object/);
+  assert.equal(issues[0]?.sourceToken, '["not","metadata"]');
 });
 
 test('XLSX WorkbookReader imports cached formula results and never formula text', async () => {

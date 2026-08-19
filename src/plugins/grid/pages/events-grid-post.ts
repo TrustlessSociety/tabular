@@ -34,6 +34,14 @@ const eventsGridPost: ApplicationHttpAction = async ({ req, res, ctx }) => {
     res.json({ status: 'ok', data: await files.confirm(principal, text(envelope.requestId, 'DDL request ID', 160), text(envelope.confirmationToken, 'DDL confirmation token', 200)) });
     return;
   }
+  if (kind === 'column.presentation.update') {
+    exactKeys(envelope, ['kind', 'input']);
+    res.json({
+      status: 'ok',
+      data: await files.updateColumnPresentation(principal, envelope.input as never)
+    });
+    return;
+  }
   if (kind === 'unstructured.column.create') {
     exactKeys(envelope, ['kind', 'fileId', 'count']);
     const count = Number(envelope.count);

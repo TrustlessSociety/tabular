@@ -110,8 +110,8 @@ test('PostgreSQL 18 MCP and browser-event paths preserve authority, effects, and
     `);
     const migrations = await loadMigrations();
     assert.deepEqual(await runMigrations(migrationTransaction(migrator), migrations), {
-      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'],
-      total: 11
+      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'],
+      total: 12
     });
     await admin.query(`
       GRANT USAGE ON SCHEMA tabular TO tabular_task13_web, tabular_task13_migrator;

@@ -1,5 +1,14 @@
+//client
+import type { CanonicalJsonValue } from '../../capability/helpers/value-contracts.js';
+import type {
+  FileFieldKind,
+  FileFormatKind,
+  FileStorageType,
+  ValidatorConfig
+} from '../../files/helpers/contracts.js';
+
 //The grid cell value contract exported for module callers
-export type GridCellValue = string | number | boolean | null;
+export type GridCellValue = string | number | boolean | CanonicalJsonValue | null;
 
 //The grid row contract exported for module callers
 export type GridRow = {
@@ -43,8 +52,13 @@ export type GridColumn = {
   editable?: boolean,
   align?: 'left' | 'center' | 'right',
   storageCodec?: 'text' | 'integer' | 'decimal' | 'boolean' | 'date' | 'time' | 'timestamp' | 'json',
-  field?: string,
-  format?: string,
+  storageType?: FileStorageType,
+  field?: FileFieldKind,
+  format?: FileFormatKind,
+  fieldConfig?: Record<string, unknown>,
+  formatConfig?: Record<string, unknown>,
+  validatorConfig?: ValidatorConfig,
+  metadataVersion?: number,
   physicalName?: string,
   required?: boolean,
   unique?: boolean,

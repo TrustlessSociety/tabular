@@ -189,14 +189,14 @@ test('PostgreSQL 18-labeled data-foundation integration', { timeout: 45_000 }, a
       runMigrations(transaction(primary), migrations),
       runMigrations(transaction(concurrent), migrations)
     ]);
-    assert.equal(concurrentRuns.flatMap((result) => result.applied).length, 11);
+    assert.equal(concurrentRuns.flatMap((result) => result.applied).length, 12);
     assert.deepEqual(await runMigrations(transaction(primary), migrations), {
       applied: [],
-      total: 11
+      total: 12
     });
     const ledger = await admin.query('SELECT version, name, checksum FROM tabular.schema_migrations');
     assert.deepEqual(ledger.rows.map((row) => row.version), [
-      '0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'
+      '0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'
     ]);
     assert.equal(ledger.rows[0].checksum, migrations[0].checksum);
 

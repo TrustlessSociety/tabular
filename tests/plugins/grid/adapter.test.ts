@@ -848,7 +848,7 @@ test('adapter definitions cover all ten accepted field editors and output format
       id: 'select', coordinate: 'G', label: 'Select', kind: 'select',
       options: [{ value: 'Ready', label: 'Ready' }]
     },
-    { id: 'price', coordinate: 'H', label: 'Price', kind: 'price', format: 'currency' },
+    { id: 'price', coordinate: 'H', label: 'Price', kind: 'price', format: 'number' },
     { id: 'switch', coordinate: 'I', label: 'Switch', kind: 'switch' },
     { id: 'datetime', coordinate: 'J', label: 'Date and time', kind: 'datetime' }
   ];
@@ -906,7 +906,7 @@ test('adapter definitions cover all ten accepted field editors and output format
     ) => unknown)(row.cells.get(field)!, {}, () => undefined);
   };
   assert.equal(format('number'), '9,007,199,254,740,993.0001');
-  assert.equal(format('price'), '12,345,678,901,234,567,890.01');
+  assert.equal(format('price'), '<span class="tabular-format-number">12,345,678,901,234,567,890.01</span>');
   assert.equal(format('relation'), 'Acme');
   assert.equal(format('switch'), 'Yes');
   const switchFormatter = definitions.get('switch')?.formatter as (

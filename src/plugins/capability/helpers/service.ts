@@ -3,6 +3,11 @@ import { createHash } from 'node:crypto';
 
 //client
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
+import type {
+  FileFieldKind,
+  FileStorageType,
+  ValidatorConfig
+} from '../../files/helpers/contracts.js';
 import type { GridFilter, GridSort } from '../../grid/helpers/contracts.js';
 import type {
   ActionResult,
@@ -32,6 +37,8 @@ import { validateAction } from './validation.js';
 import { RegisteredPostgreSqlTargetAdapter } from './postgresql-target.js';
 import { CatalogPostgreSqlTargetAdapter } from './catalog-postgresql-target.js';
 import { commitImportedTable } from './import-commit.js';
+import { validateColumnValue } from '../../files/helpers/validator-engine.js';
+import { EMPTY_VALIDATOR_CONFIG } from '../../files/helpers/field-registry.js';
 
 //The grid target plan contract exported for module callers
 export type GridTargetPlan = {
@@ -62,6 +69,84 @@ type MutationAttempt =
 
 type IdempotentAttempt = MutationAttempt | { kind: 'replay', replay: JournalReplay, };
 type DraftCommandAttempt = { kind: 'ready', } | { kind: 'replay', replay: JournalReplay, };
+
+type TabularColumnValidation = {
+  column_id: string,
+  field_kind: FileFieldKind,
+  field_config: Record<string, unknown>,
+  validator_config: ValidatorConfig | null,
+};
+
+/**
+ * Apply target-type checks and Tabular metadata validators to every mutation
+ * surface before a value can reach PostgreSQL.
+ */
+export async function validateMutationRows(
+  database: DatabaseExecutor,
+  plan: TargetPlan,
+  rows: Array<Pick<TargetMutationRow, 'patch'>>
+) {
+  const targetIssues = (await Promise.all(rows.map((row) =>
+    plan.adapter.validatePatch(plan.target, row.patch)
+  ))).flat();
+  const columnIds = [...new Set(rows.flatMap((row) => row.patch.map((entry) => entry.columnId)))];
+  if (!columnIds.length) return targetIssues;
+  const metadata = await database.execute<TabularColumnValidation>(`
+    SELECT column_id, field_kind, field_config, validator_config
+      FROM tabular.column_metadata
+     WHERE object_id = ? AND column_id IN (${columnIds.map(() => '?').join(', ')})
+       AND NOT hidden
+  `, [plan.target.fileId, ...columnIds]);
+  const definitions = new Map(metadata.rows.map((row) => [row.column_id, row]));
+  const tabularIssues: ValidationIssue[] = [];
+  for (const row of rows) {
+    for (const entry of row.patch) {
+      const definition = definitions.get(entry.columnId);
+      const storageType = storageForTypedValue(entry.value);
+      if (!definition || !storageType) continue;
+      try {
+        const result = validateColumnValue({
+          storageType,
+          field: definition.field_kind,
+          fieldConfig: definition.field_config || {},
+          validatorConfig: definition.validator_config || EMPTY_VALIDATOR_CONFIG
+        }, canonicalTypedValue(entry.value));
+        result.failures.forEach((failure, index) => {
+          const overflow = index === result.failures.length - 1 && result.overflow
+            ? ` (+${result.overflow} more)`
+            : '';
+          tabularIssues.push({
+            columnId: entry.columnId,
+            code: failure.code,
+            message: `${failure.message}${failure.path ? ` at ${failure.path}` : ''}${overflow}`
+          });
+        });
+      } catch {
+        tabularIssues.push({
+          columnId: entry.columnId,
+          code: 'invalid_validator_definition',
+          message: 'The column validator metadata is invalid and must be corrected'
+        });
+      }
+    }
+  }
+  return [...targetIssues, ...tabularIssues];
+}
+
+function storageForTypedValue(value: CellPatch['value']): FileStorageType | undefined {
+  if (value.type === 'null') return undefined;
+  if (value.type === 'integer') return 'bigint';
+  if (value.type === 'decimal') return 'numeric';
+  if (value.type === 'timestamp') return 'timestamptz';
+  if (value.type === 'json') return 'jsonb';
+  return value.type;
+}
+
+function canonicalTypedValue(value: CellPatch['value']) {
+  if (value.type === 'null') return null;
+  if (value.type === 'json') return value;
+  return value.value;
+}
 
 /**
  * Provide capability plugin operations through one service boundary.
@@ -376,9 +461,7 @@ export class CapabilityPluginService {
           context.connectionId
         );
         if (!replay) {
-          issues = (await Promise.all(rows.map((row) =>
-            plan!.adapter.validatePatch(plan!.target, row.patch)
-          ))).flat();
+          issues = await validateMutationRows(database, plan!, rows);
         }
       },
       target: async (database) => {
@@ -440,7 +523,7 @@ export class CapabilityPluginService {
           context.connectionId
         );
         if (replay) return;
-        issues = await plan.adapter.validatePatch(plan.target, action.patch);
+        issues = await validateMutationRows(database, plan, [{ patch: action.patch }]);
         if (plan.target.schemaVersion !== action.schemaVersion) {
           issues = [...issues, schemaIssue()];
         }
@@ -540,7 +623,7 @@ export class CapabilityPluginService {
         assertEditableDraft(draft, action.expectedDraftVersion);
         plan = await this.prepareTarget(database, draft!.file_id, context.connectionId);
         merged = mergePatch(draft!.patch, action.patch);
-        issues = await plan.adapter.validatePatch(plan.target, merged);
+        issues = await validateMutationRows(database, plan, [{ patch: merged }]);
         if (plan.target.schemaVersion !== draft!.schema_version) issues = [...issues, schemaIssue()];
       },
       target: async (database) => {
@@ -670,7 +753,7 @@ export class CapabilityPluginService {
           });
         }
         plan = await this.prepareTarget(database, draft!.file_id, context.connectionId);
-        issues = await plan.adapter.validatePatch(plan.target, draft!.patch);
+        issues = await validateMutationRows(database, plan, [{ patch: draft!.patch }]);
         if (plan.target.schemaVersion !== draft!.schema_version) issues = [...issues, schemaIssue()];
       },
       target: async (database) => {

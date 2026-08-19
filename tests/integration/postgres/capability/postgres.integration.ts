@@ -26,6 +26,7 @@ import { BrowserAuthorizedExecutionContext } from '../../../../src/plugins/capab
 import { RegisteredPostgreSqlTargetAdapter } from '../../../../src/plugins/capability/helpers/postgresql-target.js';
 import { WebCapabilityAdapter } from '../../../../src/plugins/capability/events/web-adapter.js';
 import { McpShapedCapabilityAdapter } from '../../../../src/plugins/capability/events/mcp-shaped-adapter.js';
+import { canonicalJsonValue } from '../../../../src/plugins/capability/helpers/value-contracts.js';
 import { TestIdentityProvider } from '../../../plugins/identity/provider-double.js';
 
 const { Pool } = pg;
@@ -119,8 +120,8 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
     `);
     const migrations = await loadMigrations();
     assert.deepEqual(await runMigrations(migrationTransaction(migrator), migrations), {
-      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'],
-      total: 11
+      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'],
+      total: 12
     });
     await admin.query(`
       CREATE SCHEMA workspace;
@@ -448,7 +449,7 @@ test('PostgreSQL 18 capability actions, drafts, atomic ranges, and bounded rever
       patch: [
         { columnId: BIG_ID, value: { type: 'integer', value: '9223372036854775806' } },
         { columnId: DECIMAL_ID, value: { type: 'decimal', value: '12345678901234567890.123456789012345678' } },
-        { columnId: JSON_ID, value: { type: 'json', value: '{"n":9007199254740993123456789}' } },
+        { columnId: JSON_ID, value: canonicalJsonValue('{"n":9007199254740993123456789}') },
         { columnId: DATE_ID, value: { type: 'date', value: '2026-08-01' } }
       ]
     });

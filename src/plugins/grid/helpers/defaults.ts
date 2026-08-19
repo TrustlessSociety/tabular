@@ -1,5 +1,6 @@
 //client
 import type { GridCellValue, GridColumn } from './contracts.js';
+import { canonicalJsonValue } from '../../capability/helpers/value-contracts.js';
 
 /**
  * Project a PostgreSQL literal default into the editable grid value domain.
@@ -20,7 +21,10 @@ export function literalGridDefault(
 
   //owned string-like and exact numeric literals use a quoted PostgreSQL cast
   const quoted = /^'((?:[^']|'')*)'(?:::[A-Za-z][A-Za-z0-9_ ]*)?$/.exec(source);
-  if (quoted) return quoted[1]!.replaceAll("''", "'");
+  if (quoted) {
+    const value = quoted[1]!.replaceAll("''", "'");
+    return storageType === 'jsonb' ? canonicalJsonValue(value) : value;
+  }
 
   //also accept normalized bare numeric catalog expressions without coercing
   // them through JavaScript's lossy number representation

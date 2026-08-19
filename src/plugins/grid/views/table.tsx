@@ -126,6 +126,7 @@ import {
 } from '../../saved-views/events/actions.js';
 import { SavedViewsDialog } from '../../saved-views/components/saved-views-dialog.js';
 import { RealtimeController } from '../../realtime/events/controller.js';
+import { gridValueIssues } from '../helpers/cell-validation.js';
 
 //The workbench page props contract exported for module callers
 export type WorkbenchPageProps = TablePageProps;
@@ -352,12 +353,13 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
   ), [gridColumns, blankColumnInsertions]);
   const cellIssues = useMemo<GridCellIssue[]>(
     () => [
+      ...gridValueIssues(rows, columns),
       ...retainedDrafts.flatMap((entry) => (
         projectDraftCellIssues(entry.draft, entry.state)
       )),
       ...(editDraft ? projectDraftCellIssues(editDraft, draftState) : [])
     ],
-    [retainedDrafts, editDraft, draftState]
+    [rows, columns, retainedDrafts, editDraft, draftState]
   );
   const visibleDraftState = editDraft
     ? draftState
@@ -2892,7 +2894,10 @@ export function WorkbenchPage(props: WorkbenchPageProps) {
             setColumnSettingsOpen(false);
             requestAnimationFrame(() => columnSettingsTrigger.current?.focus());
           }}
-          onConfirmed={(message) => setFeedback(message)}
+          onConfirmed={(message, refreshMetadata) => {
+            setFeedback(message);
+            if (refreshMetadata) void realtimeRefresh.current?.();
+          }}
         />
       )}
       {createDialogOpen && (
@@ -3226,8 +3231,15 @@ function enrichGridColumns(
       ...column,
       label: metadata.displayName,
       kind: gridKindForField(metadata.field, metadata.storageType),
-      field: metadata.field,
-      format: metadata.format,
+      field: metadata.field as GridColumn['field'],
+      format: metadata.format as GridColumn['format'],
+      storageType: metadata.storageType === 'unstructured-json'
+        ? 'text'
+        : metadata.storageType as GridColumn['storageType'],
+      fieldConfig: metadata.fieldConfig,
+      formatConfig: metadata.formatConfig,
+      validatorConfig: metadata.validatorConfig,
+      metadataVersion: metadata.metadataVersion,
       physicalName: metadata.physicalName,
       required: !metadata.nullable,
       unique: primaryOrUnique.some((constraint) =>

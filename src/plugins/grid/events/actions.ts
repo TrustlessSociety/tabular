@@ -1,6 +1,7 @@
 //client
 import type { CapabilityAction } from '../../capability/helpers/action-contracts.js';
 import type {
+  ColumnPresentationUpdate,
   ConfirmedFileDdl,
   FileDdlAction,
   PlannedFileDdl
@@ -156,6 +157,21 @@ export async function confirmGridDdl(
   return postGridEvent({
     kind: 'ddl.confirm', requestId, confirmationToken
   }, csrfToken) as Promise<{ status: 'ok', data: ConfirmedFileDdl, } | GridEventFailure>;
+}
+
+/**
+ * Save column presentation metadata without planning PostgreSQL DDL.
+ */
+export async function updateGridColumnPresentation(
+  input: ColumnPresentationUpdate,
+  csrfToken: string
+): Promise<{ status: 'ok', data: { metadataVersion: number, }, } | GridEventFailure> {
+  return postGridEvent({
+    kind: 'column.presentation.update',
+    input
+  }, csrfToken) as Promise<
+    { status: 'ok', data: { metadataVersion: number, }, } | GridEventFailure
+  >;
 }
 
 /**

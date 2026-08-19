@@ -208,6 +208,7 @@ export function createGridPluginService(
  */
 function gridValue(value: TypedCellValue): GridCellValue {
   if (value.type === 'null') return null;
+  if (value.type === 'json') return value;
   if (value.type === 'boolean') return value.value;
   if (value.type === 'integer' || value.type === 'decimal') return value.value;
   return value.value;
@@ -221,6 +222,7 @@ function gridKind(codec: string): GridColumnKind {
   if (codec === 'boolean') return 'boolean';
   if (codec === 'date') return 'date';
   if (codec === 'timestamp') return 'datetime';
+  if (codec === 'json') return 'json';
   return 'text';
 }
 

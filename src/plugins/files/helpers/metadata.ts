@@ -2,6 +2,7 @@
 import type { DatabaseExecutor } from '../../database/helpers/executor.js';
 import type {
   AppliedFileDdl,
+  ColumnPresentationUpdate,
   NativeFileDdlEffect,
   StoredFileDdlRequest
 } from './contracts.js';
@@ -11,6 +12,50 @@ import { opaqueId } from '../../identity/helpers/security.js';
 import { readRelationFingerprint } from './fingerprint.js';
 import { MANAGED_ROW_ID_PHYSICAL_NAME } from './executor.js';
 import { normalizedPhysicalName } from './validation.js';
+import { validateColumnPresentationUpdate } from './field-registry.js';
+
+/**
+ * Update Tabular-only presentation metadata without touching the target table.
+ */
+export async function updateColumnPresentationMetadata(
+  database: DatabaseExecutor,
+  input: ColumnPresentationUpdate
+) {
+  const validated = validateColumnPresentationUpdate(input);
+  const updated = await database.execute<{ metadata_version: string | number, }>(`
+    UPDATE tabular.column_metadata
+       SET field_kind = ?, format_kind = ?, field_config = ?::jsonb,
+           format_config = ?::jsonb, validator_config = ?::jsonb,
+           metadata_version = metadata_version + 1,
+           updated_at = clock_timestamp()
+     WHERE object_id = ? AND column_id = ? AND NOT hidden
+       AND metadata_version = ?
+     RETURNING metadata_version
+  `, [
+    validated.field,
+    validated.format,
+    JSON.stringify(validated.fieldConfig),
+    JSON.stringify(validated.formatConfig),
+    JSON.stringify(validated.validatorConfig),
+    validated.fileId,
+    validated.columnId,
+    validated.expectedMetadataVersion
+  ]);
+  if (updated.affectedRows !== 1 || !updated.rows[0]) {
+    throw new ApplicationError(
+      'file_metadata_stale',
+      409,
+      'The column metadata changed before this presentation update'
+    );
+  }
+  await database.execute(`
+    UPDATE tabular.file_metadata
+       SET metadata_version = metadata_version + 1,
+           updated_at = clock_timestamp()
+     WHERE object_id = ?
+  `, [validated.fileId]);
+  return { metadataVersion: Number(updated.rows[0].metadata_version) };
+}
 
 /**
  * Return the finalize file ddl result.
@@ -113,7 +158,7 @@ export async function finalizeFileDdl(
         UPDATE tabular.column_metadata
            SET catalog_column_id = ?, storage_kind = 'postgresql',
                display_name = ?, field_kind = ?, format_kind = ?, field_config = ?::jsonb,
-               format_config = ?::jsonb,
+               format_config = ?::jsonb, validator_config = ?::jsonb,
                metadata_version = metadata_version + 1, updated_at = clock_timestamp()
          WHERE column_id = ? AND object_id = ? AND storage_kind = 'unstructured-json'
       `, [
@@ -123,6 +168,7 @@ export async function finalizeFileDdl(
         action.format,
         JSON.stringify(action.fieldConfig || {}),
         JSON.stringify(action.formatConfig || {}),
+        JSON.stringify(action.validatorConfig || { version: 1, rules: [] }),
         action.jsonKey,
         object.stableId
       ]);
@@ -137,9 +183,9 @@ export async function finalizeFileDdl(
         INSERT INTO tabular.column_metadata (
           column_id, object_id, catalog_column_id, storage_kind,
           display_name, field_kind, format_kind, field_config,
-          format_config,
+          format_config, validator_config,
           hidden, hidden_purpose
-        ) VALUES (?, ?, ?, 'postgresql', ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?)
+        ) VALUES (?, ?, ?, 'postgresql', ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?)
         ON CONFLICT (column_id) DO UPDATE SET
           catalog_column_id = EXCLUDED.catalog_column_id,
           display_name = COALESCE(?, tabular.column_metadata.display_name),
@@ -147,6 +193,7 @@ export async function finalizeFileDdl(
           format_kind = COALESCE(?, tabular.column_metadata.format_kind),
           field_config = COALESCE(?::jsonb, tabular.column_metadata.field_config),
           format_config = COALESCE(?::jsonb, tabular.column_metadata.format_config),
+          validator_config = COALESCE(?::jsonb, tabular.column_metadata.validator_config),
           metadata_version = tabular.column_metadata.metadata_version + 1,
           updated_at = clock_timestamp()
       `, [
@@ -158,13 +205,15 @@ export async function finalizeFileDdl(
         axes.format,
         JSON.stringify(axes.config),
         JSON.stringify(axes.formatConfig),
+        JSON.stringify(axes.validatorConfig),
         axes.hidden,
         axes.hiddenPurpose,
         axes.updateDisplayName,
         axes.updateField,
         axes.updateFormat,
         axes.updateConfig === undefined ? null : JSON.stringify(axes.updateConfig),
-        axes.updateFormatConfig === undefined ? null : JSON.stringify(axes.updateFormatConfig)
+        axes.updateFormatConfig === undefined ? null : JSON.stringify(axes.updateFormatConfig),
+        axes.updateValidatorConfig === undefined ? null : JSON.stringify(axes.updateValidatorConfig)
       ]);
       targetColumnId = logicalId;
     }
@@ -336,13 +385,15 @@ function columnAxes(
       format: 'plain-text',
       config: {},
       formatConfig: {},
+      validatorConfig: { version: 1 as const, rules: [] },
       hidden: true,
       hiddenPurpose: action.purpose,
       updateDisplayName: fallback,
       updateField: 'text',
       updateFormat: 'plain-text',
       updateConfig: {},
-      updateFormatConfig: {}
+      updateFormatConfig: {},
+      updateValidatorConfig: { version: 1 as const, rules: [] }
     };
   }
   if (action.type === 'column.create') {
@@ -352,13 +403,15 @@ function columnAxes(
       format: action.format,
       config: action.fieldConfig || {},
       formatConfig: action.formatConfig || {},
+      validatorConfig: action.validatorConfig || { version: 1 as const, rules: [] },
       hidden: false,
       hiddenPurpose: null,
       updateDisplayName: action.displayName,
       updateField: action.field,
       updateFormat: action.format,
       updateConfig: action.fieldConfig || {},
-      updateFormatConfig: action.formatConfig || {}
+      updateFormatConfig: action.formatConfig || {},
+      updateValidatorConfig: action.validatorConfig || { version: 1 as const, rules: [] }
     };
   }
   if (action.type === 'column.configure') {
@@ -368,13 +421,15 @@ function columnAxes(
       format: action.format || 'plain-text',
       config: action.fieldConfig || {},
       formatConfig: action.formatConfig || {},
+      validatorConfig: action.validatorConfig || { version: 1 as const, rules: [] },
       hidden: false,
       hiddenPurpose: null,
       updateDisplayName: action.displayName || null,
       updateField: action.field || null,
       updateFormat: action.format || null,
       updateConfig: action.fieldConfig,
-      updateFormatConfig: action.formatConfig
+      updateFormatConfig: action.formatConfig,
+      updateValidatorConfig: action.validatorConfig
     };
   }
   throw new Error('The action does not create or configure a PostgreSQL column');

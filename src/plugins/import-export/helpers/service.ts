@@ -48,12 +48,14 @@ import { inferColumns } from './inference.js';
 import { deterministicFingerprint } from './fingerprint.js';
 import {
   defaultMapping,
+  fieldForStorage,
   mappingFingerprint,
   sourceIdentity,
   stagedRows,
   validateMappedRows,
   validateMapping
 } from './mapping.js';
+import { FIELD_REGISTRY, validateColumnAxes } from '../../files/helpers/field-registry.js';
 import { ImportExportRepository, safeOperation } from './repository.js';
 import {
   csvContentDisposition,
@@ -1713,7 +1715,7 @@ async function finalizeImportedMetadata(
   for (const field of mapping) {
     const column = byName.get(field.physicalName);
     if (!column) throw new Error('Imported field was not reconciled');
-    const axes = metadataAxes(field.storageType);
+    const axes = metadataAxes(field.storageType, field.field);
     await database.execute(`
       INSERT INTO tabular.column_metadata (
         column_id, object_id, catalog_column_id, storage_kind,
@@ -1761,14 +1763,14 @@ async function finalizeImportedMetadata(
 /**
  * Return the metadata axes result.
  */
-function metadataAxes(type: ImportColumnMapping['storageType']) {
-  if (type === 'numeric' || type === 'bigint') return { field: 'number', format: 'number' };
-  if (type === 'boolean') return { field: 'checkbox', format: 'yes-no' };
-  if (type === 'date') return { field: 'date', format: 'date' };
-  if (type === 'time') return { field: 'time', format: 'time' };
-  if (type === 'timestamptz') return { field: 'date-time', format: 'date-time' };
-  if (type === 'jsonb') return { field: 'long-text', format: 'clipped-text' };
-  return { field: 'text', format: 'plain-text' };
+function metadataAxes(
+  type: ImportColumnMapping['storageType'],
+  selectedField?: ImportColumnMapping['field']
+) {
+  const field = selectedField || fieldForStorage(type);
+  const format = FIELD_REGISTRY[field].defaultFormat;
+  validateColumnAxes(type, field, format);
+  return { field, format };
 }
 
 /**

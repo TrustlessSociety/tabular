@@ -27,16 +27,20 @@ test('PGlite-labeled migration helper installs and re-enters handwritten history
   try {
     const migrations = await loadMigrations();
     assert.deepEqual(await runMigrations(local.transaction, migrations, { advisoryLock: false }), {
-      applied: ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'],
-      total: 11
+      applied: [
+        '0001', '0002', '0003', '0004', '0005', '0006',
+        '0007', '0008', '0009', '0010', '0011', '0012'
+      ],
+      total: 12
     });
     assert.deepEqual(await runMigrations(local.transaction, migrations, { advisoryLock: false }), {
       applied: [],
-      total: 11
+      total: 12
     });
     const records = await new MigrationRepository(local.database).list();
     assert.deepEqual(records.map((record) => record.version), [
-      '0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'
+      '0001', '0002', '0003', '0004', '0005', '0006',
+      '0007', '0008', '0009', '0010', '0011', '0012'
     ]);
     assert.equal(records[0].checksum, migrations[0].checksum);
   } finally {
@@ -52,7 +56,7 @@ test('PGlite-labeled failed DDL leaves neither schema change nor version record'
     await assert.rejects(
       runMigrations(local.transaction, [
         ...base,
-        migration('0012', 'forced-failure', `
+        migration('0013', 'forced-failure', `
           CREATE TABLE tabular.should_rollback (id bigint PRIMARY KEY);
           SELECT tabular.function_that_does_not_exist();
         `)
@@ -68,7 +72,8 @@ test('PGlite-labeled failed DDL leaves neither schema change nor version record'
     assert.equal(relation.rows[0].exists, false);
     const records = await new MigrationRepository(local.database).list();
     assert.deepEqual(records.map((record) => record.version), [
-      '0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'
+      '0001', '0002', '0003', '0004', '0005', '0006',
+      '0007', '0008', '0009', '0010', '0011', '0012'
     ]);
   } finally {
     await local.close();
@@ -93,7 +98,7 @@ test('PGlite-labeled migration history rejects drift, ahead state, and transacti
       runMigrations(local.transaction, base, { advisoryLock: false }),
       /ahead of this application/
     );
-    const invalid = migration('0012', 'bad-control', 'BEGIN; SELECT 1; COMMIT;');
+    const invalid = migration('0013', 'bad-control', 'BEGIN; SELECT 1; COMMIT;');
     await assert.rejects(
       runMigrations(local.transaction, [...base, invalid], { advisoryLock: false }),
       /transaction control/
@@ -101,4 +106,13 @@ test('PGlite-labeled migration history rejects drift, ahead state, and transacti
   } finally {
     await local.close();
   }
+});
+
+test('validator metadata migration is confined to the Tabular metadata table', async () => {
+  const migrations = await loadMigrations();
+  const migration = migrations.find((item) => item.version === '0012');
+  assert.ok(migration);
+  assert.match(migration.sql, /ALTER TABLE tabular\.column_metadata/);
+  assert.doesNotMatch(migration.sql, /ALTER TABLE (?!tabular\.column_metadata)/);
+  assert.doesNotMatch(migration.sql, /UPDATE\s+(?!tabular\.column_metadata)/i);
 });

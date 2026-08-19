@@ -31,6 +31,10 @@ import {
   LogicalSelectionStore,
   spreadsheetRowNumber
 } from './selection.js';
+import {
+  renderCellFormat,
+  type FormatRenderOptions
+} from './format-renderers.js';
 
 //Tabulator's public event registry exposes heterogeneous positional payloads,
 // so a single listener port cannot narrow them before the event name is known
@@ -243,6 +247,22 @@ function formatterFor(
  * Return the base formatter for result.
  */
 function baseFormatterFor(column: GridColumn): ColumnDefinition['formatter'] {
+  if (column.format) return (cell, _formatterParams, onRendered) => {
+    const { config, options } = resolvedFormatConfiguration(column);
+    const result = renderCellFormat(column.format!, cell.getValue() as GridCellValue, config, options);
+    onRendered(() => {
+      const element = cell.getElement();
+      element.dataset.formatStatus = result.status;
+      if (result.diagnostic) {
+        element.dataset.formatDiagnostic = result.diagnostic.code;
+        element.title = result.diagnostic.message;
+      } else {
+        delete element.dataset.formatDiagnostic;
+        element.removeAttribute('title');
+      }
+    });
+    return result.html;
+  };
   if (column.kind === 'relation') return (cell) => {
     const row = cell.getRow().getData() as GridRow;
     const option = column.options?.find((candidate) => candidate.patch
@@ -291,17 +311,60 @@ function baseFormatterFor(column: GridColumn): ColumnDefinition['formatter'] {
   return undefined;
 }
 
+function resolvedFormatConfiguration(column: GridColumn): {
+  config: Record<string, unknown>,
+  options: FormatRenderOptions,
+} {
+  const source = { ...(column.formatConfig || {}) };
+  const configuredLocale = typeof source.locale === 'string' && source.locale
+    ? source.locale
+    : undefined;
+  const configuredTimeZone = typeof source.timeZone === 'string' && source.timeZone
+    ? source.timeZone
+    : undefined;
+  delete source.locale;
+  delete source.timeZone;
+  delete source.outputTemplate;
+  const options: FormatRenderOptions = {
+    locale: {
+      value: configuredLocale || 'en-US',
+      source: configuredLocale ? 'format' : 'workspace'
+    },
+    timeZone: {
+      value: configuredTimeZone || 'UTC',
+      source: configuredTimeZone ? 'format' : 'workspace'
+    },
+    ...(column.format === 'relative-time' ? { now: new Date() } : {})
+  };
+  if (column.format && ['label', 'badge', 'related-record'].includes(column.format)) {
+    return {
+      config: {
+        labels: Object.fromEntries((column.options || []).map((option) => [
+          option.value,
+          option.outputLabel || option.label
+        ]))
+      },
+      options
+    };
+  }
+  return { config: source, options };
+}
+
 /**
  * Return the editor for result.
  */
 function editorFor(column: GridColumn): ColumnDefinition['editor'] {
   if (column.editable === false) return undefined;
+  if (column.storageType === 'jsonb' && column.field
+    && ['metadata', 'tags', 'text-list', 'multi-select', 'checkbox-list'].includes(column.field)) {
+    return jsonFieldEditor(column);
+  }
   if (column.kind === 'boolean' || column.kind === 'switch') return booleanEditor(column);
   if (column.kind === 'select' || column.kind === 'relation') return 'list';
   if (column.kind === 'email') return textEditor(column, 'email');
   if (column.kind === 'url') return textEditor(column, 'url');
   if (column.kind === 'phone') return textEditor(column, 'tel');
-  if (column.kind === 'datetime') return textEditor(column, 'datetime-local');
+  if (column.kind === 'datetime') return textEditor(column, 'text');
   if (column.kind === 'number' || column.kind === 'price') {
     return textEditor(column, 'text', undefined, 'decimal');
   }
@@ -323,7 +386,7 @@ function textEditor(
     input.type = type;
     if (inputMode) input.inputMode = inputMode;
     input.setAttribute('aria-label', `Edit ${column.label || column.coordinate}`);
-    input.value = String(cell.getValue() ?? '')
+    input.value = editorValue(cell.getValue())
       .replace(' ', 'T')
       .replace(/(?:Z|[+-]\d{2}(?::\d{2})?)$/, '');
     /**
@@ -381,6 +444,43 @@ function booleanEditor(column: GridColumn): NonNullable<ColumnDefinition['editor
     onRendered(() => input.focus());
     return input;
   };
+}
+
+/** Keep JSON Field source exact in a multiline edit-exit surface. */
+function jsonFieldEditor(column: GridColumn): NonNullable<ColumnDefinition['editor']> {
+  return (cell, onRendered, success, cancel) => {
+    const input = document.createElement('textarea');
+    input.className = 'tabular-cell-input tabular-json-field-editor';
+    input.setAttribute('aria-label', `Edit ${column.label || column.coordinate}`);
+    input.value = editorValue(cell.getValue());
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      success(input.value);
+    };
+    input.addEventListener('blur', finish, { once: true });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        settled = true;
+        cancel(cell.getValue());
+      }
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        finish();
+      }
+    });
+    onRendered(() => { input.focus(); input.select(); });
+    return input;
+  };
+}
+
+function editorValue(value: unknown) {
+  return value && typeof value === 'object' && 'type' in value
+    && (value as { type?: unknown, }).type === 'json'
+    ? String((value as { source?: unknown, }).source ?? '')
+    : String(value ?? '');
 }
 
 /**

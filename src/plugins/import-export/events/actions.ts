@@ -13,6 +13,7 @@ export type BrowserImportColumnMapping = {
   displayName: string,
   physicalName: string,
   storageType: 'text' | 'bigint' | 'numeric' | 'boolean' | 'date' | 'time' | 'timestamptz' | 'jsonb',
+  field?: import('../../files/helpers/contracts.js').FileFieldKind,
   include: boolean,
 };
 

@@ -5,9 +5,14 @@ import type {
   ParsedImportCell,
   ParsedImportRow
 } from './contracts.js';
+import type { FileFieldKind } from '../../files/helpers/contracts.js';
 import { ApplicationError } from '../../../bootstrap/errors.js';
 import { normalizedPhysicalName, physicalIdentifier } from '../../files/helpers/validation.js';
 import { deterministicFingerprint } from './fingerprint.js';
+import { EMPTY_VALIDATOR_CONFIG, FIELD_REGISTRY } from '../../files/helpers/field-registry.js';
+import { validateColumnValue } from '../../files/helpers/validator-engine.js';
+import { canonicalJsonValue } from '../../capability/helpers/value-contracts.js';
+import { decodeExpandedFieldValue } from '../../grid/helpers/field-codecs.js';
 
 //The import column mapping contract exported for module callers
 export type ImportColumnMapping = {
@@ -16,6 +21,7 @@ export type ImportColumnMapping = {
   displayName: string,
   physicalName: string,
   storageType: InferredStorageType,
+  field?: FileFieldKind,
   include: boolean,
 };
 
@@ -49,6 +55,7 @@ export function defaultMapping(
       displayName: sourceName,
       physicalName,
       storageType: inference[index]?.suggestedType || 'text',
+      field: inference[index]?.suggestedField || 'text',
       include: true
     };
   });
@@ -67,7 +74,7 @@ export function validateMapping(
   const mapped = value.map((entry) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) invalid('A field mapping is invalid');
     const row = entry as Record<string, unknown>;
-    const exact = ['sourceColumn', 'sourceName', 'displayName', 'physicalName', 'storageType', 'include'];
+    const exact = ['sourceColumn', 'sourceName', 'displayName', 'physicalName', 'storageType', 'field', 'include'];
     if (Object.keys(row).some((key) => !exact.includes(key))) invalid('A field mapping has an unsupported property');
     if (!Number.isSafeInteger(row.sourceColumn) || Number(row.sourceColumn) < 1
       || Number(row.sourceColumn) > columnCount) invalid('A source field is unavailable');
@@ -76,6 +83,12 @@ export function validateMapping(
     if (typeof row.physicalName !== 'string') invalid('PostgreSQL field name is invalid');
     const physicalName = physicalIdentifier(row.physicalName);
     if (!STORAGE_TYPES.has(row.storageType as InferredStorageType)) invalid('Field storage type is invalid');
+    const field = typeof row.field === 'undefined'
+      ? undefined
+      : row.field as FileFieldKind;
+    if (field && !FIELD_REGISTRY[field]?.storage.includes(row.storageType as InferredStorageType)) {
+      invalid('The import Field is incompatible with PostgreSQL storage');
+    }
     if (typeof row.include !== 'boolean') invalid('Field inclusion is invalid');
     return {
       sourceColumn: Number(row.sourceColumn),
@@ -83,6 +96,7 @@ export function validateMapping(
       displayName,
       physicalName,
       storageType: row.storageType as InferredStorageType,
+      ...(field ? { field } : {}),
       include: row.include
     };
   });
@@ -112,6 +126,19 @@ export function validateMappedRows(
       const cell = row.cells[field.sourceColumn - 1];
       const token = !cell || cell.type === 'empty' ? null : cell.sourceToken;
       const message = conversionError(field.storageType, token);
+      if (!message && token !== null) {
+        const fieldMessage = importFieldError(field, token);
+        if (!fieldMessage) continue;
+        issues.push({
+          rowNumber: row.rowNumber,
+          columnNumber: field.sourceColumn,
+          code: 'field_validation_failed',
+          message: fieldMessage,
+          sourceToken: token.slice(0, 500)
+        });
+        if (issues.length >= limit) return issues;
+        continue;
+      }
       if (!message) continue;
       issues.push({
         rowNumber: row.rowNumber,
@@ -124,6 +151,44 @@ export function validateMappedRows(
     }
   }
   return issues;
+}
+
+function importFieldError(field: ImportColumnMapping, token: string) {
+  const fieldKind = field.field || fieldForStorage(field.storageType);
+  try {
+    const value = field.storageType === 'jsonb'
+      ? isExpandedImportField(fieldKind)
+        ? decodeExpandedFieldValue(fieldKind, token)
+        : canonicalJsonValue(token)
+      : field.storageType === 'boolean'
+        ? token === 'true'
+        : token;
+    const result = validateColumnValue({
+      storageType: field.storageType,
+      field: fieldKind,
+      fieldConfig: {},
+      validatorConfig: EMPTY_VALIDATOR_CONFIG
+    }, value);
+    return result.valid
+      ? undefined
+      : result.failures.map((failure) => failure.message).join(' ');
+  } catch (caught) {
+    return caught instanceof Error ? caught.message : 'The value does not match the selected Field';
+  }
+}
+
+function isExpandedImportField(field: FileFieldKind): field is 'metadata' | 'tags' | 'text-list' | 'multi-select' | 'checkbox-list' {
+  return ['metadata', 'tags', 'text-list', 'multi-select', 'checkbox-list'].includes(field);
+}
+
+export function fieldForStorage(type: InferredStorageType): FileFieldKind {
+  if (type === 'bigint' || type === 'numeric') return 'number';
+  if (type === 'boolean') return 'checkbox';
+  if (type === 'date') return 'date';
+  if (type === 'time') return 'time';
+  if (type === 'timestamptz') return 'date-time';
+  if (type === 'jsonb') return 'metadata';
+  return 'text';
 }
 
 /**

@@ -146,6 +146,7 @@ export type InferredStorageType =
 export type ColumnInference = {
   columnNumber: number,
   suggestedType: InferredStorageType,
+  suggestedField: import('../../files/helpers/contracts.js').FileFieldKind,
   nonEmptyCount: number,
   confidence: 'certain' | 'mixed' | 'empty',
   reason: string,

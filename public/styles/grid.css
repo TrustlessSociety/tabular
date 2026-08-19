@@ -1274,6 +1274,82 @@ kbd {
   width: 15px;
 }
 
+.column-settings-disclosure {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 4px 0 10px;
+}
+
+.validator-rule-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.validator-rule-card {
+  background: color-mix(in srgb, var(--paper) 92%, #245DA8 8%);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 9px;
+}
+
+.validator-rule-card > header,
+.validator-rule-locked {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.validator-rule-card strong,
+.validator-rule-card small {
+  display: block;
+}
+
+.validator-rule-locked {
+  background: color-mix(in srgb, var(--paper) 94%, var(--rule) 6%);
+  color: var(--muted);
+}
+
+.validator-rule-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.validator-rule-actions button,
+.validator-add-row > button {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 28px;
+  padding: 0 7px;
+}
+
+.validator-rule-actions button:disabled,
+.validator-add-row > button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.validator-add-row,
+.validator-argument-row {
+  align-items: end;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.validator-add-row > label {
+  margin-bottom: 0;
+}
+
+.validator-argument-row .check-row {
+  min-height: 34px;
+}
+
 .technical-input {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
 }

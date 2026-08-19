@@ -1,6 +1,7 @@
 //client
 import type { CapabilityAction, CellPatch, TypedCellValue, ValidationIssue } from './contracts.js';
 import { ActionFault } from './contracts.js';
+import { canonicalJsonValue } from './value-contracts.js';
 
 const MAX_PATCH_CELLS = 1_000;
 //The max range cells value exported for module callers
@@ -174,6 +175,23 @@ function cellValue(input: TypedCellValue) {
     if (Object.keys(input).length !== 1) invalid('Null cell values cannot include a value');
     return;
   }
+  if (input.type === 'json') {
+    closed(input, ['type', 'shape', 'source']);
+    if (typeof input.source !== 'string'
+      || Buffer.byteLength(input.source, 'utf8') > MAX_JSON_BYTES) {
+      invalid('JSON cell values must be bounded canonical JSON text');
+    }
+    let canonical: ReturnType<typeof canonicalJsonValue>;
+    try {
+      canonical = canonicalJsonValue(input.source);
+    } catch {
+      invalid('JSON cell values must contain valid canonical JSON text');
+    }
+    if (canonical.shape === 'other' || canonical.shape !== input.shape) {
+      invalid('JSON inputs must be an object or homogeneous string array');
+    }
+    return;
+  }
   closed(input, ['type', 'value']);
   if (input.type === 'text' && typeof input.value === 'string') return;
   if (
@@ -214,17 +232,6 @@ function cellValue(input: TypedCellValue) {
   ) return;
   if (input.type === 'timestamp') {
     invalid('Date-time cell values must use canonical ISO date-time text');
-  }
-  if (input.type === 'json') {
-    if (typeof input.value !== 'string' || Buffer.byteLength(input.value, 'utf8') > MAX_JSON_BYTES) {
-      invalid('JSON cell values must be bounded JSON text');
-    }
-    try {
-      JSON.parse(input.value);
-    } catch {
-      invalid('JSON cell values must contain valid JSON text');
-    }
-    return;
   }
   invalid('The typed cell value is invalid');
 }

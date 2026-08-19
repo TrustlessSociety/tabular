@@ -7,23 +7,17 @@ import type {
   FileFormatKind,
   FileStorageType
 } from './contracts.js';
+import {
+  FIELD_REGISTRY,
+  FILE_STORAGE_TYPES,
+  FORMAT_REGISTRY,
+  validateColumnAxes,
+  validateValidatorConfig
+} from './field-registry.js';
 
-const storageTypes = new Set<FileStorageType>([
-  'text', 'bigint', 'numeric', 'boolean', 'date', 'time', 'timestamptz', 'jsonb', 'uuid'
-]);
-const fieldKinds = new Set<FileFieldKind>([
-  'text', 'long-text', 'number', 'email', 'url', 'phone', 'relation', 'select',
-  'radio', 'suggest', 'price', 'switch', 'checkbox', 'date', 'date-time', 'time',
-  'computed', 'slug', 'masked-text', 'color', 'country-code', 'currency-code',
-  'rating', 'slider', 'tags', 'text-list', 'code-source', 'markdown-source'
-]);
-const formatKinds = new Set<FileFormatKind>([
-  'plain', 'plain-text', 'email-link', 'clipped-text', 'clipped', 'wrapped',
-  'text-transform', 'number', 'link', 'email', 'phone-link', 'related-record', 'badge',
-  'currency', 'yes-no', 'date', 'date-time', 'time', 'relative-time', 'color',
-  'country-label', 'currency-label', 'rating', 'tags', 'list', 'code-highlighting',
-  'label'
-]);
+const storageTypes = new Set<FileStorageType>(FILE_STORAGE_TYPES);
+const fieldKinds = new Set<FileFieldKind>(Object.keys(FIELD_REGISTRY) as FileFieldKind[]);
+const formatKinds = new Set<FileFormatKind>(Object.keys(FORMAT_REGISTRY) as FileFormatKind[]);
 
 /**
  * Validate the file ddl action.
@@ -52,7 +46,7 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
     case 'column.create':
       exactKeys(input, [
         'type', 'commandId', 'fileId', 'displayName', 'physicalName',
-        'storageType', 'field', 'format', 'fieldConfig', 'formatConfig', 'required', 'unique',
+        'storageType', 'field', 'format', 'fieldConfig', 'formatConfig', 'validatorConfig', 'required', 'unique',
         'default', 'generated'
       ]);
       stableFileId(input.fileId);
@@ -60,6 +54,7 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
       if (input.physicalName) physicalIdentifier(input.physicalName);
       columnAxes(input.storageType, input.field, input.format, input.fieldConfig);
       if (input.formatConfig) plainObject(input.formatConfig, 'Format configuration');
+      if (input.validatorConfig) validateValidatorConfig(input.validatorConfig);
       optionalBoolean(input.required, 'Required');
       optionalBoolean(input.unique, 'Unique');
       if (input.default) validateDefault(input.storageType, input.default);
@@ -76,7 +71,7 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
     case 'column.configure':
       exactKeys(input, [
         'type', 'commandId', 'fileId', 'columnId', 'displayName', 'physicalName',
-        'storageType', 'field', 'format', 'fieldConfig', 'formatConfig', 'required', 'unique', 'default'
+        'storageType', 'field', 'format', 'fieldConfig', 'formatConfig', 'validatorConfig', 'required', 'unique', 'default'
       ]);
       stableFileId(input.fileId);
       stableColumnId(input.columnId);
@@ -87,6 +82,10 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
       if (input.format && !formatKinds.has(input.format)) invalid('Unsupported format');
       if (input.fieldConfig) plainObject(input.fieldConfig, 'Field configuration');
       if (input.formatConfig) plainObject(input.formatConfig, 'Format configuration');
+      if (input.storageType && input.field && input.format) {
+        validateColumnAxes(input.storageType, input.field, input.format);
+      }
+      if (input.validatorConfig) validateValidatorConfig(input.validatorConfig);
       optionalBoolean(input.required, 'Required');
       optionalBoolean(input.unique, 'Unique');
       if (input.default) validateDefault(input.storageType, input.default);
@@ -136,7 +135,7 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
     case 'json.promote':
       exactKeys(input, [
         'type', 'commandId', 'fileId', 'hiddenColumnId', 'jsonKey', 'displayName',
-        'physicalName', 'storageType', 'field', 'format', 'fieldConfig', 'formatConfig',
+        'physicalName', 'storageType', 'field', 'format', 'fieldConfig', 'formatConfig', 'validatorConfig',
         'required', 'unique'
       ]);
       stableFileId(input.fileId);
@@ -146,6 +145,7 @@ export function validateFileDdlAction(input: FileDdlAction): FileDdlAction {
       if (input.physicalName) physicalIdentifier(input.physicalName);
       columnAxes(input.storageType, input.field, input.format, input.fieldConfig);
       if (input.formatConfig) plainObject(input.formatConfig, 'Format configuration');
+      if (input.validatorConfig) validateValidatorConfig(input.validatorConfig);
       optionalBoolean(input.required, 'Required');
       optionalBoolean(input.unique, 'Unique');
       break;
@@ -277,9 +277,11 @@ function columnAxes(
   format: FileFormatKind,
   config?: Record<string, unknown>
 ) {
-  if (!storageTypes.has(storage)) invalid('Unsupported storage type');
-  if (!fieldKinds.has(field)) invalid('Unsupported field');
-  if (!formatKinds.has(format)) invalid('Unsupported format');
+  try {
+    validateColumnAxes(storage, field, format);
+  } catch (error) {
+    invalid(error instanceof Error ? error.message : 'Invalid column configuration');
+  }
   if (config) plainObject(config, 'Field configuration');
 }
 

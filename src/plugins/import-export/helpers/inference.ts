@@ -37,6 +37,7 @@ export function inferColumn(
     return {
       columnNumber,
       suggestedType: 'text',
+      suggestedField: 'text',
       nonEmptyCount: 0,
       confidence: 'empty',
       reason: 'No non-empty values were available for inference.'
@@ -53,9 +54,13 @@ export function inferColumn(
   ];
   const exact = candidates.find(([, predicate]) => tokens.every(predicate));
   if (exact) {
+    const suggestedField = exact[0] === 'jsonb'
+      ? inferredJsonField(tokens)
+      : fieldForStorage(exact[0]);
     return {
       columnNumber,
       suggestedType: exact[0],
+      suggestedField,
       nonEmptyCount: tokens.length,
       confidence: 'certain',
       reason: `Every non-empty value matches ${exact[0]}.`
@@ -64,10 +69,35 @@ export function inferColumn(
   return {
     columnNumber,
     suggestedType: 'text',
+    suggestedField: 'text',
     nonEmptyCount: tokens.length,
     confidence: 'mixed',
     reason: 'Values have mixed or ambiguous representations; source tokens remain text.'
   };
+}
+
+function fieldForStorage(type: InferredStorageType): ColumnInference['suggestedField'] {
+  if (type === 'bigint' || type === 'numeric') return 'number';
+  if (type === 'boolean') return 'checkbox';
+  if (type === 'date') return 'date';
+  if (type === 'time') return 'time';
+  if (type === 'timestamptz') return 'date-time';
+  if (type === 'jsonb') return 'metadata';
+  return 'text';
+}
+
+function inferredJsonField(tokens: string[]): ColumnInference['suggestedField'] {
+  const parsed = tokens.map((token) => JSON.parse(token) as unknown);
+  if (parsed.every((value) => value && typeof value === 'object' && !Array.isArray(value))) {
+    return 'metadata';
+  }
+  if (parsed.every((value) => Array.isArray(value)
+    && value.every((item) => typeof item === 'string'))) {
+    return 'text-list';
+  }
+  //Keep JSONB storage inference; mapping validation exposes the incompatible
+  //shape until a supported Field or Text storage is chosen.
+  return 'metadata';
 }
 
 /**

@@ -10,6 +10,7 @@ import type {
   ImportWizardStep
 } from '../components/import-wizard.js';
 import type { BrowserImportOperation, GoogleSpreadsheetChoice } from '../events/actions.js';
+import type { FileFieldKind } from '../../files/helpers/contracts.js';
 import { Icon } from '../../app/components/icon.js';
 import { ImportWizard } from '../components/import-wizard.js';
 import {
@@ -22,16 +23,18 @@ import {
   startGoogleOAuth,
   uploadImportSource
 } from '../events/actions.js';
+import { recommendedColumnAxes } from '../../files/helpers/field-registry.js';
 
-const STORAGE_OPTIONS = [
-  ['text', 'Text'],
-  ['bigint', 'Integer'],
-  ['numeric', 'Decimal'],
-  ['boolean', 'True / false'],
-  ['date', 'Date'],
-  ['time', 'Time'],
-  ['timestamptz', 'Date and time'],
-  ['jsonb', 'JSON']
+const IMPORT_FIELD_OPTIONS = [
+  ['text', 'Text'], ['long-text', 'Long Text'], ['number', 'Number'],
+  ['email', 'Email'], ['url', 'URL'], ['phone', 'Phone'],
+  ['switch', 'Switch'], ['checkbox', 'Checkbox'], ['date', 'Date'],
+  ['time', 'Time'], ['date-time', 'Date and Time'], ['slug', 'Slug'],
+  ['masked-text', 'Masked Text'], ['color', 'Color'],
+  ['country-code', 'Country Code'], ['currency-code', 'Currency Code'],
+  ['metadata', 'Metadata'], ['tags', 'Tags'], ['text-list', 'Text List'],
+  ['multi-select', 'Multi-select'], ['checkbox-list', 'Checkbox List'],
+  ['code-source', 'Code Source'], ['markdown-source', 'Markdown Source']
 ] as const;
 
 /**
@@ -183,8 +186,8 @@ export function ImportPage(props: ImportEntryPageProps) {
   const wizardMapping = useMemo<ImportMapping[]>(() => mapping.map((entry) => ({
     id: String(entry.sourceColumn),
     sourceColumn: entry.sourceName,
-    field: entry.storageType,
-    fieldOptions: STORAGE_OPTIONS.map(([value, label]) => ({ value, label })),
+    field: entry.field || importFieldForStorage(entry.storageType),
+    fieldOptions: IMPORT_FIELD_OPTIONS.map(([value, label]) => ({ value, label })),
     storage: storageLabel(entry.storageType),
     ...(mappingErrors[String(entry.sourceColumn)]
       ? { error: mappingErrors[String(entry.sourceColumn)] } : {})
@@ -527,9 +530,11 @@ export function ImportPage(props: ImportEntryPageProps) {
               setStatus({ kind: 'ready' });
             });
           }}
-          onMappingChange={(mappingId, storageType) => {
+          onMappingChange={(mappingId, fieldValue) => {
+            const field = fieldValue as FileFieldKind;
+            const axes = recommendedColumnAxes(field);
             setMapping((current) => current.map((entry) => String(entry.sourceColumn) === mappingId
-              ? { ...entry, storageType: storageType as BrowserImportOperation['mapping'][number]['storageType'] }
+              ? { ...entry, field, storageType: axes.storageType as BrowserImportOperation['mapping'][number]['storageType'] }
               : entry));
             setMappingErrors((current) => {
               const next = { ...current };
@@ -620,6 +625,18 @@ function storageLabel(value: BrowserImportOperation['mapping'][number]['storageT
     jsonb: 'jsonb'
   };
   return sql[value];
+}
+
+function importFieldForStorage(
+  type: BrowserImportOperation['mapping'][number]['storageType']
+): FileFieldKind {
+  if (type === 'bigint' || type === 'numeric') return 'number';
+  if (type === 'boolean') return 'checkbox';
+  if (type === 'date') return 'date';
+  if (type === 'time') return 'time';
+  if (type === 'timestamptz') return 'date-time';
+  if (type === 'jsonb') return 'metadata';
+  return 'text';
 }
 
 /**

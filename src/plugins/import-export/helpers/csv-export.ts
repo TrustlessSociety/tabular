@@ -99,7 +99,9 @@ function formattedValue(
   column: CsvExportColumn
 ) {
   if (value.type === 'null') return '';
-  const source = value.type === 'boolean' ? (value.value ? 'true' : 'false') : value.value;
+  const source = value.type === 'boolean'
+    ? (value.value ? 'true' : 'false')
+    : value.type === 'json' ? value.source : value.value;
   const format = presentation?.numberFormat && presentation.numberFormat !== 'automatic'
     ? presentation.numberFormat
     : configuredFormat(column);

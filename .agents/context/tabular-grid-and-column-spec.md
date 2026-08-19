@@ -98,6 +98,15 @@ mini-form appearance.
    in state for a future double-click correction and render a spreadsheet error
    token at rest.
 
+The validator list is a Tabular-only layer. Saving a validator is never blocked
+by existing accepted values and does not write target-table DDL or rows.
+Materialized stored values are revalidated after the metadata change; any
+violation renders `#VALUE!` while edit mode exposes the unchanged raw value for
+correction. Values loaded later follow the same rule. Removing or changing the
+validator revalidates the display without mutating PostgreSQL data. Native
+Required, Unique, foreign-key, storage, and other constraint behavior stays in
+the separate Constraints/Advanced PostgreSQL lifecycle.
+
 An unnamed column's default is always **Text** and preserves strings such as
 002; it must never inherit the nearest named column's Number editor.
 

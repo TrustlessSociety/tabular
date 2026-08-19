@@ -12,6 +12,10 @@ verified implementation-review corrections from Spec 00003 Tasks 00014 and
 production iconography, compact formatting-popover, rendered Border-style, and
 page-session custom-color outcomes, were promoted by 2026-08-05.
 
+Frozen Spec 00005 adds the accepted Field/storage families, safe Format
+boundary, composable Tabular-only validator layer, JSONB collection shapes,
+and existing-value `#VALUE!` lifecycle as of 2026-08-13.
+
 The exact pointer-driven inserted-column drag acceptance passed on 2026-08-05
 and its detailed evidence remains Spec 00003-local. Final human acceptance is
 the remaining evidence gate; its pending status does not restore the superseded
@@ -30,13 +34,16 @@ Implementation requires an accepted task plan from a Frozen spec.
 3. [Spreadsheet canvas and column configuration](tabular-grid-and-column-spec.md)
    — the grid, editing, errors, accepted ordering ownership, column settings,
    and relationships.
-4. [Spreadsheet command surface](tabular-command-surface-spec.md) — File, Edit,
+4. [Fields, validators, and Formats](tabular-fields-validators-formats.md) —
+   canonical value families, safe editors/renderers, validator composition,
+   database separation, JSONB collections, and `#VALUE!` behavior.
+5. [Spreadsheet command surface](tabular-command-surface-spec.md) — File, Edit,
    View, Format, toolbar, popovers, and target-specific context menus.
-5. [File explorer, new file, import, and table settings](tabular-files-import-and-settings-spec.md)
+6. [File explorer, new file, import, and table settings](tabular-files-import-and-settings-spec.md)
    — folder-first Files/Views discovery and all file-level flows.
-6. [Wireframe decision history](tabular-wireframe-decision-history.md) — why
+7. [Wireframe decision history](tabular-wireframe-decision-history.md) — why
    current behavior supersedes earlier revisions and the browser-review record.
-7. [Implementation boundaries](tabular-implementation-boundaries.md) — accepted
+8. [Implementation boundaries](tabular-implementation-boundaries.md) — accepted
    direct-library composition, runtime-object, identity, authority, migration,
    browser-state, ordering, action, worker, and production-recheck rules from
    Specs 00002/00003 and r007.
